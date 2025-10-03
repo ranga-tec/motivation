@@ -1,0 +1,156 @@
+@model Poms.Web.ViewModels.EpisodeViewModel
+
+@{
+    ViewData["Title"] = "Edit Episode";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="fas fa-edit"></i> Edit Episode</h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="Edit">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                    <input type="hidden" asp-for="Id" />
+                    <input type="hidden" asp-for="PatientId" />
+
+                    <div class="alert alert-info">
+                        <strong>Patient:</strong> @Model.PatientNumber - @Model.PatientName
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Type" class="form-label">Episode Type</label>
+                                <select asp-for="Type" class="form-select" disabled>
+                                    @foreach (var type in Enum.GetValues(typeof(Poms.Domain.Enums.EpisodeType)))
+                                    {
+                                        <option value="@type" selected="@(Model.Type.ToString() == type.ToString())">@type</option>
+                                    }
+                                </select>
+                                <small class="text-muted">Episode type cannot be changed after creation.</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="OpenedOn" class="form-label">Opened Date</label>
+                                <input asp-for="OpenedOn" class="form-control" type="date" />
+                                <div asp-validation-for="OpenedOn" class="text-danger"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="ClosedOn" class="form-label">Closed Date (Optional)</label>
+                                <input asp-for="ClosedOn" class="form-control" type="date" />
+                                <div asp-validation-for="ClosedOn" class="text-danger"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Type-specific details based on existing episode type -->
+                    @if (Model.Type == Poms.Domain.Enums.EpisodeType.Prosthetic)
+                    {
+                        <div class="episode-details">
+                            <h6 class="border-bottom pb-2 mb-3">Prosthetic Details</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label asp-for="AmputationType" class="form-label">Amputation Type</label>
+                                        <select asp-for="AmputationType" class="form-select">
+                                            <option value="">-- Select --</option>
+                                            @foreach (var type in Enum.GetValues(typeof(Poms.Domain.Enums.AmputationType)))
+                                            {
+                                                <option value="@type" selected="@(Model.AmputationType?.ToString() == type.ToString())">@type</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label asp-for="ProstheticSide" class="form-label">Side</label>
+                                        <select asp-for="ProstheticSide" class="form-select">
+                                            <option value="">-- Select --</option>
+                                            @foreach (var side in Enum.GetValues(typeof(Poms.Domain.Enums.Side)))
+                                            {
+                                                <option value="@side" selected="@(Model.ProstheticSide?.ToString() == side.ToString())">@side</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label asp-for="Reason" class="form-label">Reason</label>
+                                        <select asp-for="Reason" class="form-select">
+                                            <option value="">-- Select --</option>
+                                            @foreach (var reason in Enum.GetValues(typeof(Poms.Domain.Enums.Reason)))
+                                            {
+                                                <option value="@reason" selected="@(Model.Reason?.ToString() == reason.ToString())">@reason</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else if (Model.Type == Poms.Domain.Enums.EpisodeType.Orthotic)
+                    {
+                        <div class="episode-details">
+                            <h6 class="border-bottom pb-2 mb-3">Orthotic Details</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label asp-for="BodyRegion" class="form-label">Body Region</label>
+                                        <select asp-for="BodyRegion" class="form-select">
+                                            <option value="">-- Select --</option>
+                                            @foreach (var region in Enum.GetValues(typeof(Poms.Domain.Enums.BodyRegion)))
+                                            {
+                                                <option value="@region" selected="@(Model.BodyRegion?.ToString() == region.ToString())">@region</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label asp-for="OrthoticSide" class="form-label">Side</label>
+                                        <select asp-for="OrthoticSide" class="form-select">
+                                            <option value="">-- Select --</option>
+                                            @foreach (var side in Enum.GetValues(typeof(Poms.Domain.Enums.Side)))
+                                            {
+                                                <option value="@side" selected="@(Model.OrthoticSide?.ToString() == side.ToString())">@side</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label asp-for="Remarks" class="form-label">Remarks</label>
+                        <textarea asp-for="Remarks" class="form-control" rows="3"
+                                  placeholder="Any additional notes about this episode..."></textarea>
+                        <div asp-validation-for="Remarks" class="text-danger"></div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary me-md-2">
+                            <i class="fas fa-arrow-left"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Update Episode
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

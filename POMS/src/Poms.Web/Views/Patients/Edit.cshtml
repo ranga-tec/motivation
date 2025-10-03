@@ -1,0 +1,213 @@
+﻿@model Poms.Web.ViewModels.PatientViewModel
+
+@{
+    ViewData["Title"] = "Edit Patient";
+}
+
+<h1>Edit Patient</h1>
+<p class="text-muted">Patient Number: <strong>@Model.PatientNumber</strong></p>
+
+<form asp-action="Edit" method="post" class="needs-validation">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="PatientNumber" />
+    
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+    
+    <div class="card mb-3">
+        <div class="card-header bg-warning">
+            <h5 class="mb-0">Personal Information</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="FirstName" class="form-label"></label>
+                    <input asp-for="FirstName" class="form-control" />
+                    <span asp-validation-for="FirstName" class="text-danger"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="LastName" class="form-label"></label>
+                    <input asp-for="LastName" class="form-control" />
+                    <span asp-validation-for="LastName" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Dob" class="form-label"></label>
+                    <input asp-for="Dob" class="form-control" type="date" />
+                    <span asp-validation-for="Dob" class="text-danger"></span>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Sex" class="form-label"></label>
+                    <select asp-for="Sex" class="form-select" asp-items="ViewBag.SexOptions">
+                        <option value="">-- Select --</option>
+                    </select>
+                    <span asp-validation-for="Sex" class="text-danger"></span>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="NationalId" class="form-label"></label>
+                    <input asp-for="NationalId" class="form-control" />
+                    <span asp-validation-for="NationalId" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header bg-warning">
+            <h5 class="mb-0">Contact Information</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <label asp-for="Address1" class="form-label"></label>
+                    <input asp-for="Address1" class="form-control" />
+                    <span asp-validation-for="Address1" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <label asp-for="Address2" class="form-label"></label>
+                    <input asp-for="Address2" class="form-control" />
+                    <span asp-validation-for="Address2" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label asp-for="ProvinceId" class="form-label"></label>
+                    <select asp-for="ProvinceId" class="form-select" id="provinceSelect" asp-items="ViewBag.Provinces">
+                        <option value="">-- Select Province --</option>
+                    </select>
+                    <span asp-validation-for="ProvinceId" class="text-danger"></span>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="DistrictId" class="form-label"></label>
+                    <select asp-for="DistrictId" class="form-select" id="districtSelect">
+                        <option value="">-- Select District --</option>
+                    </select>
+                    <span asp-validation-for="DistrictId" class="text-danger"></span>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="CenterId" class="form-label"></label>
+                    <select asp-for="CenterId" class="form-select" id="centerSelect" disabled>
+                        <option value="">-- Select Center --</option>
+                    </select>
+                    <span asp-validation-for="CenterId" class="text-danger"></span>
+                    <small class="text-muted">Note: Center cannot be changed after registration</small>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Phone1" class="form-label"></label>
+                    <input asp-for="Phone1" class="form-control" />
+                    <span asp-validation-for="Phone1" class="text-danger"></span>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Phone2" class="form-label"></label>
+                    <input asp-for="Phone2" class="form-control" />
+                    <span asp-validation-for="Phone2" class="text-danger"></span>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Email" class="form-label"></label>
+                    <input asp-for="Email" class="form-control" type="email" />
+                    <span asp-validation-for="Email" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header bg-warning">
+            <h5 class="mb-0">Guardian Information</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="GuardianName" class="form-label"></label>
+                    <input asp-for="GuardianName" class="form-control" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="GuardianRelationship" class="form-label"></label>
+                    <input asp-for="GuardianRelationship" class="form-control" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <label asp-for="GuardianAddress" class="form-label"></label>
+                    <input asp-for="GuardianAddress" class="form-control" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="GuardianPhone1" class="form-label"></label>
+                    <input asp-for="GuardianPhone1" class="form-control" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="GuardianPhone2" class="form-label"></label>
+                    <input asp-for="GuardianPhone2" class="form-control" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header bg-warning">
+            <h5 class="mb-0">Additional Information</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="RegistrationDate" class="form-label"></label>
+                    <input asp-for="RegistrationDate" class="form-control" type="date" disabled />
+                    <small class="text-muted">Registration date cannot be changed</small>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="ReferredBy" class="form-label"></label>
+                    <input asp-for="ReferredBy" class="form-control" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <label asp-for="Remarks" class="form-label"></label>
+                    <textarea asp-for="Remarks" class="form-control" rows="3"></textarea>
+                    <span asp-validation-for="Remarks" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-warning">
+            <i class="bi bi-save"></i> Update Patient
+        </button>
+        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        $(document).ready(function () {
+            // Disable center select - cannot change after registration
+            $('#centerSelect').prop('disabled', true);
+
+            // Province change
+            $('#provinceSelect').change(function () {
+                var provinceId = $(this).val();
+                $('#districtSelect').prop('disabled', true).empty().append('<option value="">-- Select District --</option>');
+
+                if (provinceId) {
+                    $.get('/Patients/GetDistrictsByProvince', { provinceId: provinceId }, function (data) {
+                        $('#districtSelect').prop('disabled', false);
+                        $.each(data, function (i, district) {
+                            $('#districtSelect').append($('<option>').val(district.id).text(district.name));
+                        });
+                        $('#districtSelect').val(@Model.DistrictId);
+                    });
+                }
+            });
+
+            // Trigger on load
+            $('#provinceSelect').trigger('change');
+        });
+    </script>
+}

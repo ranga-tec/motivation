@@ -1,0 +1,102 @@
+﻿@model IEnumerable<Poms.Domain.Entities.Patient>
+
+@{
+    ViewData["Title"] = "Patients";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Patients</h1>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="bi bi-person-plus"></i> Register New Patient
+    </a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form asp-action="Index" method="get" class="row g-3">
+            <div class="col-md-4">
+                <input type="text" name="searchString" value="@ViewBag.SearchString" 
+                       class="form-control" placeholder="Search by Name, Number, or NIC" />
+            </div>
+            <div class="col-md-3">
+                <select name="districtId" class="form-select">
+                    <option value="">All Districts</option>
+                    @foreach (var district in ViewBag.Districts as SelectList)
+                    {
+                        <option value="@district.Value" selected="@(district.Value == ViewBag.DistrictId?.ToString())">
+                            @district.Text
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="centerId" class="form-select">
+                    <option value="">All Centers</option>
+                    @foreach (var center in ViewBag.Centers as SelectList)
+                    {
+                        <option value="@center.Value" selected="@(center.Value == ViewBag.CenterId?.ToString())">
+                            @center.Text
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-secondary w-100">Search</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Patient Number</th>
+                <th>Name</th>
+                <th>DOB</th>
+                <th>Sex</th>
+                <th>District</th>
+                <th>Center</th>
+                <th>Registration Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>
+                        <strong>@item.PatientNumber</strong>
+                    </td>
+                    <td>@item.FirstName @item.LastName</td>
+                    <td>@item.Dob?.ToString("dd-MMM-yyyy")</td>
+                    <td>@item.Sex</td>
+                    <td>@item.District.Name</td>
+                    <td>@item.Center.Name</td>
+                    <td>@item.RegistrationDate.ToString("dd-MMM-yyyy")</td>
+                    <td>
+                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info">View</a>
+                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning">Edit</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (ViewBag.TotalPages > 1)
+{
+    <nav>
+        <ul class="pagination">
+            @for (int i = 1; i <= ViewBag.TotalPages; i++)
+            {
+                <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
+                    <a class="page-link" asp-action="Index" asp-route-page="@i" 
+                       asp-route-searchString="@ViewBag.SearchString"
+                       asp-route-districtId="@ViewBag.DistrictId"
+                       asp-route-centerId="@ViewBag.CenterId">@i</a>
+                </li>
+            }
+        </ul>
+    </nav>
+}

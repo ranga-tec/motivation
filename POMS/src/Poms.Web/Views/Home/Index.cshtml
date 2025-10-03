@@ -1,0 +1,75 @@
+﻿@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="row">
+    <div class="col-md-12">
+        <h1 class="mb-4">POMS Dashboard</h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Total Patients</h5>
+                <h2 class="card-text">@ViewBag.TotalPatients</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Active Episodes</h5>
+                <h2 class="card-text">@ViewBag.ActiveEpisodes</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Deliveries (This Month)</h5>
+                <h2 class="card-text">@ViewBag.DeliveriesThisMonth</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Pending Follow-ups</h5>
+                <h2 class="card-text">@ViewBag.PendingFollowUps</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <a asp-controller="Patients" asp-action="Create" class="btn btn-primary mb-2 d-block">
+                    <i class="fas fa-user-plus"></i> Register New Patient
+                </a>
+                <a asp-controller="Episodes" asp-action="Create" class="btn btn-success mb-2 d-block">
+                    <i class="fas fa-plus-circle"></i> Create Episode
+                </a>
+                <a asp-controller="Conditions" asp-action="Index" class="btn btn-info mb-2 d-block">
+                    <i class="fas fa-list"></i> Manage Conditions
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Recent Activity</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">No recent activity</p>
+            </div>
+        </div>
+    </div>
+</div>
