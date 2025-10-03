@@ -21,14 +21,24 @@ builder.Host.UseSerilog();
 
 // Add services to the container.
 // Check for Railway DATABASE_URL environment variable first
-var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
-    ?? builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+string connectionString;
+bool usePostgreSQL;
 
-// Determine which database provider to use
-// If DATABASE_URL exists (Railway), use PostgreSQL
-var usePostgreSQL = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL"))
-    || builder.Configuration.GetValue<bool>("UsePostgreSQL", false);
+if (!string.IsNullOrEmpty(databaseUrl))
+{
+    // Parse PostgreSQL URL format: postgresql://user:password@host:port/database
+    var uri = new Uri(databaseUrl);
+    var userInfo = uri.UserInfo.Split(':');
+    connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
+    usePostgreSQL = true;
+}
+else
+{
+    connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+    usePostgreSQL = builder.Configuration.GetValue<bool>("UsePostgreSQL", false);
+}
 
 builder.Services.AddDbContext<PomsDbContext>(options =>
 {
