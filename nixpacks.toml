@@ -1,0 +1,14 @@
+[phases.setup]
+nixPkgs = ['dotnet-sdk_9']
+
+[phases.build]
+cmds = [
+  'dotnet restore POMS/POMS.sln',
+  'dotnet build POMS/POMS.sln -c Release --no-restore'
+]
+
+[phases.deploy]
+cmds = ['cd POMS/src/Poms.Web && dotnet Poms.Web.dll']
+
+[start]
+cmd = 'cd POMS/src/Poms.Web && dotnet Poms.Web.dll'

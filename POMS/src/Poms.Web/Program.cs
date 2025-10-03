@@ -16,11 +16,23 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 // Add services to the container.
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
+// Determine which database provider to use
+var usePostgreSQL = builder.Configuration.GetValue<bool>("UsePostgreSQL", false);
+
 builder.Services.AddDbContext<PomsDbContext>(options =>
-    options.UseSqlServer(connectionString));
+{
+    if (usePostgreSQL)
+    {
+        options.UseNpgsql(connectionString);
+    }
+    else
+    {
+        options.UseSqlServer(connectionString);
+    }
+});
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
