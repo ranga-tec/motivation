@@ -16,11 +16,15 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 // Add services to the container.
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+// Check for Railway DATABASE_URL environment variable first
+var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
+    ?? builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
 // Determine which database provider to use
-var usePostgreSQL = builder.Configuration.GetValue<bool>("UsePostgreSQL", false);
+// If DATABASE_URL exists (Railway), use PostgreSQL
+var usePostgreSQL = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL"))
+    || builder.Configuration.GetValue<bool>("UsePostgreSQL", false);
 
 builder.Services.AddDbContext<PomsDbContext>(options =>
 {
