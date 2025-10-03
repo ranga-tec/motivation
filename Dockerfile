@@ -26,9 +26,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app/publish .
 
-# Set environment variables
-ENV ASPNETCORE_URLS=http://+:$PORT
-
-EXPOSE $PORT
+# Railway provides PORT environment variable at runtime
+ENV ASPNETCORE_ENVIRONMENT=Production
 
 ENTRYPOINT ["dotnet", "Poms.Web.dll"]
