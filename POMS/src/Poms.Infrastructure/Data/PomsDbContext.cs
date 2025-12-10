@@ -12,6 +12,7 @@ public class PomsDbContext : IdentityDbContext
     public DbSet<PatientDocument> PatientDocuments => Set<PatientDocument>();
     public DbSet<PatientCondition> PatientConditions => Set<PatientCondition>();
     public DbSet<Episode> Episodes => Set<Episode>();
+    public DbSet<EpisodeDocument> EpisodeDocuments => Set<EpisodeDocument>();
     public DbSet<ProstheticEpisode> ProstheticEpisodes => Set<ProstheticEpisode>();
     public DbSet<OrthoticEpisode> OrthoticEpisodes => Set<OrthoticEpisode>();
     public DbSet<SpinalEpisode> SpinalEpisodes => Set<SpinalEpisode>();

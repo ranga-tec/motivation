@@ -121,6 +121,12 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
+                                    <label asp-for="MainProblem" class="form-label">Main Problem</label>
+                                    <input asp-for="MainProblem" class="form-control" placeholder="e.g., Foot drop, Knee instability" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
                                     <label asp-for="BodyRegion" class="form-label">Body Region</label>
                                     <select asp-for="BodyRegion" class="form-select">
                                         <option value="">-- Select --</option>
@@ -131,7 +137,9 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
                                 <div class="mb-3">
                                     <label asp-for="OrthoticSide" class="form-label">Side</label>
                                     <select asp-for="OrthoticSide" class="form-select">
@@ -141,6 +149,113 @@
                                             <option value="@side">@side</option>
                                         }
                                     </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label asp-for="OrthosisTypeId" class="form-label">Orthosis Type</label>
+                                    <select asp-for="OrthosisTypeId" class="form-select" asp-items="ViewBag.OrthosisTypes">
+                                        <option value="">-- Select --</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label asp-for="ReasonForProblem" class="form-label">Reason for Problem</label>
+                                    <input asp-for="ReasonForProblem" class="form-control" placeholder="e.g., Stroke, Injury" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Spinal Orthosis Episode Details -->
+                    <div id="spinalDetails" class="episode-details" style="display: none;">
+                        <h6 class="border-bottom pb-2 mb-3">Spinal Orthosis Details</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="PathologicalCondition" class="form-label">Pathological Condition</label>
+                                    <input asp-for="PathologicalCondition" class="form-control" placeholder="e.g., Scoliosis, Kyphosis" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="OrthoticDesign" class="form-label">Orthotic Design</label>
+                                    <input asp-for="OrthoticDesign" class="form-control" placeholder="e.g., TLSO, LSO" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Assessment Section -->
+                    <div class="card mb-3 mt-4">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="fas fa-stethoscope"></i> Assessment Information (Optional)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="mb-3">
+                                        <label asp-for="AssessmentDate" class="form-label">Date of Assessment</label>
+                                        <input asp-for="AssessmentDate" class="form-control" type="date" />
+                                        <div asp-validation-for="AssessmentDate" class="text-danger"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="mb-3">
+                                        <label asp-for="AssessmentFindings" class="form-label">Assessment Findings</label>
+                                        <textarea asp-for="AssessmentFindings" class="form-control" rows="4"
+                                                  placeholder="Document clinical findings, measurements, observations..."></textarea>
+                                        <div asp-validation-for="AssessmentFindings" class="text-danger"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fitting Section -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0"><i class="fas fa-tools"></i> Fitting Information (Optional)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="mb-3">
+                                        <label asp-for="FittingDate" class="form-label">Fitting Date</label>
+                                        <input asp-for="FittingDate" class="form-control" type="date" />
+                                        <div asp-validation-for="FittingDate" class="text-danger"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="mb-3">
+                                        <label asp-for="FittingNotes" class="form-label">Fitting Notes</label>
+                                        <textarea asp-for="FittingNotes" class="form-control" rows="3"
+                                                  placeholder="Document fitting process, adjustments made, patient feedback..."></textarea>
+                                        <div asp-validation-for="FittingNotes" class="text-danger"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Delivery Section -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="mb-0"><i class="fas fa-box"></i> Delivery Information (Optional)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="mb-3">
+                                        <label asp-for="DeliveryDate" class="form-label">Delivery Date</label>
+                                        <input asp-for="DeliveryDate" class="form-control" type="date" />
+                                        <div asp-validation-for="DeliveryDate" class="text-danger"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -179,6 +294,8 @@
                     $('#prostheticDetails').show();
                 } else if (selectedType === 'Orthotic') {
                     $('#orthoticDetails').show();
+                } else if (selectedType === 'SpinalOrthosis') {
+                    $('#spinalDetails').show();
                 }
             });
 

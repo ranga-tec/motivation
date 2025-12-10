@@ -41,11 +41,43 @@ public class EpisodeViewModel
     public Reason? Reason { get; set; }
 
     // Orthotic Episode Details
+    [Display(Name = "Main Problem")]
+    public string? MainProblem { get; set; }
+
     [Display(Name = "Body Region")]
     public BodyRegion? BodyRegion { get; set; }
 
     [Display(Name = "Side")]
     public Side? OrthoticSide { get; set; }
 
-    // Spinal Episode Details (currently no specific fields beyond base Episode)
+    [Display(Name = "Orthosis Type")]
+    public int? OrthosisTypeId { get; set; }
+
+    [Display(Name = "Reason for Problem")]
+    public string? ReasonForProblem { get; set; }
+
+    // Spinal Episode Details
+    [Display(Name = "Pathological Condition")]
+    public string? PathologicalCondition { get; set; }
+
+    [Display(Name = "Orthotic Design")]
+    public string? OrthoticDesign { get; set; }
+
+    // Assessment Details (for initial assessment during episode creation)
+    [Display(Name = "Date of Assessment")]
+    public DateOnly? AssessmentDate { get; set; }
+
+    [Display(Name = "Assessment Findings")]
+    public string? AssessmentFindings { get; set; }
+
+    // Fitting Details
+    [Display(Name = "Fitting Date")]
+    public DateOnly? FittingDate { get; set; }
+
+    [Display(Name = "Fitting Notes")]
+    public string? FittingNotes { get; set; }
+
+    // Delivery Details
+    [Display(Name = "Delivery Date")]
+    public DateOnly? DeliveryDate { get; set; }
 }

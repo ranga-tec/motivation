@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POMS Implementation Proposal - Exceed Clinics</title>
+    <style>
+        /* A4 Page Setup */
+        @page {
+            size: A4;
+            margin: 20mm;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #fff;
+        }
+
+        /* A4 dimensions: 210mm x 297mm */
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 20mm;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            page-break-after: always;
+            position: relative;
+        }
+
+        .page:last-child {
+            page-break-after: auto;
+        }
+
+        /* Print optimization */
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            .page {
+                margin: 0;
+                box-shadow: none;
+                page-break-after: always;
+            }
+            .no-print {
+                display: none;
+            }
+        }
+
+        /* Header Styles */
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #2c5282;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            color: #2c5282;
+            font-size: 28pt;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .header .subtitle {
+            font-size: 14pt;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .company-info {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 10pt;
+            color: #666;
+        }
+
+        /* Section Styles */
+        .section {
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 16pt;
+            color: #2c5282;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 5px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .subsection-title {
+            font-size: 13pt;
+            color: #2d3748;
+            margin-top: 12px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        p {
+            text-align: justify;
+            margin-bottom: 10px;
+            font-size: 11pt;
+        }
+
+        /* List Styles */
+        ul, ol {
+            margin-left: 20px;
+            margin-bottom: 12px;
+        }
+
+        li {
+            margin-bottom: 6px;
+            font-size: 11pt;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+            font-size: 10pt;
+        }
+
+        table th {
+            background-color: #2c5282;
+            color: white;
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        table td {
+            padding: 8px 10px;
+            border: 1px solid #e2e8f0;
+        }
+
+        table tr:nth-child(even) {
+            background-color: #f7fafc;
+        }
+
+        /* Highlight Boxes */
+        .highlight-box {
+            background-color: #edf2f7;
+            border-left: 4px solid #2c5282;
+            padding: 12px;
+            margin-bottom: 15px;
+            font-size: 10.5pt;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .feature-item {
+            background: #f7fafc;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 10pt;
+        }
+
+        .feature-item strong {
+            color: #2c5282;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        /* Footer */
+        .footer {
+            position: absolute;
+            bottom: 15mm;
+            left: 20mm;
+            right: 20mm;
+            text-align: center;
+            font-size: 9pt;
+            color: #666;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 8px;
+        }
+
+        .signature-section {
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .signature-box {
+            width: 45%;
+            border-top: 2px solid #333;
+            padding-top: 8px;
+        }
+
+        .pricing-table {
+            background: #f7fafc;
+            border: 2px solid #2c5282;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .pricing-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 11pt;
+        }
+
+        .pricing-row.total {
+            border-top: 2px solid #2c5282;
+            margin-top: 10px;
+            padding-top: 10px;
+            font-weight: bold;
+            font-size: 13pt;
+            color: #2c5282;
+        }
+
+        .checkmark {
+            color: #2c5282;
+            font-weight: bold;
+        }
+
+        /* Cover Page Specific */
+        .cover-page {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            min-height: 257mm; /* 297mm - 40mm padding */
+        }
+
+        .cover-title {
+            font-size: 36pt;
+            color: #2c5282;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .cover-subtitle {
+            font-size: 20pt;
+            color: #555;
+            margin-bottom: 40px;
+        }
+
+        .client-box {
+            border: 2px solid #2c5282;
+            padding: 30px;
+            margin: 40px 0;
+            background: #f7fafc;
+        }
+
+        .client-box h2 {
+            font-size: 18pt;
+            color: #2c5282;
+            margin-bottom: 15px;
+        }
+
+        .proposal-date {
+            font-size: 12pt;
+            margin-top: 40px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- COVER PAGE -->
+    <div class="page">
+        <div class="cover-page">
+            <div style="margin-bottom: 60px;">
+                <h1 style="font-size: 18pt; color: #2c5282; margin-bottom: 10px;">NeurAlsEdge</h1>
+                <p style="font-size: 11pt; color: #666;">AI-First Software & IoT Solutions</p>
+                <p style="font-size: 10pt; color: #666;">www.neuralsedge.com</p>
+            </div>
+
+            <div class="cover-title">PROJECT PROPOSAL</div>
+            <div class="cover-subtitle">Prosthetic & Orthotic Management System<br>(POMS)</div>
+
+            <div class="client-box">
+                <h2>Prepared For</h2>
+                <p style="font-size: 14pt; font-weight: 600; margin-bottom: 10px;">Exceed Prosthetics & Orthotics</p>
+                <p style="font-size: 11pt; line-height: 1.8;">
+                    Sri Lanka (Ragama) | Philippines (Quezon City) | Cambodia (Phnom Penh)<br>
+                    www.exceedclinics.com
+                </p>
+            </div>
+
+            <div class="proposal-date">
+                <p><strong>Prepared By:</strong> Ranga Nanayakkara</p>
+                <p><strong>Date:</strong> December 2025</p>
+                <p><strong>Valid Until:</strong> February 2025</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAGE 2: EXECUTIVE SUMMARY -->
+    <div class="page">
+        <div class="header">
+            <h1>Executive Summary</h1>
+        </div>
+
+        <div class="section">
+            <p>NeurAlsEdge is pleased to present this comprehensive proposal for the implementation of a <strong>Prosthetic & Orthotic Management System (POMS)</strong> tailored specifically for Exceed Prosthetics & Orthotics. This enterprise-grade solution will revolutionize your multi-location clinic operations across Sri Lanka, Philippines, and Cambodia.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Understanding Your Challenges</div>
+            <p>Exceed P&O operates as a social enterprise providing life-changing prosthetic and orthotic services across three countries. Managing patient records, clinical workflows, episode tracking, and multi-location operations requires a robust, secure, and integrated system. Current manual or fragmented systems can lead to:</p>
+            <ul>
+                <li>Inefficient patient data management across multiple locations</li>
+                <li>Difficulty tracking treatment episodes from assessment to delivery</li>
+                <li>Limited reporting capabilities for clinical and administrative insights</li>
+                <li>Challenges in document management and secure file storage</li>
+                <li>Inconsistent patient numbering and location-based tracking</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Our Solution: POMS</div>
+            <p>POMS is a production-ready, enterprise-grade Patient & Episode Management System built with ASP.NET Core 8.0 and designed specifically for prosthetic and orthotic clinics. The system provides comprehensive patient tracking, clinical workflow management, and true multi-location support with location-specific patient numbering.</p>
+
+            <div class="highlight-box">
+                <strong>Key Differentiator:</strong> Unlike generic medical software, POMS is purpose-built for P&O clinics with specialized modules for prosthetic episodes (amputation types, levels, sides), orthotic episodes (body regions, orthosis types, main problems), and spinal orthosis treatments (pathological conditions, orthotic designs).
+            </div>
+        </div>
+
+        <div class="footer">
+           
+        </div>
+    </div>
+
+    <!-- PAGE 3: STRATEGIC BENEFITS -->
+    <div class="page">
+        <div class="header">
+            <h1>Strategic Benefits</h1>
+        </div>
+
+        <div class="section">
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <strong>Multi-Location Excellence</strong>
+                    Centralized system with location-specific patient numbering (SL-RGM-2025-0001, PH-QC-2025-0001, KH-PP-2025-0001)
+                </div>
+                <div class="feature-item">
+                    <strong>Clinical Workflow Integration</strong>
+                    Seamless assessment → fitting → delivery → follow-up process tracking
+                </div>
+                <div class="feature-item">
+                    <strong>Comprehensive Reporting</strong>
+                    20+ pre-built reports with PDF/Excel export for clinical insights and compliance
+                </div>
+                <div class="feature-item">
+                    <strong>Mobile-Ready Interface</strong>
+                    Fully responsive design for tablets and smartphones, enabling clinic staff to work anywhere
+                </div>
+                <div class="feature-item">
+                    <strong>Security-First Design</strong>
+                    Industry-standard authentication, role-based access control, audit trails, and data encryption
+                </div>
+                <div class="feature-item">
+                    <strong>Document Management</strong>
+                    Separate document storage for patients and episodes with secure upload/download
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            
+        </div>
+    </div>
+
+    <!-- PAGE 4: PATIENT MANAGEMENT -->
+    <div class="page">
+        <div class="header">
+            <h1>System Features & Capabilities</h1>
+        </div>
+
+        <div class="section">
+            <div class="section-title">1. Patient Management Module</div>
+
+            <div class="subsection-title">Patient Registration & Tracking</div>
+            <p>Comprehensive patient lifecycle management from registration to treatment completion with mandatory guardian information for patient safety and family engagement.</p>
+
+            <ul>
+                <li><strong>Complete Patient Profiles:</strong> Personal information, contact details, medical history, and conditions</li>
+                <li><strong>Mandatory Guardian Information:</strong> Guardian name, relationship, address, and contact numbers (required for all patients)</li>
+                <li><strong>Multi-Location Patient Numbering:</strong> Automatic generation with format {CenterCode}-{Year}-{Sequence}
+                    <ul>
+                        <li>Sri Lanka - Ragama: SL-RGM-2025-0001, SL-RGM-2025-0002...</li>
+                        <li>Philippines - Quezon City: PH-QC-2025-0001, PH-QC-2025-0002...</li>
+                        <li>Cambodia - Phnom Penh: KH-PP-2025-0001, KH-PP-2025-0002...</li>
+                    </ul>
+                </li>
+                <li><strong>Advanced Search & Filtering:</strong> By patient number, name, national ID, center, district, registration date range</li>
+                <li><strong>Patient Document Management:</strong> Upload and securely store ID cards, medical reports, insurance documents (PDF, JPG, PNG, DOCX)</li>
+                <li><strong>Complete Audit Trail:</strong> Track who created, updated, or modified patient records with timestamps</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            
+        </div>
+    </div>
+
+    <!-- PAGE 5: EPISODE MANAGEMENT -->
+    <div class="page">
+        <div class="header">
+            <h1>Episode Management Module</h1>
+        </div>
+
+        <div class="section">
+            <div class="section-title">2. Episode Management Module</div>
+
+            <div class="subsection-title">Specialized Episode Types</div>
+
+            <p><strong>Prosthetic Episodes:</strong> For artificial limb treatments</p>
+            <ul>
+                <li>Amputation types: Below/Above Knee, Below/Above Elbow, Partial Hand/Foot</li>
+                <li>Amputation level and side tracking (Left/Right/Bilateral)</li>
+                <li>Reason for amputation: Disease, Trauma, Vascular, Diabetic, Cancer, Congenital</li>
+                <li>Date of amputation tracking</li>
+            </ul>
+
+            <p><strong>Orthotic Episodes:</strong> For braces and support devices</p>
+            <ul>
+                <li>Main problem description (free text for detailed documentation)</li>
+                <li>Body region: Upper Limb, Lower Limb, Spine, Other</li>
+                <li>Orthosis type from catalog: AFO, KAFO, TLSO, LSO, WHO, and custom types</li>
+                <li>Reason for problem documentation</li>
+                <li>Side tracking (Left/Right/Bilateral/N/A)</li>
+            </ul>
+
+            <p><strong>Spinal Orthosis Episodes:</strong> For back and spine support</p>
+            <ul>
+                <li>Pathological condition documentation (e.g., scoliosis with curve degree)</li>
+                <li>Orthotic design specification (e.g., TLSO custom-molded rigid brace)</li>
+                <li>No side field (spine is central)</li>
+            </ul>
+
+            <div class="subsection-title">Episode Workflow Features</div>
+            <ul>
+                <li><strong>Integrated Workflow:</strong> Assessment, Fitting, and Delivery can be filled during episode creation</li>
+                <li><strong>Episode Status Management:</strong> Open/Closed status with automatic duration tracking</li>
+                <li><strong>Episode Documents:</strong> Separate document management per episode (assessments, X-rays, fitting photos)</li>
+                <li><strong>Episode History:</strong> Complete timeline view of all clinical activities</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            
+        </div>
+    </div>
+
+    <!-- PAGE 6: CLINICAL WORKFLOW -->
+    <div class="page">
+        <div class="header">
+            <h1>Clinical Workflow Modules</h1>
+        </div>
+
+        <div class="section">
+            <div class="section-title">3. Clinical Workflow Modules</div>
+
+            <div class="subsection-title">Assessment Module</div>
+            <ul>
+                <li>Document initial patient evaluation with date and findings</li>
+                <li>Rich text support for detailed clinical notes</li>
+                <li>Physical examination results, measurements, ROM documentation</li>
+         
+                <li>Multiple assessments per episode for progress tracking</li>
+            </ul>
+
+            <div class="subsection-title">Fitting Module</div>
+            <ul>
+                <li>Track device fitting sessions with dates and detailed notes</li>
+                <li>Document socket fit, alignment corrections, suspension adjustments</li>
+                <li>Record patient comfort levels and gait observations</li>
+                <li>Track issues encountered and resolutions</li>
+                <li>Multiple fittings supported (initial, adjustments, final)</li>
+            </ul>
+
+            <div class="subsection-title">Delivery Module</div>
+            <ul>
+                <li>Record final device handover with delivery date</li>
+                <li>Link to device catalog and serial number tracking</li>
+                
+               
+                <li>Delivery checklist and patient education documentation</li>
+            </ul>
+
+            <div class="subsection-title">Follow-up Module</div>
+            <ul>
+                <li>Schedule and track post-delivery appointments</li>
+             
+                <li>Plan and schedule next appointments</li>
+                <li>Dashboard alerts for pending follow-ups (next 7 days)</li>
+                <li>Track follow-up compliance rates</li>
+            </ul>
+
+            <div class="subsection-title">Repair Module</div>
+            <ul>
+                <li>Log device repairs and maintenance activities</li>
+                <li>Categories: Foot Repair, Socket Repair, Liner Repair, Brace Repair, Joint Repair</li>
+                <li>Detailed repair documentation for warranty management</li>
+                <li>Repair history tracking for quality assurance</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+           
+        </div>
+    </div>
+
+    <!-- PAGE 7: DOCUMENT MANAGEMENT -->
+    <div class="page">
+        <div class="header">
+            <h1>Document Management System</h1>
+        </div>
+
+        <div class="section">
+            <div class="section-title">4. Document Management System</div>
+
+            <p><strong>Dual Document Storage:</strong></p>
+            <ul>
+                <li><strong>Patient Documents:</strong> General files (ID cards, medical reports, insurance) stored at patient level</li>
+                <li><strong>Episode Documents:</strong> Treatment-specific files (assessments, X-rays, fitting photos) stored per episode</li>
+            </ul>
+
+            <p><strong>Security Features:</strong></p>
+            <ul>
+                <li>File type validation (PDF, JPG, JPEG, PNG, DOCX only)</li>
+                <li>File size limits (10MB per file, configurable)</li>
+                <li>Secure upload/download with authentication</li>
+                <li>Organized storage: {RootPath}/patients/{PatientNumber}/{Year}/{Month}/</li>
+                <li>Metadata tracking: Title, upload date, uploaded by, file size, remarks</li>
+                <li>Soft delete with audit trail (data never permanently deleted)</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+           
+        </div>
+    </div>
+
+    <!-- PAGE 8: REPORTING & MULTI-LOCATION -->
+    <div class="page">
+        <div class="header">
+            <h1>Reporting & Multi-Location Management</h1>
+        </div>
+
+        <div class="section">
+            <div class="section-title">5. Comprehensive Reporting & Analytics</div>
+
+            <div class="subsection-title">Dashboard (Real-Time Metrics)</div>
+            <ul>
+                <li><strong>Total Patients:</strong> All-time patient count across all locations</li>
+                <li><strong>Active Episodes:</strong> Currently open treatment episodes</li>
+                <li><strong>Deliveries This Month:</strong> Devices delivered in current month</li>
+                <li><strong>Pending Follow-ups:</strong> Appointments scheduled in next 7 days</li>
+                <li>Interactive charts: Episode types distribution, monthly delivery trends, patients by location</li>
+            </ul>
+
+            <div class="subsection-title">Patient Reports</div>
+            <ul>
+                <li><strong>Patient Registration Report:</strong> Filter by date range, center, district with PDF/Excel export</li>
+                <li><strong>Patient Demographics Report:</strong> Age distribution, gender breakdown, location analysis</li>
+                <li><strong>Guardian Contact List:</strong> Emergency contact reference for all patients</li>
+            </ul>
+
+            <div class="subsection-title">Episode Reports</div>
+            <ul>
+                <li><strong>Episode Summary Report:</strong> By type, status, center with duration analysis</li>
+                <li><strong>Episode Duration Report:</strong> Identify bottlenecks, average treatment times</li>
+                <li><strong>Device Usage Report:</strong> Most common devices, component usage frequency</li>
+            </ul>
+
+            <div class="subsection-title">Clinical Reports</div>
+            <ul>
+                <li><strong>Assessment Report:</strong> All assessments by date, clinician, center</li>
+                <li><strong>Fitting Report:</strong> Total fittings, average per episode, success rates</li>
+                <li><strong>Delivery Report:</strong> Deliveries by month, center, device type with charts</li>
+                <li><strong>Follow-up Compliance Report:</strong> Track patient adherence to follow-up schedules</li>
+            </ul>
+
+            <div class="subsection-title">Audit & Security Reports</div>
+            <ul>
+                <li><strong>User Activity Log:</strong> All user actions with timestamps and changes</li>
+                <li><strong>Data Modification History:</strong> Track all changes to critical data</li>
+                <li><strong>Deleted Records Report:</strong> View and recover soft-deleted records</li>
+                <li><strong>Login/Logout History:</strong> Security auditing with failed login tracking</li>
+            </ul>
+
+          
+        </div>
+<br><br><br><br>
+        <div class="section">
+            <div class="section-title">6. Multi-Location Management</div>
+
+            <div class="subsection-title">Location Hierarchy</div>
+            <p>Organized structure: Province → District → Center</p>
+            <p><strong>Pre-configured for Exceed P&O:</strong></p>
+            <ul>
+                <li><strong>Sri Lanka → Western Province → Gampaha District → Ragama Center (SL-RGM)</strong></li>
+                <li><strong>Philippines → Metro Manila → Quezon City → Aurora Boulevard Clinic (PH-QC)</strong></li>
+                <li><strong>Cambodia → Phnom Penh → Mean Chey → Stung Mean Chey Clinic (KH-PP)</strong></li>
+            </ul>
+
+            <div class="subsection-title">Location Features</div>
+            <ul>
+                <li><strong>Location-Based Patient Numbering:</strong> Separate sequential numbering per center per year</li>
+                <li><strong>Location-Based Filtering:</strong> All reports support filtering by province, district, or center</li>
+                <li><strong>Centralized Data Management:</strong> Single database for all locations with location-based access control</li>
+                <li><strong>Scalability:</strong> Easy to add new centers, districts, or provinces as Exceed P&O expands</li>
+                <li><strong>Location-Specific Codes:</strong> Each center has unique code for patient numbering and tracking</li>
+            </ul>
+
+            <div class="highlight-box">
+                <strong>Future Enhancement Ready:</strong> System architecture supports future implementation of location-specific admin roles and regional performance dashboards if needed.
+            </div>
+        </div>
+
+        <div class="footer">
+           
+        </div>
+    </div>
+
+    <!-- PAGE 9: SECURITY & TECHNICAL ARCHITECTURE -->
+    <div class="page">
+        <div class="header">
+            <h1>Security & Technical Architecture</h1>
+        </div>
+
+        <div class="section">
+            <div class="section-title">7. Security & Compliance Features</div>
+
+            <div class="subsection-title">Authentication & Authorization</div>
+            <ul>
+                <li><strong>ASP.NET Core Identity:</strong> Industry-standard user management with secure password hashing (PBKDF2)</li>
+                <li><strong>Account Lockout:</strong> Automatic lockout after 5 failed login attempts</li>
+                <li><strong>Password Policy:</strong> Requires uppercase, lowercase, digit, special character, minimum 8 characters</li>
+                <li><strong>Role-Based Access Control:</strong> Three user roles with detailed permission matrix</li>
+                <li><strong>Session Management:</strong> Secure cookies with HttpOnly and Secure flags, 30-minute sliding expiration</li>
+            </ul>
+
+            <div class="subsection-title">User Roles & Permissions</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Role</th>
+                        <th>Access Level</th>
+                        <th>Key Permissions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>ADMIN</strong></td>
+                        <td>Full System Access</td>
+                        <td>User management, system configuration, all reports, audit logs, device catalog, location management</td>
+                    </tr>
+                    <tr>
+                        <td><strong>CLINICIAN</strong></td>
+                        <td>Clinical Operations</td>
+                        <td>Patient registration, episode management, clinical documentation (assessment, fitting, delivery), clinical reports, document management</td>
+                    </tr>
+                    <tr>
+                        <td><strong>DATA_ENTRY</strong></td>
+                        <td>Basic Data Entry</td>
+                        <td>Patient registration, episode creation, document upload, view dashboard (limited access)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="subsection-title">Audit Trail & Data Protection</div>
+            <ul>
+                <li><strong>Automatic Audit Logging:</strong> All entities track CreatedBy, CreatedAt, UpdatedBy, UpdatedAt, DeletedBy, DeletedAt</li>
+                <li><strong>Change History:</strong> Complete tracking of all system changes with before/after values</li>
+                <li><strong>Soft Delete:</strong> Data never permanently deleted, ensuring compliance and recovery capability</li>
+                <li><strong>Query Filters:</strong> Deleted records automatically excluded from normal queries</li>
+            </ul>
+
+            <div class="subsection-title">Data Encryption & Security</div>
+            <ul>
+                <li><strong>HTTPS Enforced:</strong> All connections use SSL/TLS 1.2+ encryption</li>
+                <li><strong>Database Encryption:</strong> Support for Transparent Data Encryption (TDE) on SQL Server</li>
+                <li><strong>File System Encryption:</strong> Recommended BitLocker (Windows) or LUKS (Linux) for file storage</li>
+                <li><strong>SQL Injection Prevention:</strong> Entity Framework parameterized queries throughout</li>
+                <li><strong>XSS Protection:</strong> Automatic HTML encoding in all views</li>
+                
+            </ul>
+<br>
+            <div class="subsection-title">File Upload Security</div>
+            <ul>
+                <li>File size validation (configurable maximum)</li>
+                <li>File extension whitelist (PDF, JPG, JPEG, PNG, DOCX only)</li>
+                <li>Content type validation</li>
+                <li>Filename sanitization to prevent directory traversal</li>
+                <li>Isolated storage directories per patient/episode</li>
+                <li>Access control on all file downloads</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <div class="section-title">8. Technical Architecture</div>
+
+            <div class="subsection-title">Technology Stack</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Layer</th>
+                        <th>Technology</th>
+                        <th>Purpose</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Backend</td>
+                        <td>ASP.NET Core 8.0</td>
+                        <td>Web framework, API, business logic</td>
+                    </tr>
+                    <tr>
+                        <td>Database</td>
+                        <td>SQL Server / PostgreSQL</td>
+                        <td>Data persistence (dual support)</td>
+                    </tr>
+                    <tr>
+                        <td>Frontend</td>
+                        <td>Razor Pages + Bootstrap 5</td>
+                        <td>Responsive UI, mobile support</td>
+                    </tr>
+                    <tr>
+                        <td>Authentication</td>
+                        <td>ASP.NET Identity</td>
+                        <td>User management, RBAC</td>
+                    </tr>
+                    <tr>
+                        <td>Logging</td>
+                        <td>Serilog</td>
+                        <td>Structured logging, daily rotation</td>
+                    </tr>
+                    <tr>
+                        <td>ORM</td>
+                        <td>Entity Framework Core 8.0</td>
+                        <td>Database access, migrations</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="subsection-title">Architecture Pattern</div>
+            <p>Clean Architecture with separated concerns:</p>
+            <ul>
+                <li><strong>Domain Layer:</strong> Entities, enums, interfaces (business logic core)</li>
+                <li><strong>Infrastructure Layer:</strong> Data access, file storage, external services</li>
+                <li><strong>Application Layer:</strong> Business logic orchestration</li>
+                <li><strong>Presentation Layer:</strong> MVC controllers, views, view models</li>
+            </ul>
+
+            <p><strong>Design Principles:</strong> Domain-Driven Design (DDD), Repository pattern, Dependency Injection, SOLID principles</p>
+        </div>
+
+        <div class="footer">
+           
+        </div>
+    </div>
+
+    <!-- PAGE 10: MOBILE & RESPONSIVE DESIGN -->
+    <div class="page">
+        <div class="header">
+            <h1>Mobile Support & Deployment Options</h1>
+        </div>
+
+        <div class="section">
+            <div class="section-title">9. Mobile-Ready Responsive Interface</div>
+
+            <div class="subsection-title">Full Responsive Design</div>
+            <p>POMS features a fully responsive user interface built with Bootstrap 5, ensuring optimal user experience across all devices:</p>
+
+            <ul>
+                <li><strong>Desktop Experience:</strong> Full-featured interface with multi-column layouts, detailed forms, and comprehensive dashboards</li>
+                <li><strong>Tablet Optimization:</strong> Touch-friendly controls, optimized form layouts, swipe gestures for navigation</li>
+                <li><strong>Smartphone Support:</strong> Mobile-first design with collapsible menus, simplified forms, and touch-optimized buttons</li>
+                <li><strong>Adaptive Layouts:</strong> Automatically adjusts to screen size (1920px desktop to 320px mobile)</li>
+            </ul>
+
+            <div class="subsection-title">Mobile Use Cases</div>
+            <ul>
+                <li><strong>Field Work:</strong> Clinicians can document assessments and fittings directly from clinic floor using tablets</li>
+                <li><strong>Remote Access:</strong> Staff can access patient information and episode details from smartphones when away from desk</li>
+                <li><strong>Document Capture:</strong> Upload photos and documents directly from mobile device cameras</li>
+                <li><strong>Follow-up Management:</strong> Check pending appointments and update follow-up notes on mobile</li>
+                <li><strong>Quick Patient Search:</strong> Look up patient information instantly from any device</li>
+            </ul>
+
+            <div class="subsection-title">Mobile Features</div>
+            <ul>
+                <li>Touch-optimized date pickers and dropdown menus</li>
+                <li>Responsive data tables with horizontal scrolling on small screens</li>
+                <li>Mobile-friendly navigation with hamburger menu</li>
+                <li>Large, touch-friendly buttons and form controls</li>
+                <li>Optimized images and fast page load times</li>
+                <li>Offline capability ready (future enhancement)</li>
+            </ul>
+
+            
+        </div>
+<br><br><br><br><br>
+        <div class="section">
+            <div class="section-title">10. Deployment & Hosting Options</div>
+
+            <div class="subsection-title">Flexible Deployment Models</div>
+            <p>POMS supports multiple deployment options to fit your infrastructure:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Deployment Type</th>
+                        <th>Description</th>
+                        <th>Best For</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>On-Premises Server</strong></td>
+                        <td>Installed on your Windows/Linux server</td>
+                        <td>Maximum data control, existing IT infrastructure</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Cloud Hosting</strong></td>
+                        <td>Deployed to Azure, AWS, or other cloud</td>
+                        <td>Scalability, automatic backups, global access</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Docker Container</strong></td>
+                        <td>Containerized deployment with Docker</td>
+                        <td>Easy deployment, consistency, portability</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Hybrid</strong></td>
+                        <td>Database on-premises, app in cloud</td>
+                        <td>Compliance requirements, flexible architecture</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="subsection-title">Database Options</div>
+            <p>POMS supports dual database platforms:</p>
+            <ul>
+                <li><strong>SQL Server:</strong> Enterprise-grade, excellent for Windows environments, advanced features (TDE, Always On)</li>
+                <li><strong>PostgreSQL:</strong> Open-source, cost-effective, excellent for Linux/cloud deployments</li>
+                <li>Simple configuration switch - no code changes required</li>
+            </ul>
+
+            <div class="subsection-title">System Requirements</div>
+            <p><strong>Minimum Server Specifications:</strong></p>
+            <ul>
+                <li><strong>OS:</strong> Windows Server 2019+ or Ubuntu 20.04 LTS+</li>
+                <li><strong>CPU:</strong> 4 cores (Intel/AMD x64)</li>
+                <li><strong>RAM:</strong> 8 GB minimum (16 GB recommended)</li>
+                <li><strong>Storage:</strong> 100 GB minimum (SSD recommended)</li>
+                <li><strong>Network:</strong> 100 Mbps minimum bandwidth</li>
+                <li><strong>Software:</strong> .NET 8.0 Runtime, SQL Server 2019+ or PostgreSQL 13+</li>
+            </ul>
+
+            
+        </div>
+
+        <div class="footer">
+           
+        </div>
+    </div>
+
+    <!-- PAGE 11: IMPLEMENTATION & TRAINING -->
+    
+
+    <!-- PAGE 12: SUPPORT & AMC -->
+    <div class="page">
+        <div class="header">
+            <h1>Annual Maintenance & Support</h1>
+        </div>
+
+        <div class="section">
+            <div class="section-title">11. Annual Maintenance Contract (AMC)</div>
+
+            <p>To ensure continued optimal performance, security, and support of your POMS system, we offer a comprehensive Annual Maintenance Contract at <strong>15% of the total project cost per year</strong>.</p>
+
+            <div class="subsection-title">AMC Coverage & Benefits</div>
+
+            <p><strong>1. Technical Support</strong></p>
+            <ul>
+                <li><strong>Email Support:</strong> Priority response to support requests via email</li>
+                <li><strong>Phone Support:</strong> Direct phone line for urgent issues (business hours)</li>
+                <li><strong>Remote Assistance:</strong> Screen sharing and remote troubleshooting</li>
+                <li><strong>Response Times:</strong>
+                    <ul>
+                        <li>Critical issues: 4-hour response</li>
+                        <li>High priority: 24-hour response</li>
+                        <li>Normal issues: 48-hour response</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <p><strong>2. Software Updates & Enhancements</strong></p>
+            <ul>
+                <li><strong>Security Patches:</strong> Immediate deployment of critical security updates</li>
+                <li><strong>Bug Fixes:</strong> Resolution of software defects and issues</li>
+                <li><strong>Minor Enhancements:</strong> Small feature improvements and UI refinements</li>
+                <li><strong>Framework Updates:</strong> Updates to .NET runtime and dependencies</li>
+                <li><strong>Database Optimization:</strong> Query optimization and indexing improvements</li>
+            </ul>
+
+            <p><strong>3. System Monitoring & Maintenance</strong></p>
+            <ul>
+                <li><strong>Performance Monitoring:</strong> Monthly system performance review</li>
+                <li><strong>Database Maintenance:</strong> Regular database optimization and cleanup</li>
+                <li><strong>Backup Verification:</strong> Quarterly backup testing and recovery drills</li>
+                <li><strong>Security Audits:</strong> Semi-annual security assessment and recommendations</li>
+                <li><strong>Capacity Planning:</strong> Analysis and recommendations for scaling</li>
+            </ul>
+
+            <p><strong>4. User Support & Training</strong></p>
+            <ul>
+                <li><strong>Refresher Training:</strong> Annual refresher training sessions for staff</li>
+                <li><strong>New User Training:</strong> Training for new staff members (up to 4 sessions/year)</li>
+                <li><strong>Documentation Updates:</strong> Updated user manuals and guides</li>
+                <li><strong>Best Practices Consultation:</strong> Quarterly consultation on system usage optimization</li>
+            </ul>
+<br><br>
+            <p><strong>5. Data Management</strong></p>
+            <ul>
+                <li><strong>Backup Strategy Review:</strong> Annual review and optimization of backup procedures</li>
+                <li><strong>Data Migration Support:</strong> Assistance with data imports/exports as needed</li>
+                <li><strong>Report Customization:</strong> Minor report modifications (up to 4 reports/year)</li>
+                <li><strong>Data Quality Audits:</strong> Periodic data integrity checks</li>
+            </ul>
+
+        </div>
+
+        <div class="footer">
+          
+        </div>
+    </div>
+
+    <!-- PAGE 13: PRICING & PAYMENT TERMS -->
+    <div class="page">
+        <div class="header">
+            <h1>Investment & Payment Terms</h1>
+        </div>
+
+        <div class="section">
+            <div class="section-title">12. Project Investment</div>
+
+            <div class="subsection-title">What's Included</div>
+            <p>This comprehensive proposal includes everything you need for a successful POMS implementation:</p>
+
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <strong><span class="checkmark">✓</span> Complete POMS System</strong>
+                    Production-ready enterprise software with all features documented in this proposal
+                </div>
+                <div class="feature-item">
+                    <strong><span class="checkmark">✓</span> Multi-Location Setup</strong>
+                    Pre-configured for all three Exceed P&O locations (Sri Lanka, Philippines, Cambodia)
+                </div>
+                <div class="feature-item">
+                    <strong><span class="checkmark">✓</span> Server Installation</strong>
+                    Free deployment and configuration on one of your servers
+                </div>
+                <div class="feature-item">
+                    <strong><span class="checkmark">✓</span> Database Setup</strong>
+                    Complete database installation with migrations and initial data seeding
+                </div>
+                <div class="feature-item">
+                    <strong><span class="checkmark">✓</span> Customization</strong>
+                    Exceed-specific branding, device catalog setup, location configurations
+                </div>
+                <div class="feature-item">
+                    <strong><span class="checkmark">✓</span> Security Setup</strong>
+                    SSL certificate configuration, role-based access control, audit logging
+                </div>
+                <div class="feature-item">
+                    <strong><span class="checkmark">✓</span> User Training</strong>
+                    Comprehensive training for administrators, clinicians, and data entry staff
+                </div>
+                <div class="feature-item">
+                    <strong><span class="checkmark">✓</span> Documentation</strong>
+                    User manuals, technical documentation, quick reference guides
+                </div>
+                <div class="feature-item">
+                    <strong><span class="checkmark">✓</span> 30-Day Support</strong>
+                    Priority support for one month after go-live
+                </div>
+                <div class="feature-item">
+                    <strong><span class="checkmark">✓</span> Source Code</strong>
+                    Complete source code ownership transferred upon final payment
+                </div>
+            </div>
+
+            <div class="subsection-title">Additional Features Included</div>
+            <ul>
+                <li><span class="checkmark">✓</span> All forms and features: Patient registration, episode management, clinical workflows, document management</li>
+                <li><span class="checkmark">✓</span> Admin and reference forms: User management, device catalog, location management, audit logs</li>
+                <li><span class="checkmark">✓</span> 20+ comprehensive reports with PDF and Excel export capabilities</li>
+                <li><span class="checkmark">✓</span> Mobile-responsive interface for tablets and smartphones</li>
+                <li><span class="checkmark">✓</span> Security features: RBAC, audit trails, encryption, soft delete</li>
+                <li><span class="checkmark">✓</span> Multi-location support with separate location codes for each clinic</li>
+                <li><span class="checkmark">✓</span> Real-time dashboard with live metrics and KPIs</li>
+                <li><span class="checkmark">✓</span> Complete testing and quality assurance</li>
+            </ul>
+        </div>
+<br><br>
+        <div class="section">
+            <div class="section-title">13. Payment Structure</div>
+
+            <div class="pricing-table">
+                <div class="subsection-title" style="margin-bottom: 15px;">Project Cost Breakdown</div>
+
+                <div class="pricing-row">
+                    <span><strong>POMS System Implementation</strong></span>
+                    <span>SLR 230,000.00</span>
+                </div>
+
+                <div class="pricing-row" style="padding-left: 20px; font-size: 10pt;">
+                    <span>• Complete system with all modules and features</span>
+                    <span></span>
+                </div>
+                <div class="pricing-row" style="padding-left: 20px; font-size: 10pt;">
+                    <span>• Multi-location setup and configuration</span>
+                    <span></span>
+                </div>
+                <div class="pricing-row" style="padding-left: 20px; font-size: 10pt;">
+                    <span>• Free server installation and hosting setup</span>
+                    <span></span>
+                </div>
+                <div class="pricing-row" style="padding-left: 20px; font-size: 10pt;">
+                    <span>• Comprehensive user training</span>
+                    <span></span>
+                </div>
+                <div class="pricing-row" style="padding-left: 20px; font-size: 10pt;">
+                    <span>• Documentation and 30-day support</span>
+                    <span></span>
+                </div>
+                <div class="pricing-row" style="padding-left: 20px; font-size: 10pt;">
+                    <span>• Source code ownership transfer</span>
+                    <span></span>
+                </div>
+
+                <div class="pricing-row total">
+                    <span>TOTAL PROJECT INVESTMENT</span>
+                    <span>SLR 230,000.00</span>
+                </div>
+
+                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #cbd5e0;">
+                    <div class="pricing-row" style="font-size: 10.5pt;">
+                        <span><strong>Annual Maintenance Contract (Optional)</strong></span>
+                        <span><strong>15% of Project Cost/Year</strong></span>
+                    </div>
+                    <div style="font-size: 9pt; color: #666; margin-top: 8px;">
+                        Includes: Technical support, software updates, security patches, user training, system monitoring, backup verification
+                    </div>
+                </div>
+            </div>
+
+            <div class="subsection-title" style="margin-top: 25px;">Payment Terms</div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Milestone</th>
+                        <th>Payment</th>
+                        <th>Deliverables</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Contract Signing</strong></td>
+                        <td><strong>60% Advance</strong></td>
+                        <td>Signed agreement, project kickoff, timeline confirmation</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Project Completion</strong></td>
+                        <td><strong>40% Final Payment</strong></td>
+                        <td>Live system, completed training, documentation, source code transfer, acceptance sign-off</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box" style="margin-top: 15px;">
+                <strong>Payment Schedule:</strong><br>
+                • <strong>60% advance payment</strong> upon contract signing to initiate the project<br>
+                • <strong>40% final payment</strong> upon successful completion, user acceptance, and training<br>
+                • Payments via bank transfer or as mutually agreed<br>
+                • Source code ownership transfers to Exceed P&O upon final payment
+            </div>
+        </div>
+
+        <div class="footer">
+           
+        </div>
+    </div>
+
+    <!-- PAGE 14: TERMS & CONDITIONS -->
+    
+
+    <!-- PAGE 15: CONCLUSION & NEXT STEPS -->
+    <div class="page">
+       
+
+        <div class="section">
+            <div class="section-title">14. Why This Solution is Right for Exceed P&O</div>
+
+            <div class="subsection-title">Purpose-Built for P&O Clinics</div>
+            <p>POMS is not a generic medical software adapted for your needs. It was designed from the ground up specifically for prosthetic and orthotic clinics, with deep understanding of your unique workflows:</p>
+            <ul>
+                <li>Specialized episode types for prosthetics, orthotics, and spinal orthoses</li>
+                <li>Clinical workflow matching real-world P&O processes (assessment → fitting → delivery → follow-up)</li>
+                <li>Device catalog and component tracking specific to P&O devices</li>
+                <li>Reports tailored to P&O clinical metrics and administrative needs</li>
+            </ul>
+
+            <div class="subsection-title">Multi-Location Architecture from Day One</div>
+            <p>Many systems bolt on multi-location support as an afterthought. POMS was built with multi-location operations as a core requirement:</p>
+            <ul>
+                <li>Location-based patient numbering with center codes (SL-RGM, PH-QC, KH-PP)</li>
+                <li>Centralized data management across all Exceed P&O locations</li>
+                <li>Location filtering in all reports for center-specific or consolidated views</li>
+                <li>Easy to scale as Exceed P&O expands to new countries or centers</li>
+            </ul>
+
+            <div class="subsection-title">Production-Ready, Not Vaporware</div>
+            <p>This is not a proposal for software we'll build over months. POMS is <strong>already built, tested, and production-ready</strong>:</p>
+            <ul>
+                <li>Complete source code available for immediate deployment</li>
+                <li>One-week timeline is for deployment and customization, not development</li>
+                <li>No development risks or scope creep</li>
+                <li>You can see the system working before you commit</li>
+            </ul>
+
+            <div class="subsection-title">Complete Ownership & Control</div>
+            <p>Unlike SaaS solutions with vendor lock-in and recurring fees:</p>
+            <ul>
+                <li><strong>Source code ownership transfers to you</strong> upon final payment</li>
+                <li>Host on your own servers or cloud infrastructure</li>
+                <li>No monthly or per-user licensing fees</li>
+                <li>Freedom to modify, extend, or hire other developers in the future</li>
+                <li>Your data stays under your complete control</li>
+            </ul>
+<br><br><br>
+            <div class="subsection-title">Enterprise-Grade Security & Compliance</div>
+            <p>Built with healthcare-grade security from the foundation:</p>
+            <ul>
+                <li>Role-based access control with detailed permission matrix</li>
+                <li>Complete audit trails for compliance and accountability</li>
+                <li>Soft delete ensures data never lost (compliance requirement)</li>
+                <li>Encryption in transit (HTTPS) and at rest (TDE support)</li>
+                <li>Security best practices throughout (OWASP guidelines)</li>
+            </ul>
+
+            <div class="subsection-title">Comprehensive Training & Support Included</div>
+            <p>Many vendors charge extra for training and support. With NeurAlsEdge:</p>
+            <ul>
+                <li>Comprehensive training for all staff levels included in project cost</li>
+                <li>Free hosting setup on your server</li>
+                <li>30-day priority support after go-live</li>
+                <li>Documentation and training materials included</li>
+                <li>Optional AMC available for long-term support</li>
+            </ul>
+        </div>
+
+        
+
+        <div class="section">
+            <div class="section-title">Contact Information</div>
+
+            <div style="background: #f7fafc; padding: 20px; border-left: 4px solid #2c5282; margin-top: 20px;">
+                <p style="font-size: 12pt; margin-bottom: 15px;"><strong>Ready to transform your clinic operations?</strong></p>
+
+                <p style="margin-bottom: 8px;"><strong>Ranga Nanayakkara</strong></p>
+                <p style="margin-bottom: 8px;">Founder & Lead Developer</p>
+                <p style="margin-bottom: 8px;"><strong>NeurAlsEdge</strong></p>
+                <p style="margin-bottom: 8px;">AI-First Software & IoT Solutions</p>
+
+                <p style="margin-top: 15px; margin-bottom: 5px;"><strong>Website:</strong> www.neuralsedge.com</p>
+                <p style="margin-bottom: 5px;"><strong>Email:</strong> ranga@neuralsedge.com</p>
+                <p style="margin-bottom: 5px;"><strong>Phone:</strong> [Your Phone Number]</p>
+
+                <p style="margin-top: 15px; font-size: 10pt; color: #666;">
+                    We look forward to partnering with Exceed Prosthetics & Orthotics to deliver a world-class patient management system that supports your mission of transforming lives through professional prosthetic and orthotic care.
+                </p>
+            </div>
+        </div>
+<br><br><br><br><br><br><br>
+        <div class="signature-section">
+            <div class="signature-box">
+                <p><strong>For NeurAlsEdge:</strong></p>
+                <p style="margin-top: 40px;">_______________________</p>
+                <p>Ranga Nanayakkara</p>
+                <p>Founder & Lead Developer</p>
+                <p style="font-size: 9pt; margin-top: 8px;">Date: _____________</p>
+            </div>
+
+            <div class="signature-box">
+                <p><strong>For Exceed P&O:</strong></p>
+                <p style="margin-top: 40px;">_______________________</p>
+                <p>Authorized Signatory</p>
+                <p>Name & Designation</p>
+                <p style="font-size: 9pt; margin-top: 8px;">Date: _____________</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            
+        </div>
+    </div>
+
+</body>
+</html>

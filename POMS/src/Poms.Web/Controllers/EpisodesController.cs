@@ -251,10 +251,11 @@ public class EpisodesController : Controller
                 var orthotic = new OrthoticEpisode
                 {
                     EpisodeId = episode.Id,
-                    MainProblem = "General Orthotic Need", // Default value
+                    MainProblem = model.MainProblem ?? "General Orthotic Need",
                     BodyRegion = model.BodyRegion ?? BodyRegion.LowerLimb,
                     Side = model.OrthoticSide ?? Side.Left,
-                    ReasonForProblem = "Assessment Required" // Default value
+                    OrthosisTypeId = model.OrthosisTypeId,
+                    ReasonForProblem = model.ReasonForProblem ?? "Assessment Required"
                 };
                 _context.OrthoticEpisodes.Add(orthotic);
                 break;
@@ -262,10 +263,51 @@ public class EpisodesController : Controller
             case EpisodeType.SpinalOrthosis:
                 var spinal = new SpinalEpisode
                 {
-                    EpisodeId = episode.Id
+                    EpisodeId = episode.Id,
+                    PathologicalCondition = model.PathologicalCondition ?? "Not Specified",
+                    OrthoticDesign = model.OrthoticDesign ?? "Not Specified"
                 };
                 _context.SpinalEpisodes.Add(spinal);
                 break;
+        }
+
+        // Create Assessment if data provided
+        if (model.AssessmentDate.HasValue || !string.IsNullOrWhiteSpace(model.AssessmentFindings))
+        {
+            var assessment = new Assessment
+            {
+                EpisodeId = episode.Id,
+                AssessedOn = model.AssessmentDate ?? DateOnly.FromDateTime(DateTime.Today),
+                Findings = model.AssessmentFindings ?? "",
+                Remarks = "Created with episode"
+            };
+            _context.Assessments.Add(assessment);
+        }
+
+        // Create Fitting if data provided
+        if (model.FittingDate.HasValue || !string.IsNullOrWhiteSpace(model.FittingNotes))
+        {
+            var fitting = new Fitting
+            {
+                EpisodeId = episode.Id,
+                FittingDate = model.FittingDate ?? DateOnly.FromDateTime(DateTime.Today),
+                Notes = model.FittingNotes ?? "",
+                Remarks = "Created with episode"
+            };
+            _context.Fittings.Add(fitting);
+        }
+
+        // Create Delivery if data provided
+        if (model.DeliveryDate.HasValue)
+        {
+            var delivery = new Delivery
+            {
+                EpisodeId = episode.Id,
+                DeliveryDate = model.DeliveryDate,
+                DeliveredBy = User.Identity?.Name ?? "System",
+                Remarks = "Created with episode"
+            };
+            _context.Deliveries.Add(delivery);
         }
 
         await _context.SaveChangesAsync();
@@ -302,5 +344,12 @@ public class EpisodesController : Controller
                 .Select(p => new { p.Id, DisplayName = p.PatientNumber + " - " + p.FirstName + " " + p.LastName })
                 .ToListAsync(),
             "Id", "DisplayName");
+
+        ViewBag.OrthosisTypes = new SelectList(
+            await _context.DeviceCatalogs
+                .Include(d => d.DeviceType)
+                .Where(d => d.DeviceType.Code == "ORTHOTIC" && d.IsActive)
+                .ToListAsync(),
+            "Id", "Name");
     }
 }

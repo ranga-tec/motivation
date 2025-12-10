@@ -24,4 +24,5 @@ public class Episode : BaseEntity
     public Delivery? Delivery { get; set; }
     public ICollection<FollowUp> FollowUps { get; set; } = new List<FollowUp>();
     public ICollection<Repair> Repairs { get; set; } = new List<Repair>();
+    public ICollection<EpisodeDocument> Documents { get; set; } = new List<EpisodeDocument>();
 }

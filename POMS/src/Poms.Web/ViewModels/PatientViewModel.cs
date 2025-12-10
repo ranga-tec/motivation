@@ -73,18 +73,24 @@ public class PatientViewModel
     public string? Remarks { get; set; } = "";
 
     // Guardian Information
+    [Required]
     [Display(Name = "Guardian Name")]
-    public string? GuardianName { get; set; }
+    [StringLength(100)]
+    public string GuardianName { get; set; } = default!;
 
     [Display(Name = "Guardian Relationship")]
+    [StringLength(50)]
     public string? GuardianRelationship { get; set; }
 
     [Display(Name = "Guardian Address")]
     public string? GuardianAddress { get; set; }
 
+    [Required]
     [Display(Name = "Guardian Phone 1")]
-    public string? GuardianPhone1 { get; set; }
+    [Phone]
+    public string GuardianPhone1 { get; set; } = default!;
 
     [Display(Name = "Guardian Phone 2")]
+    [Phone]
     public string? GuardianPhone2 { get; set; }
 }
