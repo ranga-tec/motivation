@@ -25,7 +25,11 @@ public class Patient : BaseEntity
     public DateOnly RegistrationDate { get; set; }
     public string? ReferredBy { get; set; }
     public string? Remarks { get; set; }
-    
+
+    // Status and Photo
+    public bool IsActive { get; set; } = true;
+    public string? PhotoPath { get; set; }
+
     // Guardian fields
     public string? GuardianName { get; set; }
     public string? GuardianRelationship { get; set; }

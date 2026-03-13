@@ -1,0 +1,77 @@
+@model List<Poms.Domain.Entities.SystemSetting>
+@{
+    ViewData["Title"] = "System Settings";
+}
+
+<div class="page-header">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Admin</a></li>
+            <li class="breadcrumb-item active">Settings</li>
+        </ol>
+    </nav>
+    <h1 class="page-title">System Settings</h1>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@{
+    var groupedSettings = Model.GroupBy(s => s.Category);
+}
+
+@foreach (var group in groupedSettings)
+{
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">@group.Key</h5>
+        </div>
+        <div class="card-body">
+            @foreach (var setting in group)
+            {
+                <form asp-action="UpdateSetting" method="post" class="row g-3 align-items-end mb-3 pb-3 border-bottom">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@setting.Id" />
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">@setting.Key</label>
+                        @if (!string.IsNullOrEmpty(setting.Description))
+                        {
+                            <div class="form-text">@setting.Description</div>
+                        }
+                    </div>
+                    <div class="col-md-6">
+                        <input type="text" name="value" class="form-control" value="@setting.Value" />
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-save me-1"></i> Save
+                        </button>
+                    </div>
+                    <div class="col-md-1 text-muted small">
+                        @if (setting.UpdatedAt != default)
+                        {
+                            <span title="Last updated: @setting.UpdatedAt.ToString("yyyy-MM-dd HH:mm")">
+                                <i class="fas fa-clock"></i>
+                            </span>
+                        }
+                    </div>
+                </form>
+            }
+        </div>
+    </div>
+}
+
+@if (!Model.Any())
+{
+    <div class="card">
+        <div class="card-body text-center text-muted py-5">
+            <i class="fas fa-sliders-h fa-3x mb-3"></i>
+            <p>No system settings configured yet.</p>
+        </div>
+    </div>
+}

@@ -1,0 +1,145 @@
+@model List<Poms.Domain.Entities.AuditLog>
+@{
+    ViewData["Title"] = "Audit Logs";
+}
+
+<div class="page-header">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Admin</a></li>
+            <li class="breadcrumb-item active">Audit Logs</li>
+        </ol>
+    </nav>
+    <h1 class="page-title">Audit Logs</h1>
+    <p class="page-subtitle">System activity and change history</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Entity Type</label>
+                <select name="entityType" class="form-select">
+                    <option value="">All Types</option>
+                    @foreach (var type in ViewBag.EntityTypes as List<string>)
+                    {
+                        <option value="@type" selected="@(ViewBag.EntityType == type)">@type</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Action</label>
+                <select name="action" class="form-select">
+                    <option value="">All Actions</option>
+                    @foreach (var action in ViewBag.Actions as string[])
+                    {
+                        <option value="@action" selected="@(ViewBag.Action == action)">@action</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-filter me-1"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>Entity Type</th>
+                        <th>Entity ID</th>
+                        <th>IP Address</th>
+                        <th>Changes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var log in Model)
+                    {
+                        <tr>
+                            <td>@log.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            <td>@log.UserId</td>
+                            <td>
+                                <span class="badge bg-@(log.Action == "Create" ? "success" : log.Action == "Update" ? "primary" : "danger")">
+                                    @log.Action
+                                </span>
+                            </td>
+                            <td>@log.EntityType</td>
+                            <td><code class="small">@log.EntityId</code></td>
+                            <td><small>@(log.IpAddress ?? "-")</small></td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(log.Changes))
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                                            data-bs-toggle="modal" data-bs-target="#changesModal"
+                                            onclick="showChanges('@System.Web.HttpUtility.JavaScriptStringEncode(log.Changes)')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-3">No audit logs found</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@if (ViewBag.TotalPages > 1)
+{
+    <nav class="mt-3">
+        <ul class="pagination justify-content-center">
+            @for (int i = 1; i <= ViewBag.TotalPages; i++)
+            {
+                <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
+                    <a class="page-link" asp-action="AuditLogs" asp-route-page="@i"
+                       asp-route-entityType="@ViewBag.EntityType"
+                       asp-route-action="@ViewBag.Action">@i</a>
+                </li>
+            }
+        </ul>
+    </nav>
+}
+
+<!-- Changes Modal -->
+<div class="modal fade" id="changesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Changes</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <pre id="changesContent" class="bg-light p-3 rounded" style="max-height: 400px; overflow-y: auto;"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function showChanges(json) {
+        try {
+            var parsed = JSON.parse(json);
+            document.getElementById('changesContent').textContent = JSON.stringify(parsed, null, 2);
+        } catch (e) {
+            document.getElementById('changesContent').textContent = json;
+        }
+    }
+</script>
+}

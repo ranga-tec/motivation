@@ -1,0 +1,32 @@
+@model Poms.Domain.Entities.Fitting
+@using Poms.Domain.Enums
+
+<div class="fitting-card fitting-@Model.Status.ToString().ToLower()"
+     onclick="showFittingDetails('@Model.Id')">
+    <div class="d-flex justify-content-between align-items-start">
+        <div class="d-flex align-items-center">
+            <span class="fitting-number me-3">@Model.FittingNumber</span>
+            <div>
+                <div class="fw-semibold">@Model.FittingDate.ToString("MMM dd, yyyy")</div>
+                <small class="text-muted">@(Model.PerformedBy ?? "Not assigned")</small>
+            </div>
+        </div>
+        <span class="badge bg-@(Model.Status == FittingStatus.Completed ? "success" :
+            Model.Status == FittingStatus.InProgress ? "warning" :
+            Model.Status == FittingStatus.Scheduled ? "info" : "secondary")">
+            @Model.Status
+        </span>
+    </div>
+    @if (!string.IsNullOrEmpty(Model.Notes))
+    {
+        <div class="mt-2 text-muted small">
+            @(Model.Notes.Length > 100 ? Model.Notes.Substring(0, 100) + "..." : Model.Notes)
+        </div>
+    }
+</div>
+
+<script>
+    function showFittingDetails(id) {
+        window.location.href = '@Url.Action("Details", "Fittings")/' + id;
+    }
+</script>

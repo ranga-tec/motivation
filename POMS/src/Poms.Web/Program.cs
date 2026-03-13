@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Poms.Domain.Entities;
 using Poms.Infrastructure.Data;
 using Poms.Infrastructure.Services;
 using Serilog;
@@ -54,8 +55,8 @@ builder.Services.AddDbContext<PomsDbContext>(options =>
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-// Identity Configuration
-builder.Services.AddDefaultIdentity<IdentityUser>(options => {
+// Identity Configuration with ApplicationUser
+builder.Services.AddDefaultIdentity<ApplicationUser>(options => {
     options.SignIn.RequireConfirmedAccount = false;
     options.Password.RequireDigit = true;
     options.Password.RequireLowercase = true;
@@ -73,8 +74,13 @@ var maxFileSizeMB = fileStorageConfig.GetValue<long>("MaxFileSizeMB", 10);
 var allowedExtensions = fileStorageConfig.GetSection("AllowedExtensions").Get<string[]>();
 
 builder.Services.AddScoped<IPatientNumberService, PatientNumberService>();
-builder.Services.AddScoped<IFileStorageService>(sp => 
+builder.Services.AddScoped<IFileStorageService>(sp =>
     new FileStorageService(rootPath, maxFileSizeMB, allowedExtensions));
+
+// Register new services
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddScoped<IOcrService, OcrService>();
 
 // Add AutoMapper
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());

@@ -11,3 +11,9 @@ public enum ConditionType { Primary, Secondary }
 public enum AmputationType { BelowKnee, AboveKnee, BelowElbow, AboveElbow, PartialHand, PartialFoot, Other }
 public enum Reason { Disease, Trauma, Vascular, Diabetic, Cancer, Congenital, Other }
 public enum RepairCategory { FootRep, SocketRep, LinerRep, BraceRep, JointRep, Other }
+
+// Fitting status for tracking fitting sessions
+public enum FittingStatus { Scheduled, InProgress, Completed, Cancelled }
+
+// OCR processing status for documents
+public enum OcrStatus { Pending, Processing, Completed, Failed, NotApplicable }

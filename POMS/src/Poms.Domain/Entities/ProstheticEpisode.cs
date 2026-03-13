@@ -9,6 +9,7 @@ public class ProstheticEpisode
 {
     public Guid EpisodeId { get; set; }
     public AmputationType AmputationType { get; set; }
+    public string? AmputationTypeOther { get; set; }
     public string Level { get; set; } = default!;
     public Side Side { get; set; }
     public DateOnly? DateOfAmputation { get; set; }

@@ -1,4 +1,5 @@
-﻿using Poms.Domain.Enums;
+﻿using Microsoft.AspNetCore.Http;
+using Poms.Domain.Enums;
 using System.ComponentModel.DataAnnotations;
 
 namespace Poms.Web.ViewModels;
@@ -9,6 +10,14 @@ public class PatientViewModel
 
     [Display(Name = "Patient Number")]
     public string? PatientNumber { get; set; }
+
+    [Display(Name = "Status")]
+    public bool IsActive { get; set; } = true;
+
+    [Display(Name = "Photo")]
+    public IFormFile? Photo { get; set; }
+
+    public string? PhotoPath { get; set; }
 
     [Required]
     [Display(Name = "First Name")]

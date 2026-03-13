@@ -1,0 +1,90 @@
+@model List<Poms.Domain.Entities.DeviceCatalog>
+@{
+    ViewData["Title"] = "Device Catalog";
+}
+
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-controller="Admin" asp-action="Index">Admin</a></li>
+                <li class="breadcrumb-item active">Device Catalog</li>
+            </ol>
+        </nav>
+        <h1 class="page-title">Device Catalog</h1>
+    </div>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i>Add Device
+    </a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card">
+    <div class="card-header">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">Device Type</label>
+                <select name="deviceTypeId" class="form-select">
+                    <option value="">All Types</option>
+                    @foreach (SelectListItem item in ViewBag.DeviceTypes)
+                    {
+                        <option value="@item.Value" selected="@(ViewBag.DeviceTypeId?.ToString() == item.Value)">@item.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-filter me-1"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Device Type</th>
+                        <th>Status</th>
+                        <th width="150">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var device in Model)
+                    {
+                        <tr>
+                            <td><code>@device.Code</code></td>
+                            <td>@device.Name</td>
+                            <td>@device.DeviceType.Name</td>
+                            <td>
+                                <span class="badge badge-status @(device.IsActive ? "badge-active" : "badge-inactive")">
+                                    @(device.IsActive ? "Active" : "Inactive")
+                                </span>
+                            </td>
+                            <td>
+                                <a asp-action="Edit" asp-route-id="@device.Id" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form asp-action="ToggleStatus" asp-route-id="@device.Id" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-outline-@(device.IsActive ? "warning" : "success")">
+                                        <i class="fas fa-@(device.IsActive ? "ban" : "check")"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

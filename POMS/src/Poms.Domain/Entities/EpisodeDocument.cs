@@ -4,6 +4,7 @@
 namespace Poms.Domain.Entities;
 
 using Poms.Domain.Common;
+using Poms.Domain.Enums;
 
 public class EpisodeDocument : BaseEntity
 {
@@ -17,6 +18,12 @@ public class EpisodeDocument : BaseEntity
     public string? Remarks { get; set; }
     public string UploadedBy { get; set; } = default!;
     public DateTime UploadedAt { get; set; }
+
+    // OCR fields
+    public string? ExtractedText { get; set; }
+    public DateTime? OcrProcessedAt { get; set; }
+    public string? OcrLanguage { get; set; }
+    public OcrStatus OcrStatus { get; set; } = OcrStatus.NotApplicable;
 
     public Episode Episode { get; set; } = default!;
 }

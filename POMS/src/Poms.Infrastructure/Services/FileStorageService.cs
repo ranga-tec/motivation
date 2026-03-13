@@ -5,8 +5,10 @@ namespace Poms.Infrastructure.Services;
 public interface IFileStorageService
 {
     Task<(string StoragePath, string FileName)> SaveFileAsync(IFormFile file, string patientNumber);
+    Task<(string StoragePath, string FileName)> SavePatientPhotoAsync(IFormFile file, string patientNumber);
     Task<byte[]> GetFileAsync(string storagePath);
     Task DeleteFileAsync(string storagePath);
+    string GetFullPath(string storagePath);
 }
 
 public class FileStorageService : IFileStorageService
@@ -69,5 +71,44 @@ public class FileStorageService : IFileStorageService
             File.Delete(fullPath);
 
         return Task.CompletedTask;
+    }
+
+    public async Task<(string StoragePath, string FileName)> SavePatientPhotoAsync(IFormFile file, string patientNumber)
+    {
+        if (file.Length > _maxFileSizeBytes)
+            throw new InvalidOperationException($"File size exceeds maximum allowed size of {_maxFileSizeBytes / 1024 / 1024}MB");
+
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        var allowedImageExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+        if (!allowedImageExtensions.Contains(extension))
+            throw new InvalidOperationException($"File type {extension} is not allowed for photos");
+
+        var directory = Path.Combine(_rootPath, "photos", patientNumber);
+
+        if (!Directory.Exists(directory))
+            Directory.CreateDirectory(directory);
+
+        var fileName = $"photo{extension}";
+        var fullPath = Path.Combine(directory, fileName);
+
+        // Delete existing photo if any
+        var existingFiles = Directory.GetFiles(directory, "photo.*");
+        foreach (var existingFile in existingFiles)
+        {
+            File.Delete(existingFile);
+        }
+
+        using (var stream = new FileStream(fullPath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        var relativePath = Path.Combine("photos", patientNumber, fileName);
+        return (relativePath, file.FileName);
+    }
+
+    public string GetFullPath(string storagePath)
+    {
+        return Path.Combine(_rootPath, storagePath);
     }
 }

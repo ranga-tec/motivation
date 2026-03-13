@@ -1,75 +1,281 @@
-﻿@{
+@model DashboardViewModel
+@{
     ViewData["Title"] = "Dashboard";
 }
 
-<div class="row">
-    <div class="col-md-12">
-        <h1 class="mb-4">POMS Dashboard</h1>
+<div class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle">Welcome to POMS - Prosthetic, Orthotic & Spinal Patient Management System</p>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6 col-lg-3">
+        <div class="card kpi-card kpi-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="kpi-value">@Model.Data.TotalPatients</div>
+                        <div class="kpi-label">Total Patients</div>
+                    </div>
+                    <div class="kpi-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+                <small class="text-muted">@Model.Data.ActivePatients active</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card kpi-card kpi-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="kpi-value">@Model.Data.OpenEpisodes</div>
+                        <div class="kpi-label">Open Episodes</div>
+                    </div>
+                    <div class="kpi-icon">
+                        <i class="fas fa-folder-open"></i>
+                    </div>
+                </div>
+                <small class="text-muted">@Model.Data.CompletedEpisodes completed</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card kpi-card kpi-info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="kpi-value">@Model.Data.DeliveriesThisMonth</div>
+                        <div class="kpi-label">Deliveries This Month</div>
+                    </div>
+                    <div class="kpi-icon">
+                        <i class="fas fa-truck"></i>
+                    </div>
+                </div>
+                <small class="text-muted">Device deliveries</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card kpi-card kpi-warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="kpi-value">@Model.Data.PendingFollowUps</div>
+                        <div class="kpi-label">Pending Follow-ups</div>
+                    </div>
+                    <div class="kpi-icon">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                </div>
+                <small class="text-muted">Requires attention</small>
+            </div>
+        </div>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-3">
-        <div class="card text-white bg-primary mb-3">
+<div class="row g-4 mb-4">
+    <!-- Patient Registration Trend Chart -->
+    <div class="col-lg-8">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Patient Registration Trend</h5>
+            </div>
             <div class="card-body">
-                <h5 class="card-title">Total Patients</h5>
-                <h2 class="card-text">@ViewBag.TotalPatients</h2>
+                <div class="chart-container">
+                    <canvas id="registrationChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-success mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Active Episodes</h5>
-                <h2 class="card-text">@ViewBag.ActiveEpisodes</h2>
+
+    <!-- Episodes by Type Chart -->
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Episodes by Type</h5>
             </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-info mb-3">
             <div class="card-body">
-                <h5 class="card-title">Deliveries (This Month)</h5>
-                <h2 class="card-text">@ViewBag.DeliveriesThisMonth</h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-warning mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Pending Follow-ups</h5>
-                <h2 class="card-text">@ViewBag.PendingFollowUps</h2>
+                <div class="chart-container" style="height: 250px;">
+                    <canvas id="episodesChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row mt-4">
-    <div class="col-md-6">
+<div class="row g-4">
+    <!-- Quick Actions -->
+    <div class="col-lg-4">
         <div class="card">
             <div class="card-header">
-                <h5>Quick Actions</h5>
+                <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
             </div>
             <div class="card-body">
-                <a asp-controller="Patients" asp-action="Create" class="btn btn-primary mb-2 d-block">
-                    <i class="fas fa-user-plus"></i> Register New Patient
-                </a>
-                <a asp-controller="Episodes" asp-action="Create" class="btn btn-success mb-2 d-block">
-                    <i class="fas fa-plus-circle"></i> Create Episode
-                </a>
-                <a asp-controller="Conditions" asp-action="Index" class="btn btn-info mb-2 d-block">
-                    <i class="fas fa-list"></i> Manage Conditions
-                </a>
+                <div class="row g-3">
+                    <div class="col-6">
+                        <a asp-controller="Patients" asp-action="Create" class="quick-action-btn w-100">
+                            <i class="fas fa-user-plus"></i>
+                            <span>New Patient</span>
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a asp-controller="Episodes" asp-action="Create" class="quick-action-btn w-100">
+                            <i class="fas fa-folder-plus"></i>
+                            <span>New Episode</span>
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a asp-controller="Reports" asp-action="Index" class="quick-action-btn w-100">
+                            <i class="fas fa-file-alt"></i>
+                            <span>Reports</span>
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a asp-controller="Patients" asp-action="Index" class="quick-action-btn w-100">
+                            <i class="fas fa-search"></i>
+                            <span>Find Patient</span>
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="card">
+
+    <!-- Deliveries Chart -->
+    <div class="col-lg-4">
+        <div class="card h-100">
             <div class="card-header">
-                <h5>Recent Activity</h5>
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Monthly Deliveries</h5>
             </div>
             <div class="card-body">
-                <p class="text-muted">No recent activity</p>
+                <div class="chart-container" style="height: 220px;">
+                    <canvas id="deliveriesChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Recent Activity</h5>
+            </div>
+            <div class="card-body p-0">
+                @if (Model.RecentActivities.Any())
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var activity in Model.RecentActivities.Take(6))
+                        {
+                            <div class="list-group-item border-0 py-2">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        <span class="badge rounded-pill bg-@activity.Color bg-opacity-10 text-@activity.Color">
+                                            <i class="fas @activity.Icon"></i>
+                                        </span>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="small">@activity.Description</div>
+                                        <div class="text-muted" style="font-size: 0.75rem;">
+                                            @activity.Timestamp.ToString("MMM dd, HH:mm")
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                        <p class="mb-0">No recent activity</p>
+                    </div>
+                }
             </div>
         </div>
     </div>
 </div>
+
+@section Scripts {
+<script>
+    // Registration Trend Chart
+    const registrationCtx = document.getElementById('registrationChart').getContext('2d');
+    new Chart(registrationCtx, {
+        type: 'line',
+        data: {
+            labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.RegistrationTrend.Select(x => x.Label))),
+            datasets: [{
+                label: 'Patient Registrations',
+                data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.RegistrationTrend.Select(x => x.Value))),
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+
+    // Episodes by Type Chart
+    const episodesCtx = document.getElementById('episodesChart').getContext('2d');
+    new Chart(episodesCtx, {
+        type: 'doughnut',
+        data: {
+            labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.EpisodesByType.Select(x => x.Label))),
+            datasets: [{
+                data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.EpisodesByType.Select(x => x.Value))),
+                backgroundColor: ['#2563eb', '#059669', '#d97706'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { padding: 15 }
+                }
+            }
+        }
+    });
+
+    // Deliveries Chart
+    const deliveriesCtx = document.getElementById('deliveriesChart').getContext('2d');
+    new Chart(deliveriesCtx, {
+        type: 'bar',
+        data: {
+            labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.DeliveriesByMonth.Select(x => x.Label))),
+            datasets: [{
+                label: 'Deliveries',
+                data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.DeliveriesByMonth.Select(x => x.Value))),
+                backgroundColor: '#059669',
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+</script>
+}

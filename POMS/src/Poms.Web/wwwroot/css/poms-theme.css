@@ -1,0 +1,675 @@
+/* ============================================================================
+   POMS Light Theme - Professional Medical Application Theme
+   ============================================================================ */
+
+:root {
+    /* Primary Colors */
+    --poms-primary: #2563eb;
+    --poms-primary-dark: #1d4ed8;
+    --poms-primary-light: #3b82f6;
+
+    /* Secondary Colors (Medical Green) */
+    --poms-secondary: #059669;
+    --poms-secondary-dark: #047857;
+    --poms-secondary-light: #10b981;
+
+    /* Background Colors */
+    --poms-bg-main: #f8fafc;
+    --poms-bg-card: #ffffff;
+    --poms-bg-sidebar: #f1f5f9;
+
+    /* Text Colors */
+    --poms-text-primary: #1e293b;
+    --poms-text-secondary: #64748b;
+    --poms-text-muted: #94a3b8;
+
+    /* Border Colors */
+    --poms-border: #e2e8f0;
+    --poms-border-light: #f1f5f9;
+
+    /* Status Colors */
+    --poms-success: #059669;
+    --poms-warning: #d97706;
+    --poms-danger: #dc2626;
+    --poms-info: #0284c7;
+
+    /* Shadow */
+    --poms-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --poms-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --poms-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+/* ============================================================================
+   Base Styles
+   ============================================================================ */
+
+body {
+    background-color: var(--poms-bg-main);
+    color: var(--poms-text-primary);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+}
+
+/* ============================================================================
+   Navbar Styles (Light Theme)
+   ============================================================================ */
+
+.navbar-poms {
+    background-color: var(--poms-bg-card) !important;
+    border-bottom: 1px solid var(--poms-border);
+    box-shadow: var(--poms-shadow-sm);
+    padding: 0.5rem 1rem;
+}
+
+.navbar-poms .navbar-brand {
+    color: var(--poms-primary) !important;
+    font-weight: 700;
+    font-size: 1.25rem;
+}
+
+.navbar-poms .navbar-brand i {
+    color: var(--poms-secondary);
+}
+
+.navbar-poms .nav-link {
+    color: var(--poms-text-secondary) !important;
+    font-weight: 500;
+    padding: 0.5rem 1rem !important;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.navbar-poms .nav-link:hover {
+    color: var(--poms-primary) !important;
+    background-color: var(--poms-bg-sidebar);
+}
+
+.navbar-poms .nav-link.active {
+    color: var(--poms-primary) !important;
+    background-color: rgba(37, 99, 235, 0.1);
+}
+
+.navbar-poms .dropdown-menu {
+    border: 1px solid var(--poms-border);
+    box-shadow: var(--poms-shadow-md);
+    border-radius: 8px;
+}
+
+.navbar-poms .dropdown-item {
+    padding: 0.5rem 1rem;
+}
+
+.navbar-poms .dropdown-item:hover {
+    background-color: var(--poms-bg-sidebar);
+}
+
+/* ============================================================================
+   Sidebar Styles (Admin Pages)
+   ============================================================================ */
+
+.poms-sidebar {
+    background-color: var(--poms-bg-card);
+    border-right: 1px solid var(--poms-border);
+    min-height: calc(100vh - 60px);
+    padding: 1rem 0;
+}
+
+.poms-sidebar .nav-link {
+    color: var(--poms-text-secondary);
+    padding: 0.75rem 1.5rem;
+    border-left: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.poms-sidebar .nav-link:hover {
+    color: var(--poms-primary);
+    background-color: var(--poms-bg-sidebar);
+    border-left-color: var(--poms-primary-light);
+}
+
+.poms-sidebar .nav-link.active {
+    color: var(--poms-primary);
+    background-color: rgba(37, 99, 235, 0.08);
+    border-left-color: var(--poms-primary);
+    font-weight: 600;
+}
+
+.poms-sidebar .nav-link i {
+    width: 20px;
+    margin-right: 10px;
+}
+
+.sidebar-heading {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--poms-text-muted);
+    padding: 1rem 1.5rem 0.5rem;
+}
+
+/* ============================================================================
+   Card Styles
+   ============================================================================ */
+
+.card {
+    background-color: var(--poms-bg-card);
+    border: 1px solid var(--poms-border);
+    border-radius: 12px;
+    box-shadow: var(--poms-shadow-sm);
+}
+
+.card-header {
+    background-color: transparent;
+    border-bottom: 1px solid var(--poms-border);
+    font-weight: 600;
+    padding: 1rem 1.25rem;
+}
+
+.card-body {
+    padding: 1.25rem;
+}
+
+/* KPI Cards */
+.kpi-card {
+    border: none;
+    border-radius: 12px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--poms-shadow-md);
+}
+
+.kpi-card .kpi-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.kpi-card .kpi-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.kpi-card .kpi-label {
+    color: var(--poms-text-secondary);
+    font-size: 0.875rem;
+}
+
+.kpi-primary .kpi-icon { background-color: rgba(37, 99, 235, 0.15); color: var(--poms-primary); }
+.kpi-success .kpi-icon { background-color: rgba(5, 150, 105, 0.15); color: var(--poms-success); }
+.kpi-warning .kpi-icon { background-color: rgba(217, 119, 6, 0.15); color: var(--poms-warning); }
+.kpi-info .kpi-icon { background-color: rgba(2, 132, 199, 0.15); color: var(--poms-info); }
+.kpi-danger .kpi-icon { background-color: rgba(220, 38, 38, 0.15); color: var(--poms-danger); }
+
+/* ============================================================================
+   Table Styles
+   ============================================================================ */
+
+.table {
+    --bs-table-bg: var(--poms-bg-card);
+}
+
+.table thead th {
+    background-color: var(--poms-bg-sidebar);
+    border-bottom: 2px solid var(--poms-border);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--poms-text-secondary);
+    padding: 0.75rem 1rem;
+}
+
+.table tbody td {
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--poms-border-light);
+}
+
+.table tbody tr:hover {
+    background-color: var(--poms-bg-sidebar);
+}
+
+.table-clickable tbody tr {
+    cursor: pointer;
+}
+
+/* ============================================================================
+   Form Styles
+   ============================================================================ */
+
+.form-control, .form-select {
+    border: 1px solid var(--poms-border);
+    border-radius: 8px;
+    padding: 0.5rem 0.875rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--poms-primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.form-label {
+    font-weight: 500;
+    color: var(--poms-text-primary);
+    margin-bottom: 0.375rem;
+}
+
+.form-text {
+    color: var(--poms-text-muted);
+    font-size: 0.8125rem;
+}
+
+.input-group-text {
+    background-color: var(--poms-bg-sidebar);
+    border: 1px solid var(--poms-border);
+}
+
+/* ============================================================================
+   Button Styles
+   ============================================================================ */
+
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    transition: all 0.2s ease;
+}
+
+.btn-primary {
+    background-color: var(--poms-primary);
+    border-color: var(--poms-primary);
+}
+
+.btn-primary:hover {
+    background-color: var(--poms-primary-dark);
+    border-color: var(--poms-primary-dark);
+}
+
+.btn-success {
+    background-color: var(--poms-success);
+    border-color: var(--poms-success);
+}
+
+.btn-outline-primary {
+    color: var(--poms-primary);
+    border-color: var(--poms-primary);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--poms-primary);
+    border-color: var(--poms-primary);
+}
+
+.btn-light {
+    background-color: var(--poms-bg-sidebar);
+    border-color: var(--poms-border);
+    color: var(--poms-text-primary);
+}
+
+.btn-light:hover {
+    background-color: var(--poms-border);
+}
+
+/* ============================================================================
+   Badge Styles
+   ============================================================================ */
+
+.badge {
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+    border-radius: 6px;
+}
+
+.badge-status {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.625rem;
+}
+
+.badge-active {
+    background-color: rgba(5, 150, 105, 0.15);
+    color: var(--poms-success);
+}
+
+.badge-inactive {
+    background-color: rgba(100, 116, 139, 0.15);
+    color: var(--poms-text-secondary);
+}
+
+.badge-pending {
+    background-color: rgba(217, 119, 6, 0.15);
+    color: var(--poms-warning);
+}
+
+.badge-completed {
+    background-color: rgba(5, 150, 105, 0.15);
+    color: var(--poms-success);
+}
+
+/* ============================================================================
+   Patient Photo Styles
+   ============================================================================ */
+
+.patient-photo {
+    width: 120px;
+    height: 120px;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 3px solid var(--poms-border);
+    box-shadow: var(--poms-shadow);
+}
+
+.patient-photo-sm {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.patient-photo-placeholder {
+    width: 120px;
+    height: 120px;
+    border-radius: 12px;
+    background-color: var(--poms-bg-sidebar);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--poms-text-muted);
+    font-size: 2.5rem;
+    border: 2px dashed var(--poms-border);
+}
+
+/* ============================================================================
+   Fitting Card Styles (Click-to-View)
+   ============================================================================ */
+
+.fitting-card {
+    border: 1px solid var(--poms-border);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: var(--poms-bg-card);
+}
+
+.fitting-card:hover {
+    border-color: var(--poms-primary);
+    box-shadow: var(--poms-shadow-md);
+    transform: translateX(4px);
+}
+
+.fitting-card.fitting-completed {
+    border-left: 4px solid var(--poms-success);
+}
+
+.fitting-card.fitting-scheduled {
+    border-left: 4px solid var(--poms-info);
+}
+
+.fitting-card.fitting-inprogress {
+    border-left: 4px solid var(--poms-warning);
+}
+
+.fitting-card.fitting-cancelled {
+    border-left: 4px solid var(--poms-text-muted);
+    opacity: 0.7;
+}
+
+.fitting-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background-color: var(--poms-primary);
+    color: white;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+/* ============================================================================
+   Document Card Styles
+   ============================================================================ */
+
+.document-card {
+    border: 1px solid var(--poms-border);
+    border-radius: 10px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.2s ease;
+}
+
+.document-card:hover {
+    background-color: var(--poms-bg-sidebar);
+}
+
+.document-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.document-icon.pdf { background-color: rgba(220, 38, 38, 0.15); color: var(--poms-danger); }
+.document-icon.image { background-color: rgba(37, 99, 235, 0.15); color: var(--poms-primary); }
+.document-icon.doc { background-color: rgba(2, 132, 199, 0.15); color: var(--poms-info); }
+
+.ocr-badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+}
+
+/* ============================================================================
+   Activity Timeline Styles
+   ============================================================================ */
+
+.activity-timeline {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.activity-timeline::before {
+    content: '';
+    position: absolute;
+    left: 0.5rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: var(--poms-border);
+}
+
+.activity-item {
+    position: relative;
+    padding-bottom: 1rem;
+}
+
+.activity-item::before {
+    content: '';
+    position: absolute;
+    left: -1.5rem;
+    top: 0.25rem;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--poms-primary);
+    border: 2px solid var(--poms-bg-card);
+}
+
+.activity-item.activity-success::before { background-color: var(--poms-success); }
+.activity-item.activity-info::before { background-color: var(--poms-info); }
+.activity-item.activity-warning::before { background-color: var(--poms-warning); }
+
+/* ============================================================================
+   Page Header Styles
+   ============================================================================ */
+
+.page-header {
+    margin-bottom: 1.5rem;
+}
+
+.page-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--poms-text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.page-subtitle {
+    color: var(--poms-text-secondary);
+    font-size: 0.875rem;
+}
+
+.breadcrumb {
+    background-color: transparent;
+    padding: 0;
+    margin-bottom: 0.5rem;
+}
+
+.breadcrumb-item a {
+    color: var(--poms-text-secondary);
+    text-decoration: none;
+}
+
+.breadcrumb-item a:hover {
+    color: var(--poms-primary);
+}
+
+.breadcrumb-item.active {
+    color: var(--poms-text-primary);
+}
+
+/* ============================================================================
+   Chart Container Styles
+   ============================================================================ */
+
+.chart-container {
+    position: relative;
+    height: 300px;
+}
+
+/* ============================================================================
+   Quick Action Buttons
+   ============================================================================ */
+
+.quick-action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.25rem;
+    border-radius: 12px;
+    background-color: var(--poms-bg-card);
+    border: 1px solid var(--poms-border);
+    text-decoration: none;
+    color: var(--poms-text-primary);
+    transition: all 0.2s ease;
+}
+
+.quick-action-btn:hover {
+    border-color: var(--poms-primary);
+    box-shadow: var(--poms-shadow-md);
+    transform: translateY(-2px);
+    color: var(--poms-primary);
+}
+
+.quick-action-btn i {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--poms-primary);
+}
+
+.quick-action-btn span {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* ============================================================================
+   Report Filter Card
+   ============================================================================ */
+
+.filter-card {
+    background-color: var(--poms-bg-sidebar);
+    border: 1px solid var(--poms-border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+/* ============================================================================
+   Modal Enhancements
+   ============================================================================ */
+
+.modal-content {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--poms-border);
+    padding: 1rem 1.25rem;
+}
+
+.modal-footer {
+    border-top: 1px solid var(--poms-border);
+    padding: 1rem 1.25rem;
+}
+
+/* ============================================================================
+   Responsive Adjustments
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .poms-sidebar {
+        border-right: none;
+        border-bottom: 1px solid var(--poms-border);
+        min-height: auto;
+    }
+
+    .kpi-card .kpi-value {
+        font-size: 1.5rem;
+    }
+
+    .patient-photo {
+        width: 80px;
+        height: 80px;
+    }
+}
+
+/* ============================================================================
+   Print Styles
+   ============================================================================ */
+
+@media print {
+    .navbar-poms,
+    .poms-sidebar,
+    .btn,
+    .no-print {
+        display: none !important;
+    }
+
+    body {
+        background-color: white;
+    }
+
+    .card {
+        border: 1px solid #ddd;
+        box-shadow: none;
+    }
+}

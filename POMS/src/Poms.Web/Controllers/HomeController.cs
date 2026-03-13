@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Poms.Infrastructure.Data;
+using Poms.Infrastructure.Services;
 using Poms.Web.Models;
 using System.Diagnostics;
 
@@ -12,31 +12,36 @@ public class HomeController : Controller
 {
     private readonly ILogger<HomeController> _logger;
     private readonly PomsDbContext _context;
+    private readonly IDashboardService _dashboardService;
 
-    public HomeController(ILogger<HomeController> logger, PomsDbContext context)
+    public HomeController(
+        ILogger<HomeController> logger,
+        PomsDbContext context,
+        IDashboardService dashboardService)
     {
         _logger = logger;
         _context = context;
+        _dashboardService = dashboardService;
     }
 
     public async Task<IActionResult> Index()
     {
-        var totalPatients = await _context.Patients.CountAsync();
-        var activeEpisodes = await _context.Episodes.CountAsync(e => !e.ClosedOn.HasValue);
-        var deliveriesThisMonth = await _context.Deliveries
-            .CountAsync(d => d.DeliveryDate.HasValue &&
-                        d.DeliveryDate.Value.Month == DateTime.Now.Month &&
-                        d.DeliveryDate.Value.Year == DateTime.Now.Year);
-        var pendingFollowUps = await _context.FollowUps
-            .CountAsync(f => f.NextAppointmentDate.HasValue &&
-                        f.NextAppointmentDate.Value <= DateOnly.FromDateTime(DateTime.Today.AddDays(7)));
+        var dashboardData = await _dashboardService.GetDashboardDataAsync();
+        var registrationTrend = await _dashboardService.GetPatientRegistrationTrendAsync(12);
+        var episodesByType = await _dashboardService.GetEpisodesByTypeAsync();
+        var deliveriesByMonth = await _dashboardService.GetDeliveriesByMonthAsync(6);
+        var recentActivities = await _dashboardService.GetRecentActivitiesAsync(10);
 
-        ViewBag.TotalPatients = totalPatients;
-        ViewBag.ActiveEpisodes = activeEpisodes;
-        ViewBag.DeliveriesThisMonth = deliveriesThisMonth;
-        ViewBag.PendingFollowUps = pendingFollowUps;
+        var viewModel = new DashboardViewModel
+        {
+            Data = dashboardData,
+            RegistrationTrend = registrationTrend,
+            EpisodesByType = episodesByType,
+            DeliveriesByMonth = deliveriesByMonth,
+            RecentActivities = recentActivities
+        };
 
-        return View();
+        return View(viewModel);
     }
 
     public IActionResult Privacy()
@@ -49,4 +54,13 @@ public class HomeController : Controller
     {
         return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
     }
+}
+
+public class DashboardViewModel
+{
+    public DashboardData Data { get; set; } = new();
+    public List<ChartDataPoint> RegistrationTrend { get; set; } = new();
+    public List<ChartDataPoint> EpisodesByType { get; set; } = new();
+    public List<ChartDataPoint> DeliveriesByMonth { get; set; } = new();
+    public List<RecentActivityItem> RecentActivities { get; set; } = new();
 }

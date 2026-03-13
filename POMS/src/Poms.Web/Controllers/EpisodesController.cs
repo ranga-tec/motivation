@@ -172,6 +172,7 @@ public class EpisodesController : Controller
         if (episode.Type == EpisodeType.Prosthetic && episode.Prosthetic != null)
         {
             model.AmputationType = episode.Prosthetic.AmputationType;
+            model.AmputationTypeOther = episode.Prosthetic.AmputationTypeOther;
             model.Level = episode.Prosthetic.Level;
             model.ProstheticSide = episode.Prosthetic.Side;
             model.Reason = episode.Prosthetic.Reason;
@@ -240,6 +241,7 @@ public class EpisodesController : Controller
                 {
                     EpisodeId = episode.Id,
                     AmputationType = model.AmputationType ?? AmputationType.BelowKnee,
+                    AmputationTypeOther = model.AmputationType == AmputationType.Other ? model.AmputationTypeOther : null,
                     Level = model.Level ?? "Not Specified",
                     Side = model.ProstheticSide ?? Side.Left,
                     Reason = model.Reason ?? Reason.Disease
@@ -319,6 +321,7 @@ public class EpisodesController : Controller
         {
             case EpisodeType.Prosthetic when episode.Prosthetic != null:
                 episode.Prosthetic.AmputationType = model.AmputationType ?? AmputationType.BelowKnee;
+                episode.Prosthetic.AmputationTypeOther = model.AmputationType == AmputationType.Other ? model.AmputationTypeOther : null;
                 episode.Prosthetic.Level = model.Level ?? "Not Specified";
                 episode.Prosthetic.Side = model.ProstheticSide ?? Side.Left;
                 episode.Prosthetic.Reason = model.Reason ?? Reason.Disease;

@@ -27,8 +27,9 @@ public class ComponentCatalog
     public int Id { get; set; }
     public string Code { get; set; } = default!;
     public string Name { get; set; } = default!;
+    public string? Category { get; set; }
     public int DeviceTypeId { get; set; }
     public bool IsActive { get; set; } = true;
-    
+
     public DeviceType DeviceType { get; set; } = default!;
 }

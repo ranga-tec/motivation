@@ -57,13 +57,6 @@
                                 <div asp-validation-for="OpenedOn" class="text-danger"></div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label asp-for="ClosedOn" class="form-label">Closed Date (Optional)</label>
-                                <input asp-for="ClosedOn" class="form-control" type="date" />
-                                <div asp-validation-for="ClosedOn" class="text-danger"></div>
-                            </div>
-                        </div>
                     </div>
 
                     <!-- Prosthetic Episode Details -->
@@ -73,13 +66,19 @@
                             <div class="col-md-3">
                                 <div class="mb-3">
                                     <label asp-for="AmputationType" class="form-label">Amputation Type</label>
-                                    <select asp-for="AmputationType" class="form-select">
+                                    <select asp-for="AmputationType" class="form-select" id="amputationType">
                                         <option value="">-- Select --</option>
                                         @foreach (var type in Enum.GetValues(typeof(Poms.Domain.Enums.AmputationType)))
                                         {
                                             <option value="@type">@type</option>
                                         }
                                     </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3" id="amputationTypeOtherContainer" style="display: none;">
+                                <div class="mb-3">
+                                    <label asp-for="AmputationTypeOther" class="form-label">Specify Other Type</label>
+                                    <input asp-for="AmputationTypeOther" class="form-control" placeholder="Enter amputation type" />
                                 </div>
                             </div>
                             <div class="col-md-3">
@@ -100,6 +99,8 @@
                                     </select>
                                 </div>
                             </div>
+                        </div>
+                        <div class="row">
                             <div class="col-md-3">
                                 <div class="mb-3">
                                     <label asp-for="Reason" class="form-label">Reason</label>
@@ -299,8 +300,21 @@
                 }
             });
 
+            // Handle "Other" amputation type - show text input
+            $('#amputationType').change(function () {
+                const selectedType = $(this).val();
+                if (selectedType === 'Other') {
+                    $('#amputationTypeOtherContainer').show();
+                    $('#AmputationTypeOther').attr('required', true);
+                } else {
+                    $('#amputationTypeOtherContainer').hide();
+                    $('#AmputationTypeOther').attr('required', false).val('');
+                }
+            });
+
             // Trigger change on page load if a type is already selected
             $('#episodeType').trigger('change');
+            $('#amputationType').trigger('change');
         });
     </script>
 }

@@ -1,0 +1,152 @@
+@model Poms.Domain.Entities.Fitting
+@using Poms.Domain.Enums
+@{
+    ViewData["Title"] = $"Fitting #{Model.FittingNumber}";
+}
+
+<div class="page-header">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Fittings</a></li>
+            <li class="breadcrumb-item active">Fitting #@Model.FittingNumber</li>
+        </ol>
+    </nav>
+    <div class="d-flex justify-content-between align-items-center">
+        <h1 class="page-title">Fitting #@Model.FittingNumber</h1>
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+            <i class="fas fa-edit me-2"></i>Edit
+        </a>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Fitting Details</h5>
+                <span class="badge bg-@(Model.Status == FittingStatus.Completed ? "success" :
+                    Model.Status == FittingStatus.InProgress ? "warning" :
+                    Model.Status == FittingStatus.Scheduled ? "info" : "secondary") fs-6">
+                    @Model.Status
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="text-muted small">Fitting Date</label>
+                        <div class="fw-semibold">@Model.FittingDate.ToString("yyyy-MM-dd")</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">Performed By</label>
+                        <div class="fw-semibold">@(Model.PerformedBy ?? "-")</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">Next Fitting Date</label>
+                        <div class="fw-semibold">@(Model.NextFittingDate?.ToString("yyyy-MM-dd") ?? "-")</div>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.Notes))
+                {
+                    <div class="mb-3">
+                        <label class="text-muted small">Notes</label>
+                        <div class="border rounded p-3 bg-light">@Model.Notes</div>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.Adjustments))
+                {
+                    <div class="mb-3">
+                        <label class="text-muted small">Adjustments Made</label>
+                        <div class="border rounded p-3 bg-light">@Model.Adjustments</div>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.PatientFeedback))
+                {
+                    <div class="mb-3">
+                        <label class="text-muted small">Patient Feedback</label>
+                        <div class="border rounded p-3 bg-light">@Model.PatientFeedback</div>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.NextSteps))
+                {
+                    <div class="mb-3">
+                        <label class="text-muted small">Next Steps</label>
+                        <div class="border rounded p-3 bg-light">@Model.NextSteps</div>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.Remarks))
+                {
+                    <div class="mb-3">
+                        <label class="text-muted small">Remarks</label>
+                        <div class="border rounded p-3 bg-light">@Model.Remarks</div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Status Update -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Update Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex gap-2">
+                    @foreach (var status in Enum.GetValues<FittingStatus>())
+                    {
+                        if (status != Model.Status)
+                        {
+                            <form asp-action="UpdateStatus" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@Model.Id" />
+                                <input type="hidden" name="status" value="@status" />
+                                <button type="submit" class="btn btn-outline-@(status == FittingStatus.Completed ? "success" :
+                                    status == FittingStatus.InProgress ? "warning" :
+                                    status == FittingStatus.Scheduled ? "info" : "secondary")">
+                                    Mark as @status
+                                </button>
+                            </form>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Patient Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="text-muted small">Patient Number</label>
+                    <div class="fw-semibold">@Model.Episode.Patient.PatientNumber</div>
+                </div>
+                <div class="mb-3">
+                    <label class="text-muted small">Name</label>
+                    <div class="fw-semibold">@Model.Episode.Patient.FirstName @Model.Episode.Patient.LastName</div>
+                </div>
+                <div class="mb-3">
+                    <label class="text-muted small">Episode Type</label>
+                    <div class="fw-semibold">@Model.Episode.Type</div>
+                </div>
+                <a asp-controller="Episodes" asp-action="Details" asp-route-id="@Model.EpisodeId"
+                   class="btn btn-outline-primary w-100">
+                    <i class="fas fa-folder-open me-2"></i>View Episode
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

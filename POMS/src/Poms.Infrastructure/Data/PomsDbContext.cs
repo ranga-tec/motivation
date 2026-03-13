@@ -1,10 +1,11 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Poms.Domain.Entities;
+using Poms.Domain.Enums;
 
 namespace Poms.Infrastructure.Data;
 
-public class PomsDbContext : IdentityDbContext
+public class PomsDbContext : IdentityDbContext<ApplicationUser>
 {
     public PomsDbContext(DbContextOptions<PomsDbContext> options) : base(options) { }
 
@@ -30,6 +31,7 @@ public class PomsDbContext : IdentityDbContext
     public DbSet<ComponentCatalog> ComponentCatalogs => Set<ComponentCatalog>();
     public DbSet<NumberSeries> NumberSeries => Set<NumberSeries>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -96,6 +98,7 @@ public class PomsDbContext : IdentityDbContext
         // Fitting
         builder.Entity<Fitting>(entity =>
         {
+            entity.Property(e => e.Status).HasConversion<string>();
             entity.HasOne(e => e.Episode).WithMany(ep => ep.Fittings).HasForeignKey(e => e.EpisodeId);
             entity.HasQueryFilter(e => !e.IsDeleted);
         });
@@ -167,6 +170,36 @@ public class PomsDbContext : IdentityDbContext
         builder.Entity<NumberSeries>(entity =>
         {
             entity.HasIndex(e => new { e.CenterId, e.Year }).IsUnique();
+        });
+
+        // PatientDocument - OCR fields
+        builder.Entity<PatientDocument>(entity =>
+        {
+            entity.Property(e => e.OcrStatus).HasConversion<string>();
+            entity.HasOne(e => e.Patient).WithMany(p => p.Documents).HasForeignKey(e => e.PatientId);
+            entity.HasQueryFilter(e => !e.IsDeleted);
+        });
+
+        // EpisodeDocument - OCR fields
+        builder.Entity<EpisodeDocument>(entity =>
+        {
+            entity.Property(e => e.OcrStatus).HasConversion<string>();
+            entity.HasOne(e => e.Episode).WithMany(ep => ep.Documents).HasForeignKey(e => e.EpisodeId);
+            entity.HasQueryFilter(e => !e.IsDeleted);
+        });
+
+        // ApplicationUser
+        builder.Entity<ApplicationUser>(entity =>
+        {
+            entity.HasOne(e => e.Center).WithMany().HasForeignKey(e => e.CenterId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // SystemSetting
+        builder.Entity<SystemSetting>(entity =>
+        {
+            entity.HasIndex(e => e.Key).IsUnique();
+            entity.Property(e => e.Key).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Category).HasMaxLength(50);
         });
 
         // Device Catalog

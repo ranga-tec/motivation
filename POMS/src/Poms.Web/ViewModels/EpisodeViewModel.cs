@@ -31,6 +31,9 @@ public class EpisodeViewModel
     [Display(Name = "Amputation Type")]
     public AmputationType? AmputationType { get; set; }
 
+    [Display(Name = "Amputation Type (Other)")]
+    public string? AmputationTypeOther { get; set; }
+
     [Display(Name = "Level")]
     public string? Level { get; set; }
 

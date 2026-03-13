@@ -28,7 +28,7 @@ public class PatientsController : Controller
     }
 
     // GET: Patients
-    public async Task<IActionResult> Index(string searchString, int? centerId, int? districtId, int page = 1)
+    public async Task<IActionResult> Index(string searchString, int? centerId, int? districtId, bool? isActive, int page = 1)
     {
         var query = _context.Patients
             .Include(p => p.Province)
@@ -38,7 +38,7 @@ public class PatientsController : Controller
 
         if (!string.IsNullOrEmpty(searchString))
         {
-            query = query.Where(p => 
+            query = query.Where(p =>
                 p.PatientNumber.Contains(searchString) ||
                 p.FirstName.Contains(searchString) ||
                 (p.LastName != null && p.LastName.Contains(searchString)) ||
@@ -51,6 +51,9 @@ public class PatientsController : Controller
         if (districtId.HasValue)
             query = query.Where(p => p.DistrictId == districtId.Value);
 
+        if (isActive.HasValue)
+            query = query.Where(p => p.IsActive == isActive.Value);
+
         var pageSize = 20;
         var totalCount = await query.CountAsync();
         var patients = await query
@@ -62,11 +65,30 @@ public class PatientsController : Controller
         ViewBag.SearchString = searchString;
         ViewBag.CenterId = centerId;
         ViewBag.DistrictId = districtId;
+        ViewBag.IsActive = isActive;
         ViewBag.CurrentPage = page;
         ViewBag.TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
         await PopulateDropdowns();
         return View(patients);
+    }
+
+    // POST: Patients/ToggleStatus
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ToggleStatus(Guid id)
+    {
+        var patient = await _context.Patients.FindAsync(id);
+        if (patient == null) return NotFound();
+
+        patient.IsActive = !patient.IsActive;
+        patient.UpdatedBy = User.Identity?.Name;
+        patient.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        TempData["Success"] = $"Patient status changed to {(patient.IsActive ? "Active" : "Inactive")}";
+        return RedirectToAction(nameof(Details), new { id });
     }
 
     // GET: Patients/Details/5

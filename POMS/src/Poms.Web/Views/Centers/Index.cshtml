@@ -1,0 +1,94 @@
+@model List<Poms.Domain.Entities.Center>
+@{
+    ViewData["Title"] = "Centers";
+}
+
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-controller="Admin" asp-action="Index">Admin</a></li>
+                <li class="breadcrumb-item active">Centers</li>
+            </ol>
+        </nav>
+        <h1 class="page-title">Centers</h1>
+    </div>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i>Add Center
+    </a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card">
+    <div class="card-header">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">District</label>
+                <select name="districtId" class="form-select">
+                    <option value="">All Districts</option>
+                    @foreach (SelectListItem item in ViewBag.Districts)
+                    {
+                        <option value="@item.Value" selected="@(ViewBag.DistrictId?.ToString() == item.Value)">@item.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-filter me-1"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>District</th>
+                        <th>Province</th>
+                        <th>Phone</th>
+                        <th>Status</th>
+                        <th width="150">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var center in Model)
+                    {
+                        <tr>
+                            <td><code>@center.Code</code></td>
+                            <td>@center.Name</td>
+                            <td>@center.District.Name</td>
+                            <td>@center.District.Province.Name</td>
+                            <td>@(center.Phone ?? "-")</td>
+                            <td>
+                                <span class="badge badge-status @(center.IsActive ? "badge-active" : "badge-inactive")">
+                                    @(center.IsActive ? "Active" : "Inactive")
+                                </span>
+                            </td>
+                            <td>
+                                <a asp-action="Edit" asp-route-id="@center.Id" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form asp-action="ToggleStatus" asp-route-id="@center.Id" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-outline-@(center.IsActive ? "warning" : "success")">
+                                        <i class="fas fa-@(center.IsActive ? "ban" : "check")"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

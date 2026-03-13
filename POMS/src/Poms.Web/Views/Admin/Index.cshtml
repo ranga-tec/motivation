@@ -1,0 +1,213 @@
+@model AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<div class="page-header">
+    <h1 class="page-title">Admin Dashboard</h1>
+    <p class="page-subtitle">System administration and management</p>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-6 col-lg-3">
+        <div class="card kpi-card kpi-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="kpi-value">@Model.TotalUsers</div>
+                        <div class="kpi-label">Total Users</div>
+                    </div>
+                    <div class="kpi-icon">
+                        <i class="fas fa-users-cog"></i>
+                    </div>
+                </div>
+                <small class="text-muted">@Model.ActiveUsers active</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card kpi-card kpi-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="kpi-value">@Model.TotalPatients</div>
+                        <div class="kpi-label">Total Patients</div>
+                    </div>
+                    <div class="kpi-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card kpi-card kpi-info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="kpi-value">@Model.TotalEpisodes</div>
+                        <div class="kpi-label">Total Episodes</div>
+                    </div>
+                    <div class="kpi-icon">
+                        <i class="fas fa-folder"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card kpi-card kpi-warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="kpi-value">@Model.TotalCenters</div>
+                        <div class="kpi-label">Centers</div>
+                    </div>
+                    <div class="kpi-icon">
+                        <i class="fas fa-hospital"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Administration</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <a asp-controller="Users" asp-action="Index" class="list-group-item list-group-item-action d-flex align-items-center">
+                        <i class="fas fa-users-cog me-3 text-primary"></i>
+                        <div>
+                            <div class="fw-semibold">User Management</div>
+                            <small class="text-muted">Create, edit, and manage system users</small>
+                        </div>
+                    </a>
+                    <a asp-controller="Admin" asp-action="Settings" class="list-group-item list-group-item-action d-flex align-items-center">
+                        <i class="fas fa-sliders-h me-3 text-success"></i>
+                        <div>
+                            <div class="fw-semibold">System Settings</div>
+                            <small class="text-muted">Configure application settings</small>
+                        </div>
+                    </a>
+                    <a asp-controller="Admin" asp-action="AuditLogs" class="list-group-item list-group-item-action d-flex align-items-center">
+                        <i class="fas fa-history me-3 text-info"></i>
+                        <div>
+                            <div class="fw-semibold">Audit Logs</div>
+                            <small class="text-muted">View system activity logs</small>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-database me-2"></i>Master Data</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <a asp-controller="Provinces" asp-action="Index" class="list-group-item list-group-item-action d-flex align-items-center">
+                        <i class="fas fa-map me-3 text-primary"></i>
+                        <div>
+                            <div class="fw-semibold">Provinces</div>
+                            <small class="text-muted">Manage province records</small>
+                        </div>
+                    </a>
+                    <a asp-controller="Districts" asp-action="Index" class="list-group-item list-group-item-action d-flex align-items-center">
+                        <i class="fas fa-map-marker-alt me-3 text-success"></i>
+                        <div>
+                            <div class="fw-semibold">Districts</div>
+                            <small class="text-muted">Manage district records</small>
+                        </div>
+                    </a>
+                    <a asp-controller="Centers" asp-action="Index" class="list-group-item list-group-item-action d-flex align-items-center">
+                        <i class="fas fa-hospital me-3 text-info"></i>
+                        <div>
+                            <div class="fw-semibold">Centers</div>
+                            <small class="text-muted">Manage rehabilitation centers</small>
+                        </div>
+                    </a>
+                    <a asp-controller="DeviceTypes" asp-action="Index" class="list-group-item list-group-item-action d-flex align-items-center">
+                        <i class="fas fa-cubes me-3 text-warning"></i>
+                        <div>
+                            <div class="fw-semibold">Device Types</div>
+                            <small class="text-muted">Manage device categories</small>
+                        </div>
+                    </a>
+                    <a asp-controller="DeviceCatalog" asp-action="Index" class="list-group-item list-group-item-action d-flex align-items-center">
+                        <i class="fas fa-list me-3 text-danger"></i>
+                        <div>
+                            <div class="fw-semibold">Device Catalog</div>
+                            <small class="text-muted">Manage device products</small>
+                        </div>
+                    </a>
+                    <a asp-controller="ComponentCatalog" asp-action="Index" class="list-group-item list-group-item-action d-flex align-items-center">
+                        <i class="fas fa-puzzle-piece me-3 text-secondary"></i>
+                        <div>
+                            <div class="fw-semibold">Components</div>
+                            <small class="text-muted">Manage device components</small>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Audit Logs</h5>
+                <a asp-action="AuditLogs" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>User</th>
+                                <th>Action</th>
+                                <th>Entity</th>
+                                <th>Entity ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.RecentAuditLogs.Any())
+                            {
+                                @foreach (var log in Model.RecentAuditLogs)
+                                {
+                                    <tr>
+                                        <td>@log.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                        <td>@log.UserId</td>
+                                        <td>
+                                            <span class="badge bg-@(log.Action == "Create" ? "success" : log.Action == "Update" ? "primary" : "danger")">
+                                                @log.Action
+                                            </span>
+                                        </td>
+                                        <td>@log.EntityType</td>
+                                        <td><code>@log.EntityId</code></td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-3">No audit logs available</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

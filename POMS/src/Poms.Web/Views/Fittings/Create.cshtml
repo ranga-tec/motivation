@@ -1,0 +1,94 @@
+@model FittingViewModel
+@using Poms.Domain.Enums
+@{
+    ViewData["Title"] = "Create Fitting";
+}
+
+<div class="page-header">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Fittings</a></li>
+            <li class="breadcrumb-item active">Create</li>
+        </ol>
+    </nav>
+    <h1 class="page-title">Create Fitting</h1>
+    <p class="page-subtitle">Patient: @Model.PatientNumber - @Model.PatientName</p>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    <input type="hidden" asp-for="EpisodeId" />
+                    <input type="hidden" asp-for="FittingNumber" />
+                    <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Fitting Number</label>
+                            <input type="text" class="form-control" value="@Model.FittingNumber" readonly />
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="FittingDate" class="form-label"></label>
+                            <input asp-for="FittingDate" type="date" class="form-control" />
+                            <span asp-validation-for="FittingDate" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Status" class="form-label"></label>
+                            <select asp-for="Status" asp-items="@ViewBag.StatusOptions" class="form-select"></select>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label asp-for="PerformedBy" class="form-label"></label>
+                            <input asp-for="PerformedBy" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="NextFittingDate" class="form-label"></label>
+                            <input asp-for="NextFittingDate" type="date" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Notes" class="form-label"></label>
+                        <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Adjustments" class="form-label"></label>
+                        <textarea asp-for="Adjustments" class="form-control" rows="3"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="PatientFeedback" class="form-label"></label>
+                        <textarea asp-for="PatientFeedback" class="form-control" rows="3"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="NextSteps" class="form-label"></label>
+                        <textarea asp-for="NextSteps" class="form-control" rows="2"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Remarks" class="form-label"></label>
+                        <textarea asp-for="Remarks" class="form-control" rows="2"></textarea>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Save Fitting
+                        </button>
+                        <a asp-controller="Episodes" asp-action="Details" asp-route-id="@Model.EpisodeId"
+                           class="btn btn-light">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
