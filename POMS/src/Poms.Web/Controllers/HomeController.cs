@@ -56,6 +56,7 @@ public class HomeController : Controller
     }
 }
 
+// Use Infrastructure types for dashboard
 public class DashboardViewModel
 {
     public DashboardData Data { get; set; } = new();
