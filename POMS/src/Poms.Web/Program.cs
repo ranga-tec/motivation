@@ -138,8 +138,12 @@ using (var scope = app.Services.CreateScope())
         // Use Migrate for SQL Server (local development)
         if (usePostgreSQL)
         {
-            Log.Information("PostgreSQL detected - using EnsureCreated for schema initialization");
+            Log.Information("PostgreSQL detected - recreating database schema");
+            // Drop and recreate to ensure schema matches current model
+            // This is needed because EnsureCreated won't update existing tables
+            await context.Database.EnsureDeletedAsync();
             await context.Database.EnsureCreatedAsync();
+            Log.Information("Database schema created successfully");
         }
         else
         {
