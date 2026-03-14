@@ -9,6 +9,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Configure Railway PORT
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
+Console.WriteLine($"[POMS] Starting on port {port}");
+Console.WriteLine($"[POMS] Environment: {Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development"}");
+Console.WriteLine($"[POMS] Railway: {Environment.GetEnvironmentVariable("RAILWAY_ENVIRONMENT") ?? "Not on Railway"}");
+
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 // Configure Serilog
@@ -28,14 +32,31 @@ bool usePostgreSQL;
 
 if (!string.IsNullOrEmpty(databaseUrl))
 {
+    Console.WriteLine("[POMS] DATABASE_URL found - using PostgreSQL");
     // Parse PostgreSQL URL format: postgresql://user:password@host:port/database
-    var uri = new Uri(databaseUrl);
-    var userInfo = uri.UserInfo.Split(':');
-    connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
-    usePostgreSQL = true;
+    try
+    {
+        var uri = new Uri(databaseUrl);
+        var userInfo = uri.UserInfo.Split(':');
+        var host = uri.Host;
+        var dbPort = uri.Port > 0 ? uri.Port : 5432;
+        var database = uri.AbsolutePath.TrimStart('/');
+        var username = userInfo[0];
+        var password = userInfo.Length > 1 ? userInfo[1] : "";
+
+        connectionString = $"Host={host};Port={dbPort};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+        Console.WriteLine($"[POMS] Database Host: {host}, Port: {dbPort}, Database: {database}");
+        usePostgreSQL = true;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[POMS] Error parsing DATABASE_URL: {ex.Message}");
+        throw;
+    }
 }
 else
 {
+    Console.WriteLine("[POMS] No DATABASE_URL - using DefaultConnection from appsettings");
     connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
         ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
     usePostgreSQL = builder.Configuration.GetValue<bool>("UsePostgreSQL", false);
@@ -69,9 +90,15 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options => {
 
 // Configure application services
 var fileStorageConfig = builder.Configuration.GetSection("FileStorage");
-var rootPath = fileStorageConfig["RootPath"] ?? "C:\\PomsStorage";
+// Use /app/storage for Railway (Linux), or Windows path for local dev
+var defaultStoragePath = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RAILWAY_ENVIRONMENT"))
+    ? "/app/storage"
+    : "C:\\PomsStorage";
+var rootPath = fileStorageConfig["RootPath"] ?? defaultStoragePath;
 var maxFileSizeMB = fileStorageConfig.GetValue<long>("MaxFileSizeMB", 10);
 var allowedExtensions = fileStorageConfig.GetSection("AllowedExtensions").Get<string[]>();
+
+Console.WriteLine($"[POMS] File storage path: {rootPath}");
 
 builder.Services.AddScoped<IPatientNumberService, PatientNumberService>();
 builder.Services.AddScoped<IFileStorageService>(sp =>
