@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Poms.Domain.Entities;
 using Poms.Infrastructure.Data;
@@ -6,6 +7,14 @@ using Poms.Infrastructure.Services;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure forwarded headers for Railway reverse proxy
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 // Configure Railway PORT
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
@@ -163,6 +172,9 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline.
+// Handle forwarded headers from Railway reverse proxy (must be first)
+app.UseForwardedHeaders();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
@@ -170,12 +182,6 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseExceptionHandler("/Home/Error");
-    // Only use HSTS and HTTPS redirect when not behind a reverse proxy (Railway)
-    if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RAILWAY_ENVIRONMENT")))
-    {
-        app.UseHsts();
-        app.UseHttpsRedirection();
-    }
 }
 app.UseStaticFiles();
 
