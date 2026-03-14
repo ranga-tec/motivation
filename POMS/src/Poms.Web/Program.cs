@@ -125,10 +125,13 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
+    // Only use HSTS and HTTPS redirect when not behind a reverse proxy (Railway)
+    if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RAILWAY_ENVIRONMENT")))
+    {
+        app.UseHsts();
+        app.UseHttpsRedirection();
+    }
 }
-
-app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
