@@ -106,7 +106,19 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<PomsDbContext>();
-        await context.Database.MigrateAsync();
+
+        // Use EnsureCreated for PostgreSQL (Railway) since migrations are SQL Server-specific
+        // Use Migrate for SQL Server (local development)
+        if (usePostgreSQL)
+        {
+            Log.Information("PostgreSQL detected - using EnsureCreated for schema initialization");
+            await context.Database.EnsureCreatedAsync();
+        }
+        else
+        {
+            await context.Database.MigrateAsync();
+        }
+
         await DbInitializer.SeedUsersAndRolesAsync(services);
         await SampleDataSeeder.SeedSampleConditionsAsync(context);
         Log.Information("Database seeded successfully");
@@ -114,6 +126,8 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         Log.Error(ex, "An error occurred seeding the database");
+        // Don't crash the app - allow it to start even if database setup fails
+        // This helps with debugging on Railway
     }
 }
 
