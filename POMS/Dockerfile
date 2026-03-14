@@ -31,7 +31,7 @@ RUN mkdir -p /app/storage && chmod 777 /app/storage
 
 # Railway provides PORT environment variable at runtime
 ENV ASPNETCORE_ENVIRONMENT=Production
-ENV PORT=5000
+ENV PORT=8080
 
 # Use shell form to expand PORT variable
 CMD ASPNETCORE_URLS=http://0.0.0.0:$PORT dotnet Poms.Web.dll
