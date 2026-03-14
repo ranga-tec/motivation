@@ -220,20 +220,53 @@ dotnet run
 
 ## Deployment
 
-### Railway
-- Uses `DATABASE_URL` environment variable
-- Set `PORT=5000`
-- Set `ASPNETCORE_ENVIRONMENT=Production`
+### Railway (Production)
+- **URL:** https://popms.up.railway.app
+- **Environment Variables:**
+  - `DATABASE_URL` - PostgreSQL connection (auto-set by Railway)
+  - `PORT=8080` - Railway expects port 8080
+  - `ASPNETCORE_ENVIRONMENT=Production`
+- **Important:** PostgreSQL uses `EnsureCreated()` instead of migrations (SQL Server migrations don't work on PostgreSQL)
+- Uses `ForwardedHeaders` middleware for HTTPS behind Railway's reverse proxy
+
+### Default Login Credentials
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | admin@poms.lk | Admin@123 |
+| Clinician | clinician@poms.lk | Clinic@123 |
+| Data Entry | registrar@poms.lk | Data@123 |
+| Viewer | viewer@poms.lk | View@123 |
 
 ### Docker
 Dockerfile is at project root.
+- Uses port 8080 by default
+- Creates `/app/storage` directory for file uploads
 
 ## Known Issues / Warnings
 
 1. **SixLabors.ImageSharp vulnerabilities** - Package has known vulnerabilities, consider upgrading to latest version
 2. **Query filter warnings** - EF Core warns about global query filters on related entities (soft delete pattern) - this is expected behavior
+3. **Data Protection Keys** - Keys not persisted outside container, sessions expire on redeploy
+
+## Pending Features / TODOs
+
+1. **File Upload on Patient Creation** - Add document/photo upload fields to Patient Create form
+   - Files: `Views/Patients/Create.cshtml`, `Controllers/PatientsController.cs`
+   - Use `FileStorageService.SavePatientPhotoAsync()` and `SaveFileAsync()`
+
+2. **PostgreSQL Migrations** - Create separate PostgreSQL migration assembly for proper schema management
+
+3. **Data Protection Configuration** - Configure persistent data protection keys for Railway
 
 ## Recent Changes (March 2026)
+
+### Railway Production Deployment
+- Fixed HTTPS redirect loop with ForwardedHeaders middleware
+- Fixed PORT binding (8080 instead of 5000)
+- Fixed PostgreSQL schema creation (EnsureCreated vs Migrate)
+- Fixed ApplicationUser Identity configuration
+- Fixed _LoginPartial.cshtml to use ApplicationUser
+- Fixed ViewModel type conflicts (DashboardViewModel, DocumentListItem)
 
 ### EnhancedEntities Migration
 - Added `AmputationTypeOther` handling in EpisodesController
@@ -241,6 +274,22 @@ Dockerfile is at project root.
 - Created all missing ViewModels
 - Fixed build errors in DashboardService and ReportService
 - Added Category to ComponentCatalog entity
+
+## ViewModel Guidelines
+
+**Important:** Do NOT create duplicate ViewModel classes in Controllers. Always use classes from `Poms.Web.ViewModels` namespace. If a controller-specific ViewModel is needed (like `DashboardViewModel` in `HomeController`), ensure it uses types from `Poms.Infrastructure.Services`.
+
+Example of correct usage:
+```csharp
+// In Controller - use Infrastructure types
+using Poms.Infrastructure.Services; // For DashboardData, ChartDataPoint
+// NOT using Poms.Web.ViewModels for these
+
+public class DashboardViewModel
+{
+    public DashboardData Data { get; set; } = new();  // From Infrastructure
+}
+```
 
 ## Contact
 
@@ -250,4 +299,4 @@ For questions about this codebase:
 - Email: ranga@neuralsedge.com
 
 ---
-Last Updated: March 2026
+Last Updated: March 14, 2026

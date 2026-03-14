@@ -5,6 +5,7 @@ using Poms.Domain.Entities;
 using Poms.Domain.Enums;
 using Poms.Infrastructure.Data;
 using Poms.Infrastructure.Services;
+using Poms.Web.ViewModels;
 
 namespace Poms.Web.Controllers;
 
@@ -366,50 +367,3 @@ public class DocumentsController : Controller
         return RedirectToAction("Details", "Episodes", new { id = episodeId });
     }
 }
-
-#region ViewModels
-
-public class DocumentListItem
-{
-    public Guid Id { get; set; }
-    public string Title { get; set; } = "";
-    public string FileName { get; set; } = "";
-    public string ContentType { get; set; } = "";
-    public DateTime UploadedAt { get; set; }
-    public OcrStatus OcrStatus { get; set; }
-    public string PatientNumber { get; set; } = "";
-    public string PatientName { get; set; } = "";
-    public string DocumentType { get; set; } = "";
-}
-
-public class DocumentDetailsViewModel
-{
-    public Guid Id { get; set; }
-    public string Title { get; set; } = "";
-    public string FileName { get; set; } = "";
-    public string ContentType { get; set; } = "";
-    public long FileSize { get; set; }
-    public string UploadedBy { get; set; } = "";
-    public DateTime UploadedAt { get; set; }
-    public string? Remarks { get; set; }
-    public string? ExtractedText { get; set; }
-    public OcrStatus OcrStatus { get; set; }
-    public string? OcrLanguage { get; set; }
-    public DateTime? OcrProcessedAt { get; set; }
-    public string PatientNumber { get; set; } = "";
-    public string PatientName { get; set; } = "";
-    public string DocumentType { get; set; } = "";
-    public Guid ParentId { get; set; }
-
-    public string FileSizeFormatted
-    {
-        get
-        {
-            if (FileSize < 1024) return $"{FileSize} B";
-            if (FileSize < 1024 * 1024) return $"{FileSize / 1024:F1} KB";
-            return $"{FileSize / 1024 / 1024:F1} MB";
-        }
-    }
-}
-
-#endregion
