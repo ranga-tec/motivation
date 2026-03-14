@@ -28,5 +28,7 @@ COPY --from=build /app/publish .
 
 # Railway provides PORT environment variable at runtime
 ENV ASPNETCORE_ENVIRONMENT=Production
+ENV PORT=5000
 
-ENTRYPOINT ["dotnet", "Poms.Web.dll"]
+# Use shell form to expand PORT variable
+CMD ASPNETCORE_URLS=http://0.0.0.0:$PORT dotnet Poms.Web.dll
