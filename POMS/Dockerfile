@@ -26,6 +26,9 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app/publish .
 
+# Create storage directory for file uploads
+RUN mkdir -p /app/storage && chmod 777 /app/storage
+
 # Railway provides PORT environment variable at runtime
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV PORT=5000
