@@ -1,4 +1,14 @@
-﻿<!DOCTYPE html>
+@using Microsoft.Extensions.Options
+@inject IOptions<VersionSwitchOptions> VersionSwitchOptionsAccessor
+@{
+    var versionSwitch = VersionSwitchOptionsAccessor.Value;
+    var isProductionVariant = string.Equals(versionSwitch.CurrentVariant, "production", StringComparison.OrdinalIgnoreCase);
+    var bannerBackground = isProductionVariant ? "#0f766e" : "#f59e0b";
+    var bannerForeground = isProductionVariant ? "#ecfeff" : "#1a1a1a";
+    var buttonBackground = isProductionVariant ? "#ecfeff" : "#1a1a1a";
+    var buttonForeground = isProductionVariant ? "#0f766e" : "#f59e0b";
+}
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -47,14 +57,16 @@
             </div>
         </nav>
     </header>
-    <!-- Version Switcher Banner -->
-    <div style="background:#f59e0b;color:#1a1a1a;text-align:center;padding:8px 16px;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:16px;">
-        <span>&#128196; You are viewing the <strong>PROTOTYPE</strong> version</span>
-        <a href="/Switch/Go?target=production"
-           style="background:#1a1a1a;color:#f59e0b;padding:4px 14px;border-radius:4px;text-decoration:none;font-weight:700;font-size:13px;">
-            Switch to Production Version &rarr;
-        </a>
-    </div>
+    @if (versionSwitch.IsConfigured)
+    {
+        <div style="background:@bannerBackground;color:@bannerForeground;text-align:center;padding:8px 16px;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:16px;">
+            <span>&#128196; You are viewing the <strong>@versionSwitch.CurrentLabel</strong> version</span>
+            <a href="/Switch/Go?target=@versionSwitch.TargetVariant"
+               style="background:@buttonBackground;color:@buttonForeground;padding:4px 14px;border-radius:4px;text-decoration:none;font-weight:700;font-size:13px;">
+                Switch to @versionSwitch.TargetLabel Version &rarr;
+            </a>
+        </div>
+    }
 
     <div class="container-fluid">
         <main role="main" class="pb-3">
@@ -64,7 +76,7 @@
 
     <footer class="border-top footer text-muted">
         <div class="container">
-            &copy; 2025 - POMS - Prosthetic, Orthotic & Spinal Patient Management System
+            &copy; 2025 - POMS - Prosthetic, Orthotic &amp; Spinal Patient Management System
         </div>
     </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>

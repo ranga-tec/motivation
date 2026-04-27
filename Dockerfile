@@ -27,6 +27,9 @@ WORKDIR /app
 COPY --from=build /app/publish .
 
 # Railway provides PORT environment variable at runtime
-ENV ASPNETCORE_ENVIRONMENT=Production
+ENV ASPNETCORE_ENVIRONMENT=Production \
+    PORT=8080
+
+EXPOSE 8080
 
 ENTRYPOINT ["dotnet", "Poms.Web.dll"]

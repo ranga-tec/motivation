@@ -1,0 +1,47 @@
+services:
+  poms-db:
+    image: postgres:16-alpine
+    container_name: poms-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-poms}
+      POSTGRES_USER: ${POSTGRES_USER:-poms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-this-now}
+    volumes:
+      - poms-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-poms} -d ${POSTGRES_DB:-poms}"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  poms-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: poms-web
+    depends_on:
+      poms-db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      PORT: 8080
+      DATABASE_URL: postgresql://${POSTGRES_USER:-poms}:${POSTGRES_PASSWORD:-change-this-now}@poms-db:5432/${POSTGRES_DB:-poms}
+      FileStorage__RootPath: /app/storage
+      DataProtection__KeysPath: /app/data-protection-keys
+      Security__ForceHttps: ${SECURITY_FORCE_HTTPS:-false}
+    ports:
+      - "${POMS_HOST_PORT:-8081}:8080"
+    volumes:
+      - poms-storage:/app/storage
+      - poms-data-protection:/app/data-protection-keys
+    restart: unless-stopped
+
+volumes:
+  poms-postgres:
+  poms-storage:
+  poms-data-protection:

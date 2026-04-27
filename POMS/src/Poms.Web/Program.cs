@@ -1,14 +1,20 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Poms.Infrastructure.Data;
 using Poms.Infrastructure.Services;
+using Poms.Web.Models;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Railway PORT
-var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
-builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+// Respect ASPNETCORE_URLS when it is provided, otherwise fall back to Railway/container PORT.
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(port) && string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
 
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
@@ -20,17 +26,25 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 // Add services to the container.
-// Check for Railway DATABASE_URL environment variable first
+// Check for Railway/container DATABASE_URL environment variable first.
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 string connectionString;
 bool usePostgreSQL;
 
-if (!string.IsNullOrEmpty(databaseUrl))
+if (!string.IsNullOrWhiteSpace(databaseUrl))
 {
     // Parse PostgreSQL URL format: postgresql://user:password@host:port/database
     var uri = new Uri(databaseUrl);
-    var userInfo = uri.UserInfo.Split(':');
-    connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
+    var userInfo = uri.UserInfo.Split(':', 2);
+    if (userInfo.Length != 2)
+    {
+        throw new InvalidOperationException("DATABASE_URL is missing the expected username and password.");
+    }
+
+    connectionString =
+        $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};" +
+        $"Username={Uri.UnescapeDataString(userInfo[0])};Password={Uri.UnescapeDataString(userInfo[1])};" +
+        "SSL Mode=Prefer;Trust Server Certificate=true";
     usePostgreSQL = true;
 }
 else
@@ -53,9 +67,24 @@ builder.Services.AddDbContext<PomsDbContext>(options =>
 });
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+builder.Services.AddHealthChecks();
+builder.Services.Configure<VersionSwitchOptions>(builder.Configuration.GetSection("VersionSwitch"));
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto |
+        ForwardedHeaders.XForwardedHost;
+
+    // The reverse proxy address is environment-specific, so trust the proxy network
+    // that fronts the container instead of hard-coding host IPs here.
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 // Identity Configuration
-builder.Services.AddDefaultIdentity<IdentityUser>(options => {
+builder.Services.AddDefaultIdentity<IdentityUser>(options =>
+{
     options.SignIn.RequireConfirmedAccount = false;
     options.Password.RequireDigit = true;
     options.Password.RequireLowercase = true;
@@ -68,12 +97,20 @@ builder.Services.AddDefaultIdentity<IdentityUser>(options => {
 
 // Configure application services
 var fileStorageConfig = builder.Configuration.GetSection("FileStorage");
-var rootPath = fileStorageConfig["RootPath"] ?? "C:\\PomsStorage";
+var defaultStorageRoot = OperatingSystem.IsWindows() ? @"C:\PomsStorage" : "/app/storage";
+var rootPath = fileStorageConfig["RootPath"] ?? defaultStorageRoot;
 var maxFileSizeMB = fileStorageConfig.GetValue<long>("MaxFileSizeMB", 10);
 var allowedExtensions = fileStorageConfig.GetSection("AllowedExtensions").Get<string[]>();
+var dataProtectionKeysPath = builder.Configuration["DataProtection:KeysPath"]
+    ?? (OperatingSystem.IsWindows() ? Path.Combine(rootPath, "data-protection-keys") : "/app/data-protection-keys");
+
+Directory.CreateDirectory(dataProtectionKeysPath);
+
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
 
 builder.Services.AddScoped<IPatientNumberService, PatientNumberService>();
-builder.Services.AddScoped<IFileStorageService>(sp => 
+builder.Services.AddScoped<IFileStorageService>(_ =>
     new FileStorageService(rootPath, maxFileSizeMB, allowedExtensions));
 
 // Add AutoMapper
@@ -100,7 +137,19 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<PomsDbContext>();
-        await context.Database.MigrateAsync();
+        var providerName = context.Database.ProviderName ?? string.Empty;
+
+        if (providerName.Contains("Npgsql", StringComparison.OrdinalIgnoreCase))
+        {
+            // PostgreSQL deployments on Contabo start from a fresh database, so build the schema
+            // directly from the current model instead of applying the existing SQL Server migration.
+            await context.Database.EnsureCreatedAsync();
+        }
+        else
+        {
+            await context.Database.MigrateAsync();
+        }
+
         await DbInitializer.SeedUsersAndRolesAsync(services);
         await SampleDataSeeder.SeedSampleConditionsAsync(context);
         Log.Information("Database seeded successfully");
@@ -112,6 +161,8 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline.
+app.UseForwardedHeaders();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
@@ -122,7 +173,14 @@ else
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+var enforceHttps = builder.Configuration.GetValue<bool?>("Security:ForceHttps")
+    ?? (!string.IsNullOrWhiteSpace(builder.Configuration["ASPNETCORE_HTTPS_PORT"])
+        || !string.IsNullOrWhiteSpace(builder.Configuration["HTTPS_PORT"]));
+if (enforceHttps)
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseStaticFiles();
 
 app.UseRouting();
@@ -130,6 +188,7 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapHealthChecks("/health");
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
