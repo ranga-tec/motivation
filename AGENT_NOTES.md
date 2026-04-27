@@ -1,81 +1,87 @@
-# Agent Handoff Notes — POMS Project
+# Agent Handoff Notes - POMS Project
 
-**Last Updated:** 2026-03-30
+**Last Updated:** 2026-04-27
 
-## IMPORTANT: Current Branch State
+## Current Live Topology
 
-| Branch | Commit | What It Contains |
-|--------|--------|-----------------|
-| `main` (currently deployed) | `6fe2e74` | **PROTOTYPE** — basic POMS, Railway deployment config only |
-| `production-backup` | `5eea145` | **FULL PRODUCTION** — all Phase 1 features, restore this when ready |
+The project no longer relies on a single Railway app that flips between prototype and production by resetting `main`.
 
-## What Happened & Why
+Current live services:
 
-The client wanted to review the original prototype UI to describe what changes are needed before finalizing the production system.
+- Prototype: `https://motivation-production-f454.up.railway.app`
+- Production: `https://motivation-production-production.up.railway.app`
 
-**Steps taken (2026-03-30):**
-1. `production-backup` branch created from `main` HEAD (`5eea145`) — full production state saved
-2. `main` was reset back to `6fe2e74` (last commit before "Production system enhancements - Phase 1")
-3. Both branches pushed to GitHub
-4. Railway (https://popms.up.railway.app) deploys from `main` → now shows prototype
+Each service has its own role:
 
-## What To Do Next
+- `main` backs the prototype line
+- `production-backup` backs the production line
 
-After the client reviews the prototype and describes the needed changes:
+## Branch Roles
 
-### Step 1 — Restore production
+| Branch | Purpose | Live Service |
+|--------|---------|--------------|
+| `main` | Prototype branch with env-driven switch URLs, Railway hardening, Contabo fallback files | `motivation` |
+| `production-backup` | Full production branch with dashboard/reports/admin modules | `motivation-production` |
+
+## Important Change From The Old Workflow
+
+The older handoff advised resetting `main` to `production-backup` and redeploying a single Railway app. That guidance is obsolete.
+
+Do this instead:
+
+- keep `main` as prototype
+- keep `production-backup` as production
+- deploy each branch to its own Railway service
+
+## Version Switching
+
+Prototype and production switching now depends on:
+
+- `/Switch/Go`
+- `VersionSwitch__Current`
+- `VersionSwitch__PrototypeUrl`
+- `VersionSwitch__ProductionUrl`
+- `SWITCH_SECRET`
+
+On the prototype branch, the switching configuration lives in:
+
+- `POMS/src/Poms.Web/Models/VersionSwitchOptions.cs`
+- `POMS/src/Poms.Web/Controllers/SwitchController.cs`
+- `POMS/src/Poms.Web/Views/Shared/_Layout.cshtml`
+
+On the production branch, the switch controller was updated with the live Railway URLs and a fixed-time signature comparison.
+
+## Database Notes
+
+- Prototype and production must not share the same application database.
+- A previous production deployment pointed at a database that already contained unrelated UUID-based identity tables, which broke login and switching.
+- The production app was corrected by moving it to its own PostgreSQL database and keeping prototype and production separated.
+
+## Deployment Notes
+
+Prototype deploy command from the `main` worktree:
+
 ```bash
-git checkout main
-git reset --hard production-backup
-git push origin main   # Railway will redeploy with production version
+railway up . --path-as-root --service motivation --environment production --detach
 ```
 
-### Step 2 — Apply client feedback
-Make the requested UI/feature changes on top of the restored production code, then commit and push.
+Production deploy command from a `production-backup` worktree:
 
-## Key Difference: Prototype vs Production
-
-The **prototype** (`6fe2e74`) has:
-- Basic patient, episode, fitting management
-- Simple views with Bootstrap 5
-- Railway deployment configs (Dockerfile, nixpacks.toml)
-
-The **production** (`production-backup` / `5eea145`) added on top:
-- Dashboard with KPIs and Chart.js visualizations
-- Reports module (PDF/Excel export via QuestPDF + ClosedXML)
-- Admin module (user management, system settings, audit logs)
-- Light professional UI theme (`wwwroot/css/poms-theme.css`)
-- Enhanced Fitting module (status, adjustments, feedback, FittingNumber)
-- Document management with OCR (Tesseract, Sinhala support)
-- Patient photo upload and IsActive toggle
-- Complete ViewModels, DashboardService, ReportService
-- DEVELOPMENT.md developer guide
-
-## Credentials (unchanged in both versions)
-
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@poms.lk | Admin@123 |
-| Clinician | clinician@poms.lk | Clinic@123 |
-| Data Entry | registrar@poms.lk | Data@123 |
-| Viewer | viewer@poms.lk | View@123 |
-
-## Railway Deployment
-
-- **URL:** https://popms.up.railway.app
-- **Deploys from:** `main` branch on GitHub (ranga-tec/motivation)
-- **Build:** Nixpacks using `nixpacks.toml`
-- **DB:** PostgreSQL (auto-provisioned by Railway, uses `DATABASE_URL` env var)
-- **Port:** 8080
-
-## Authentication Note for Future Agents
-
-Git push requires authentication via Windows Credential Manager (GUI). If push fails silently, ask the user to run the push commands manually:
 ```bash
-git push origin production-backup    # save production state
-git push --force origin main         # deploy prototype to Railway
+railway up . --path-as-root --service motivation-production --environment production --detach
 ```
-Or after client feedback:
-```bash
-git push origin main                 # redeploy production+changes
-```
+
+See also:
+
+- `DEPLOY_RAILWAY.md`
+- `DEPLOY_CONTABO.md`
+
+## Credentials
+
+Fresh databases still seed the standard four user emails from `DbInitializer.cs`.
+
+Do not assume the seeded passwords are valid on live systems:
+
+- the live Railway environments had their seeded passwords rotated
+- those live passwords are intentionally not stored in the repository
+- after any fresh deployment, rotate passwords immediately
