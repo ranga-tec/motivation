@@ -17,8 +17,8 @@ public class SwitchController : Controller
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly string _switchSecret;
 
-    private const string ProductionUrl = "https://poms-production-production.up.railway.app";
-    private const string PrototypeUrl  = "https://popms.up.railway.app";
+    private const string ProductionUrl = "https://motivation-production-production.up.railway.app";
+    private const string PrototypeUrl  = "https://motivation-production-f454.up.railway.app";
 
     public SwitchController(
         SignInManager<ApplicationUser> signInManager,
@@ -63,8 +63,9 @@ public class SwitchController : Controller
             return RedirectToAction("Index", "Home");
 
         // Validate HMAC signature
-        var expected = Sign($"{user}:{ts}");
-        if (!sig.Equals(expected, StringComparison.Ordinal))
+        if (!CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(sig),
+                Encoding.UTF8.GetBytes(Sign($"{user}:{ts}"))))
             return RedirectToAction("Index", "Home");
 
         var appUser = await _userManager.FindByEmailAsync(user)

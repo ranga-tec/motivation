@@ -143,14 +143,11 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<PomsDbContext>();
 
-        // Use EnsureCreated for PostgreSQL (Railway) since migrations are SQL Server-specific
-        // Use Migrate for SQL Server (local development)
+        // Use EnsureCreated for PostgreSQL (Railway) since migrations are SQL Server-specific.
+        // Do not drop the database on startup; production data must survive redeploys and restarts.
         if (usePostgreSQL)
         {
-            Log.Information("PostgreSQL detected - recreating database schema");
-            // Drop and recreate to ensure schema matches current model
-            // This is needed because EnsureCreated won't update existing tables
-            await context.Database.EnsureDeletedAsync();
+            Log.Information("PostgreSQL detected - ensuring database schema exists");
             await context.Database.EnsureCreatedAsync();
             Log.Information("Database schema created successfully");
         }
