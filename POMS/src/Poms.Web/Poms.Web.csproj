@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Poms.Application\Poms.Application.csproj" />
     <ProjectReference Include="..\Poms.Infrastructure\Poms.Infrastructure.csproj" />
+    <ProjectReference Include="..\Poms.Reporting\Poms.Reporting.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,0 +1,24 @@
+@model Poms.Web.ViewModels.LookupItemViewModel
+
+@{
+    ViewData["Title"] = "Edit " + ViewBag.LookupTitle;
+}
+
+<h1>Edit @ViewBag.LookupTitle</h1>
+
+<form asp-action="LookupEdit" asp-route-type="@ViewBag.LookupType" method="post">
+    <input type="hidden" asp-for="Id" />
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" />
+    </div>
+    <div class="mb-3 form-check">
+        <input asp-for="IsActive" class="form-check-input" />
+        <label asp-for="IsActive" class="form-check-label"></label>
+    </div>
+
+    <button type="submit" class="btn btn-warning">Save</button>
+    <a asp-action="Lookup" asp-route-type="@ViewBag.LookupType" class="btn btn-secondary">Cancel</a>
+</form>

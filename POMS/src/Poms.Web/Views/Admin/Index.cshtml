@@ -1,0 +1,50 @@
+@{
+    ViewData["Title"] = "Admin";
+}
+
+<h1 class="mb-4">Admin - Master Data</h1>
+
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <div class="card"><div class="card-body">
+            <h6>Locations</h6>
+            <a asp-action="Locations" class="btn btn-sm btn-primary">Manage</a>
+        </div></div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card"><div class="card-body">
+            <h6>Referral Sources</h6>
+            <a asp-action="Lookup" asp-route-type="referral-sources" class="btn btn-sm btn-primary">Manage</a>
+        </div></div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card"><div class="card-body">
+            <h6>Nationalities</h6>
+            <a asp-action="Lookup" asp-route-type="nationalities" class="btn btn-sm btn-primary">Manage</a>
+        </div></div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card"><div class="card-body">
+            <h6>Main Problem Types</h6>
+            <a asp-action="Lookup" asp-route-type="main-problem-types" class="btn btn-sm btn-primary">Manage</a>
+        </div></div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card"><div class="card-body">
+            <h6>Cause / Reason / Pathology Types</h6>
+            <a asp-action="Lookup" asp-route-type="cause-reason-types" class="btn btn-sm btn-primary">Manage</a>
+        </div></div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card"><div class="card-body">
+            <h6>Provinces / Districts / Cities</h6>
+            <a asp-action="Provinces" class="btn btn-sm btn-primary">Manage</a>
+        </div></div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card"><div class="card-body">
+            <h6>Users &amp; Roles</h6>
+            <a asp-action="Users" class="btn btn-sm btn-primary">Manage</a>
+        </div></div>
+    </div>
+</div>

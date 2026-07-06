@@ -1,0 +1,27 @@
+@model Poms.Web.ViewModels.FittingViewModel
+
+@{
+    ViewData["Title"] = "Edit Fitting";
+}
+
+<h1>Edit Fitting</h1>
+<p class="text-muted">Patient: <strong>@Model.PatientNumber - @Model.PatientName</strong></p>
+
+<form asp-action="Edit" method="post">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="EpisodeId" />
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+    <div class="mb-3">
+        <label asp-for="FittingDate" class="form-label"></label>
+        <input asp-for="FittingDate" class="form-control" type="date" />
+        <span asp-validation-for="FittingDate" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Notes" class="form-label"></label>
+        <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-warning">Update Fitting</button>
+    <a asp-controller="Episodes" asp-action="Details" asp-route-id="@Model.EpisodeId" class="btn btn-secondary">Cancel</a>
+</form>

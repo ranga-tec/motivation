@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Poms.Infrastructure.Data;
@@ -10,8 +10,9 @@ public static class DbInitializer
         var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
         var userManager = serviceProvider.GetRequiredService<UserManager<IdentityUser>>();
 
-        // Create Roles
-        string[] roleNames = { "ADMIN", "CLINICIAN", "DATA_ENTRY", "VIEWER" };
+        // Create Roles - ADMIN, CLINICIAN, DATA_ENTRY, VIEWER, MANAGEMENT
+        // (= Admin, Clinical user, Registration user, Report user, Management user per PRD 4.1)
+        string[] roleNames = { "ADMIN", "CLINICIAN", "DATA_ENTRY", "VIEWER", "MANAGEMENT" };
         foreach (var roleName in roleNames)
         {
             if (!await roleManager.RoleExistsAsync(roleName))
@@ -26,7 +27,8 @@ public static class DbInitializer
             new { Email = "admin@poms.lk", Password = "Admin@123", Role = "ADMIN" },
             new { Email = "clinician@poms.lk", Password = "Clinic@123", Role = "CLINICIAN" },
             new { Email = "registrar@poms.lk", Password = "Data@123", Role = "DATA_ENTRY" },
-            new { Email = "viewer@poms.lk", Password = "View@123", Role = "VIEWER" }
+            new { Email = "viewer@poms.lk", Password = "View@123", Role = "VIEWER" },
+            new { Email = "management@poms.lk", Password = "Manage@123", Role = "MANAGEMENT" }
         };
 
         foreach (var userData in defaultUsers)

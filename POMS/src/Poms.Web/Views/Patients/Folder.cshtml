@@ -1,0 +1,191 @@
+@model Poms.Domain.Entities.Patient
+
+@{
+    ViewData["Title"] = "Patient Folder";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1>Patient Folder</h1>
+        <p class="text-muted mb-0">Patient Number: <strong class="text-primary">@Model.PatientNumber</strong> &mdash; @Model.FullName</p>
+    </div>
+    <div>
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">Edit</a>
+        <a asp-controller="Episodes" asp-action="Create" asp-route-patientId="@Model.Id" class="btn btn-success">+ New Record</a>
+        <a asp-controller="Print" asp-action="RegistrationForm" asp-route-patientId="@Model.Id" class="btn btn-outline-secondary" target="_blank">Print Registration Form</a>
+        <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Info"] != null)
+{
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        @TempData["Info"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<ul class="nav nav-tabs mb-4" id="folderTabs" role="tablist">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#overview" type="button">Overview</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#records" type="button">Records</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#documents" type="button">Documents</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#appointments" type="button">Appointments</button></li>
+</ul>
+
+<div class="tab-content">
+    <div class="tab-pane fade show active" id="overview" role="tabpanel">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header bg-primary text-white"><h5 class="mb-0">Personal Details</h5></div>
+                    <div class="card-body">
+                        <table class="table table-sm">
+                            <tr><th width="40%">Full Name:</th><td>@Model.FullName</td></tr>
+                            <tr><th>Name with Initials:</th><td>@Model.NameWithInitials</td></tr>
+                            <tr><th>Date of Birth:</th><td>@Model.Dob.ToString("dd-MMM-yyyy")</td></tr>
+                            <tr><th>Sex:</th><td>@Model.Sex</td></tr>
+                            <tr><th>Employment:</th><td>@(Model.Employment ?? "N/A")</td></tr>
+                            <tr><th>Category:</th><td>@Model.Category @(Model.Category == Poms.Domain.Enums.PatientCategory.Foreign ? $"({Model.Nationality})" : "")</td></tr>
+                            <tr><th>Identification:</th><td>@Model.IdentificationType: @Model.IdentificationNumber</td></tr>
+                            <tr><th>Location:</th><td>@Model.Center.Name</td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header bg-primary text-white"><h5 class="mb-0">Contact &amp; Guardian</h5></div>
+                    <div class="card-body">
+                        <table class="table table-sm">
+                            <tr><th width="40%">Address:</th><td>@Model.Address1<br />@Model.Address2</td></tr>
+                            <tr><th>Province / District / City:</th><td>@Model.Province.Name / @Model.District.Name / @(Model.City?.Name ?? Model.CityOther ?? "N/A")</td></tr>
+                            <tr><th>Email:</th><td>@(Model.Email ?? "N/A")</td></tr>
+                            <tr><th>Telephone:</th>
+                                <td>
+                                    @foreach (var c in Model.Contacts)
+                                    {
+                                        <div>@c.TelephoneNo @(c.DateConfirmed.HasValue ? $"(confirmed {c.DateConfirmed:dd-MMM-yyyy})" : "")</div>
+                                    }
+                                </td>
+                            </tr>
+                            <tr><th>Guardian:</th><td>@Model.GuardianName (@Model.GuardianRelationship)</td></tr>
+                            <tr><th>Guardian Phone/Mobile:</th><td>@Model.GuardianPhone / @Model.GuardianMobile</td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="records" role="tabpanel">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0">Patient Records / Episodes</h5></div>
+            <div class="card-body">
+                @if (Model.Episodes.Any())
+                {
+                    <table class="table table-striped">
+                        <thead><tr><th>Record Date</th><th>Status</th><th>Assessments</th><th>Fittings</th><th>Deliveries</th><th>Follow-ups</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            @foreach (var episode in Model.Episodes.OrderByDescending(e => e.RecordDate))
+                            {
+                                <tr>
+                                    <td>@episode.RecordDate.ToString("dd-MMM-yyyy")</td>
+                                    <td><span class="badge bg-info">@episode.Status</span></td>
+                                    <td>@episode.Assessments.Count</td>
+                                    <td>@episode.Fittings.Count</td>
+                                    <td>@episode.Deliveries.Count</td>
+                                    <td>@episode.FollowUps.Count</td>
+                                    <td><a asp-controller="Episodes" asp-action="Details" asp-route-id="@episode.Id" class="btn btn-sm btn-info">Open</a></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p class="text-muted">No records yet.</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="documents" role="tabpanel">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Uploaded Documents</h5>
+                <a asp-controller="Files" asp-action="UploadForPatient" asp-route-patientId="@Model.Id" class="btn btn-sm btn-primary">+ Upload Document</a>
+            </div>
+            <div class="card-body">
+                @if (Model.Documents.Any())
+                {
+                    <table class="table table-striped">
+                        <thead><tr><th>Type</th><th>File Name</th><th>Uploaded</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            @foreach (var doc in Model.Documents)
+                            {
+                                <tr>
+                                    <td>@doc.DocumentType</td>
+                                    <td>@doc.FileName</td>
+                                    <td>@doc.UploadedAt.ToString("dd-MMM-yyyy HH:mm")</td>
+                                    <td>
+                                        <a asp-controller="Files" asp-action="Download" asp-route-id="@doc.Id" asp-route-scope="patient" class="btn btn-sm btn-success">Download</a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p class="text-muted">No documents uploaded yet.</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="appointments" role="tabpanel">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Appointments</h5>
+                <a asp-controller="Appointments" asp-action="Create" asp-route-patientId="@Model.Id" class="btn btn-sm btn-primary">+ New Appointment</a>
+            </div>
+            <div class="card-body">
+                @if (Model.Appointments.Any())
+                {
+                    <table class="table table-striped">
+                        <thead><tr><th>Date</th><th>Type</th><th>Status</th><th>Notes</th></tr></thead>
+                        <tbody>
+                            @foreach (var a in Model.Appointments.OrderByDescending(a => a.AppointmentDate))
+                            {
+                                <tr>
+                                    <td>@a.AppointmentDate.ToString("dd-MMM-yyyy") @a.AppointmentTime</td>
+                                    <td>@a.Type</td>
+                                    <td>@a.Status</td>
+                                    <td>@a.Notes</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p class="text-muted">No appointments yet.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,73 @@
+@model IEnumerable<Poms.Domain.Entities.Appointment>
+
+@{
+    ViewData["Title"] = "Appointments";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Appointments / Date-Based Actions</h1>
+    <a asp-action="Create" class="btn btn-primary">+ New Appointment</a>
+</div>
+
+@if (ViewBag.Type == null)
+{
+    <p class="text-muted small">Delivery appointments are not shown here by default — track deliveries via <a asp-controller="Reports" asp-action="Delivery">Delivery Report</a> or the patient folder. Select "Delivery" below to view them in this list.</p>
+}
+
+<form asp-action="Index" method="get" class="row g-3 mb-3">
+    <div class="col-md-3">
+        <input type="date" name="date" value="@ViewBag.Date" class="form-control" />
+    </div>
+    <div class="col-md-3">
+        <select name="type" class="form-select">
+            <option value="">All Types</option>
+            @foreach (var t in Enum.GetValues(typeof(Poms.Domain.Enums.AppointmentType)))
+            {
+                <option value="@t" selected="@(ViewBag.Type?.ToString() == t.ToString())">@t</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-3">
+        <select name="status" class="form-select">
+            <option value="">All Statuses</option>
+            @foreach (var s in Enum.GetValues(typeof(Poms.Domain.Enums.AppointmentStatus)))
+            {
+                <option value="@s" selected="@(ViewBag.Status?.ToString() == s.ToString())">@s</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-3">
+        <button type="submit" class="btn btn-outline-secondary w-100">Filter</button>
+    </div>
+</form>
+
+<table class="table table-striped">
+    <thead><tr><th>Date</th><th>Patient</th><th>Type</th><th>Status</th><th>Notes</th><th>Actions</th></tr></thead>
+    <tbody>
+        @foreach (var a in Model)
+        {
+            <tr>
+                <td>@a.AppointmentDate.ToString("dd-MMM-yyyy") @a.AppointmentTime</td>
+                <td>@a.Patient.PatientNumber - @a.Patient.FullName</td>
+                <td>@a.Type</td>
+                <td>
+                    <span class="badge @(a.Status == Poms.Domain.Enums.AppointmentStatus.Scheduled ? "bg-warning" : a.Status == Poms.Domain.Enums.AppointmentStatus.Completed ? "bg-success" : "bg-secondary")">
+                        @a.Status
+                    </span>
+                </td>
+                <td>@a.Notes</td>
+                <td>
+                    @if (a.Status == Poms.Domain.Enums.AppointmentStatus.Scheduled)
+                    {
+                        <form asp-action="Complete" asp-route-id="@a.Id" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-success">Done</button>
+                        </form>
+                        <form asp-action="Cancel" asp-route-id="@a.Id" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Cancel</button>
+                        </form>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

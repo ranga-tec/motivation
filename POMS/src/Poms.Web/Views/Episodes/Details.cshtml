@@ -1,158 +1,75 @@
 @model Poms.Domain.Entities.Episode
 
 @{
-    ViewData["Title"] = "Episode Details";
+    ViewData["Title"] = "Record Details";
 }
 
 <div class="row">
     <div class="col-md-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h2>Episode Details</h2>
+                <h2>Record Details</h2>
                 <p class="text-muted mb-0">
-                    <strong>@Model.Type</strong> Episode for
-                    <strong class="text-primary">@Model.Patient.PatientNumber</strong> - @Model.Patient.FirstName @Model.Patient.LastName
+                    Record for <strong class="text-primary">@Model.Patient.PatientNumber</strong> - @Model.Patient.FullName
+                    at @Model.Center.Name
                 </p>
             </div>
             <div>
-                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
-                    <i class="fas fa-edit"></i> Edit
-                </a>
-                <a asp-action="Index" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Back to List
-                </a>
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">Edit</a>
+                <a asp-controller="Patients" asp-action="Folder" asp-route-id="@Model.Patient.Id" class="btn btn-secondary">Patient Folder</a>
             </div>
         </div>
 
-        <!-- Episode Information -->
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                @TempData["Success"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
         <div class="card mb-4">
-            <div class="card-header">
-                <h5><i class="fas fa-info-circle"></i> Episode Information</h5>
-            </div>
+            <div class="card-header"><h5>Record Information</h5></div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <table class="table table-sm table-borderless">
-                            <tr>
-                                <th width="40%">Type:</th>
-                                <td>
-                                    <span class="badge @(Model.Type == Poms.Domain.Enums.EpisodeType.Prosthetic ? "bg-primary" :
-                                                          Model.Type == Poms.Domain.Enums.EpisodeType.Orthotic ? "bg-success" : "bg-info")">
-                                        @Model.Type
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <th>Opened On:</th>
-                                <td>@Model.OpenedOn.ToString("dd-MMM-yyyy")</td>
-                            </tr>
-                            <tr>
-                                <th>Status:</th>
-                                <td>
-                                    @if (Model.ClosedOn.HasValue)
-                                    {
-                                        <span class="badge bg-secondary">Closed on @Model.ClosedOn.Value.ToString("dd-MMM-yyyy")</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-success">Active</span>
-                                    }
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                    <div class="col-md-6">
-                        @if (!string.IsNullOrEmpty(Model.Remarks))
-                        {
-                            <h6>Remarks:</h6>
-                            <p>@Model.Remarks</p>
-                        }
-                    </div>
-                </div>
+                <table class="table table-sm table-borderless">
+                    <tr><th width="20%">Record Date:</th><td>@Model.RecordDate.ToString("dd-MMM-yyyy")</td></tr>
+                    <tr><th>Status:</th>
+                        <td>
+                            <span class="badge @(Model.Status == Poms.Domain.Enums.RecordStatus.Active ? "bg-success" : Model.Status == Poms.Domain.Enums.RecordStatus.Completed ? "bg-secondary" : "bg-danger")">
+                                @Model.Status
+                            </span>
+                        </td>
+                    </tr>
+                    @if (!string.IsNullOrEmpty(Model.Remarks))
+                    {
+                        <tr><th>Remarks:</th><td>@Model.Remarks</td></tr>
+                    }
+                </table>
             </div>
         </div>
 
-        <!-- Type-Specific Details -->
-        @if (Model.Type == Poms.Domain.Enums.EpisodeType.Prosthetic && Model.Prosthetic != null)
-        {
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5><i class="fas fa-cog"></i> Prosthetic Details</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <strong>Amputation Type:</strong><br />
-                            @Model.Prosthetic.AmputationType
-                        </div>
-                        <div class="col-md-4">
-                            <strong>Side:</strong><br />
-                            @Model.Prosthetic.Side
-                        </div>
-                        <div class="col-md-4">
-                            <strong>Reason:</strong><br />
-                            @Model.Prosthetic.Reason
-                        </div>
-                    </div>
-                    @if (!string.IsNullOrEmpty(Model.Prosthetic.Remarks))
-                    {
-                        <div class="mt-3">
-                            <strong>Prosthetic Notes:</strong><br />
-                            @Model.Prosthetic.Remarks
-                        </div>
-                    }
-                </div>
-            </div>
-        }
-        else if (Model.Type == Poms.Domain.Enums.EpisodeType.Orthotic && Model.Orthotic != null)
-        {
-            <div class="card mb-4">
-                <div class="card-header bg-success text-white">
-                    <h5><i class="fas fa-cog"></i> Orthotic Details</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <strong>Body Region:</strong><br />
-                            @Model.Orthotic.BodyRegion
-                        </div>
-                        <div class="col-md-6">
-                            <strong>Side:</strong><br />
-                            @Model.Orthotic.Side
-                        </div>
-                    </div>
-                </div>
-            </div>
-        }
-        else if (Model.Type == Poms.Domain.Enums.EpisodeType.SpinalOrthosis && Model.Spinal != null)
-        {
-            <div class="card mb-4">
-                <div class="card-header bg-info text-white">
-                    <h5><i class="fas fa-cog"></i> Spinal Orthosis Details</h5>
-                </div>
-                <div class="card-body">
-                    <p>Spinal orthosis episode details will be displayed here.</p>
-                </div>
-            </div>
-        }
-
-        <!-- Episode Activities -->
         <div class="row">
-            <!-- Assessments -->
             <div class="col-md-6">
                 <div class="card mb-4">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h6><i class="fas fa-stethoscope"></i> Assessments (@Model.Assessments.Count)</h6>
-                        <button class="btn btn-sm btn-outline-primary">Add Assessment</button>
+                        <h6>Assessments (@Model.Assessments.Count)</h6>
+                        <a asp-controller="Assessments" asp-action="Create" asp-route-episodeId="@Model.Id" class="btn btn-sm btn-outline-primary">+ Create New Assessment</a>
                     </div>
                     <div class="card-body">
                         @if (Model.Assessments.Any())
                         {
-                            @foreach (var assessment in Model.Assessments.OrderByDescending(a => a.AssessedOn))
+                            @foreach (var a in Model.Assessments.OrderByDescending(a => a.AssessedOn))
                             {
                                 <div class="border-bottom pb-2 mb-2">
-                                    <small class="text-muted">@assessment.AssessedOn.ToString("dd-MMM-yyyy")</small>
-                                    <p class="mb-1">@(assessment.Findings ?? "No findings recorded")</p>
+                                    <small class="text-muted">@a.AssessedOn.ToString("dd-MMM-yyyy")</small>
+                                    <a asp-controller="Assessments" asp-action="Edit" asp-route-id="@a.Id" class="float-end ms-2">Edit</a>
+                                    <a asp-controller="Print" asp-action="AssessmentForm" asp-route-assessmentId="@a.Id" class="float-end ms-2" target="_blank">Print Assessment</a>
+                                    <a asp-controller="Print" asp-action="PrescriptionForm" asp-route-assessmentId="@a.Id" class="float-end" target="_blank">Print Prescription</a>
+                                    <p class="mb-1">@a.AssessmentType / @a.LimbCategory - @a.MainProblemType.Name - Side: @a.Side</p>
+                                    @foreach (var p in a.Prescriptions)
+                                    {
+                                        <div><small>@p.Side: @p.PrescriptionLabel @(p.SubType != null ? $"({p.SubType})" : "") @(p.OtherText != null ? $"- {p.OtherText}" : "")</small></div>
+                                    }
                                 </div>
                             }
                         }
@@ -164,12 +81,11 @@
                 </div>
             </div>
 
-            <!-- Fittings -->
             <div class="col-md-6">
                 <div class="card mb-4">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h6><i class="fas fa-tools"></i> Fittings (@Model.Fittings.Count)</h6>
-                        <button class="btn btn-sm btn-outline-success">Add Fitting</button>
+                        <h6>Fittings (@Model.Fittings.Count)</h6>
+                        <a asp-controller="Fittings" asp-action="Create" asp-route-episodeId="@Model.Id" class="btn btn-sm btn-outline-success">+ Add Fitting</a>
                     </div>
                     <div class="card-body">
                         @if (Model.Fittings.Any())
@@ -178,6 +94,7 @@
                             {
                                 <div class="border-bottom pb-2 mb-2">
                                     <small class="text-muted">@fitting.FittingDate.ToString("dd-MMM-yyyy")</small>
+                                    <a asp-controller="Fittings" asp-action="Edit" asp-route-id="@fitting.Id" class="float-end">Edit</a>
                                     <p class="mb-1">@(fitting.Notes ?? "No notes recorded")</p>
                                 </div>
                             }
@@ -192,53 +109,49 @@
         </div>
 
         <div class="row">
-            <!-- Delivery -->
             <div class="col-md-6">
                 <div class="card mb-4">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h6><i class="fas fa-shipping-fast"></i> Delivery</h6>
-                        @if (Model.Delivery == null)
-                        {
-                            <button class="btn btn-sm btn-outline-info">Record Delivery</button>
-                        }
+                        <h6>Deliveries (@Model.Deliveries.Count)</h6>
+                        <a asp-controller="Deliveries" asp-action="Create" asp-route-episodeId="@Model.Id" class="btn btn-sm btn-outline-info">+ Add Delivery</a>
                     </div>
                     <div class="card-body">
-                        @if (Model.Delivery != null)
+                        @if (Model.Deliveries.Any())
                         {
-                            <p><strong>Delivered:</strong> @(Model.Delivery.DeliveryDate?.ToString("dd-MMM-yyyy") ?? "Date not recorded")</p>
-                            <p><strong>Delivered By:</strong> @(Model.Delivery.DeliveredBy ?? "Not recorded")</p>
-                            @if (!string.IsNullOrEmpty(Model.Delivery.Remarks))
+                            @foreach (var d in Model.Deliveries.OrderByDescending(d => d.DeliveryDate))
                             {
-                                <p><strong>Notes:</strong> @Model.Delivery.Remarks</p>
+                                <div class="border-bottom pb-2 mb-2">
+                                    <small class="text-muted">@d.DeliveryDate.ToString("dd-MMM-yyyy")</small>
+                                    <a asp-controller="Deliveries" asp-action="Edit" asp-route-id="@d.Id" class="float-end ms-2">Edit</a>
+                                    <a asp-controller="Print" asp-action="DeliveryNote" asp-route-deliveryId="@d.Id" class="float-end" target="_blank">Print</a>
+                                    <p class="mb-1">@(d.Notes ?? "No notes recorded")</p>
+                                </div>
                             }
                         }
                         else
                         {
-                            <p class="text-muted">No delivery recorded yet.</p>
+                            <p class="text-muted">No deliveries recorded yet.</p>
                         }
                     </div>
                 </div>
             </div>
 
-            <!-- Follow-ups -->
             <div class="col-md-6">
                 <div class="card mb-4">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h6><i class="fas fa-calendar-check"></i> Follow-ups (@Model.FollowUps.Count)</h6>
-                        <button class="btn btn-sm btn-outline-warning">Add Follow-up</button>
+                        <h6>Follow-ups (@Model.FollowUps.Count)</h6>
+                        <a asp-controller="FollowUps" asp-action="Create" asp-route-episodeId="@Model.Id" class="btn btn-sm btn-outline-warning">+ Add Follow-up</a>
                     </div>
                     <div class="card-body">
                         @if (Model.FollowUps.Any())
                         {
-                            @foreach (var followUp in Model.FollowUps.OrderByDescending(f => f.FollowUpDate))
+                            @foreach (var f in Model.FollowUps.OrderByDescending(f => f.FollowUpDate))
                             {
                                 <div class="border-bottom pb-2 mb-2">
-                                    <small class="text-muted">@followUp.FollowUpDate.ToString("dd-MMM-yyyy")</small>
-                                    <p class="mb-1">@followUp.ActionTaken</p>
-                                    @if (followUp.NextAppointmentDate.HasValue)
-                                    {
-                                        <small class="text-info">Next: @followUp.NextAppointmentDate.Value.ToString("dd-MMM-yyyy")</small>
-                                    }
+                                    <small class="text-muted">@f.FollowUpDate.ToString("dd-MMM-yyyy")</small>
+                                    <a asp-controller="FollowUps" asp-action="Edit" asp-route-id="@f.Id" class="float-end ms-2">Edit</a>
+                                    <a asp-controller="Print" asp-action="FollowUpNote" asp-route-followUpId="@f.Id" class="float-end" target="_blank">Print</a>
+                                    <p class="mb-1">@(f.Notes ?? "No notes recorded")</p>
                                 </div>
                             }
                         }
@@ -251,38 +164,34 @@
             </div>
         </div>
 
-        <!-- Repairs -->
-        @if (Model.Repairs.Any())
-        {
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h6><i class="fas fa-wrench"></i> Repairs (@Model.Repairs.Count)</h6>
-                    <button class="btn btn-sm btn-outline-danger">Record Repair</button>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Category</th>
-                                    <th>Details</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var repair in Model.Repairs.OrderByDescending(r => r.RepairDate))
-                                {
-                                    <tr>
-                                        <td>@repair.RepairDate.ToString("dd-MMM-yyyy")</td>
-                                        <td><span class="badge bg-danger">@repair.Category</span></td>
-                                        <td>@(repair.Details ?? "No details recorded")</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6>Documents (@Model.Documents.Count)</h6>
+                <a asp-controller="Files" asp-action="UploadForEpisode" asp-route-episodeId="@Model.Id" class="btn btn-sm btn-outline-secondary">+ Upload Document</a>
             </div>
-        }
+            <div class="card-body">
+                @if (Model.Documents.Any())
+                {
+                    <table class="table table-sm">
+                        <thead><tr><th>Type</th><th>File Name</th><th>Uploaded</th><th></th></tr></thead>
+                        <tbody>
+                            @foreach (var doc in Model.Documents)
+                            {
+                                <tr>
+                                    <td>@doc.DocumentType</td>
+                                    <td>@doc.FileName</td>
+                                    <td>@doc.UploadedAt.ToString("dd-MMM-yyyy")</td>
+                                    <td><a asp-controller="Files" asp-action="Download" asp-route-id="@doc.Id" asp-route-scope="episode" class="btn btn-sm btn-success">Download</a></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p class="text-muted">No documents uploaded yet.</p>
+                }
+            </div>
+        </div>
     </div>
 </div>

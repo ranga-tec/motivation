@@ -1,0 +1,1376 @@
+# Product Requirements Document
+
+# Exceed Lanka Prosthetic & Orthotic Data Management System
+
+## 1. Product Overview
+
+The system is a patient data management system for Exceed Lanka’s prosthetic and orthotic services.
+
+The system will manage the complete patient workflow:
+
+1. Patient registration
+2. Patient file number generation
+3. Patient folder management
+4. Prosthetic and orthotic assessments
+5. Prescription selection
+6. Fitting records
+7. Delivery records
+8. Follow-up records
+9. File uploads
+10. Printable forms
+11. Reports
+
+The system must support multiple locations. Currently the active locations are:
+
+1. Ragama
+2. Colombo
+
+New locations must be addable in the future.
+
+The primary business tracking number is the **Patient Number / Patient File Number / PNO**.
+
+All related records must be tracked under the patient number.
+
+---
+
+## 2. Core Business Rule
+
+### 2.1 Patient Number Is Primary
+
+The patient number is the main business identifier.
+
+Everything must be linked under the patient number:
+
+* Registration details
+* Assessments
+* Prosthetic records
+* Orthotic records
+* Prescriptions
+* Fitting dates
+* Delivery details
+* Follow-up records
+* Uploaded files
+* Printed documents
+* Reports
+
+The system database will still have internal primary keys for each table, but those keys are for technical use only.
+
+### 2.2 No Separate Visible Business Numbers Required
+
+The following do not need separate visible business codes at this stage:
+
+* Patient registration number
+* Assessment number
+* Prosthetic record number
+* Orthotic record number
+* Fitting record number
+* Delivery record number
+* Follow-up record number
+
+Reason:
+
+All these records are tracked under the **Patient Number / PNO**.
+
+Each table can have an internal database primary key, such as `assessment_id`, `fitting_id`, `delivery_id`, and `followup_id`, but those do not need to be shown as official document numbers.
+
+### 2.3 Optional Future Document Numbers
+
+If the organization later wants printed document references, the system can add optional document numbers later.
+
+For now, the visible business number should remain the **Patient Number / PNO**.
+
+---
+
+## 3. Location Support
+
+### 3.1 Current Locations
+
+The system must support:
+
+* Ragama
+* Colombo
+
+### 3.2 Future Locations
+
+Admin users must be able to add new locations in the future.
+
+Each location should have:
+
+* Location name
+* Location code or flag
+* Active / inactive status
+* Contact details, optional
+* Address, optional
+
+### 3.3 Colombo Patient Number Flag
+
+Colombo patients should receive patient numbers with a Colombo flag or code.
+
+Other patients can receive the general patient number format.
+
+Required behavior:
+
+* Patient number must identify whether the patient belongs to Colombo if Colombo flag/code is required.
+* Other locations can use the general numbering format unless a separate flag is configured.
+* The system must support adding location flags/codes later.
+
+### 3.4 Yearly Number Increment
+
+Patient numbers must increase yearly.
+
+Requirement:
+
+* Patient number sequence should reset or increment by year according to configured yearly rules.
+* The system must store the year with the number sequence.
+* The system must prevent duplicate patient numbers.
+
+Example only:
+
+* General: `2026/0001`
+* Colombo flagged: `C/2026/0001`
+
+The exact final format must be confirmed by the client.
+
+---
+
+## 4. Users and Access
+
+### 4.1 User Roles
+
+Suggested roles:
+
+1. Admin
+2. Registration user
+3. Clinical user
+4. Report user
+5. Management user
+
+### 4.2 Location Access
+
+Ragama users can view Colombo records.
+
+Colombo users can view Ragama records.
+
+Therefore, the system does not need strict location-based record blocking for now.
+
+However, records must still store the correct patient location for reporting.
+
+### 4.3 Editing Access
+
+Old records should remain editable for now.
+
+Users should be able to edit:
+
+* Patient details
+* Assessment details
+* Prescription details
+* Fitting dates and notes
+* Delivery date and notes
+* Follow-up dates and notes
+* Uploaded files
+
+The system should still store basic metadata:
+
+* Created by
+* Created date
+* Updated by
+* Updated date
+
+A full audit module is not required.
+
+---
+
+# 5. Dashboard Requirements
+
+## 5.1 Dashboard Title
+
+Dashboard title:
+
+**Exceed Lanka Prosthetic & Orthotic Data Management System**
+
+## 5.2 Main Dashboard Cards
+
+The dashboard must show the following main cards.
+
+### 5.2.1 Total Patients
+
+Shows the total number of registered patients.
+
+Users should be able to drill down and view the patient list behind the count.
+
+### 5.2.2 Active Records
+
+Recommended meaning:
+
+**Active Records should mean active patient treatment records / active patient episodes.**
+
+This is the best option because one patient can have more than one prosthetic or orthotic case over time.
+
+So the dashboard should use:
+
+* Label: **Active Records**
+* Meaning: active treatment records or active episodes under patients
+
+Each active record belongs to a patient number.
+
+Users should be able to click the Active Records card and see:
+
+* Patient number
+* Patient name
+* Location
+* Assessment type
+* Prosthetic / orthotic type
+* Last activity date
+* Current stage
+* Record status
+
+### 5.2.3 Active Patients
+
+Optional separate card.
+
+If required, the system can show **Active Patients** separately.
+
+Meaning:
+
+* Unique patients who currently have at least one active record.
+
+This is different from Active Records.
+
+Example:
+
+* One patient has two active records.
+* Active Patients count = 1
+* Active Records count = 2
+
+### 5.2.4 Today’s Activities
+
+Instead of using “Today’s active records,” the better dashboard label is:
+
+**Today’s Activities**
+
+This can show today’s scheduled or recorded items, such as:
+
+* Assessments
+* Fittings
+* Deliveries
+
+Follow-ups should not appear as pending items because follow-ups are report-only according to the confirmed requirement.
+
+---
+
+## 5.3 Appointments / Date-Based Actions
+
+Dashboard should include an Appointments or Date-Based Actions button/tab.
+
+It should allow users to view or create:
+
+* Assessment appointment
+* Fitting appointment
+* Delivery appointment
+
+Delivery must be available in appointment creation and delivery records.
+
+However, delivery must not be shown as a pending appointment.
+
+Follow-ups should be recorded and reported, but should not appear as pending dashboard items.
+
+---
+
+## 5.4 Quick Actions
+
+Dashboard must include Quick Actions.
+
+Quick action buttons:
+
+1. Register New Patient
+2. Create New Record / Assessment
+3. Create New Appointment
+4. Add Fitting
+5. Add Delivery
+6. Add Follow-up
+
+### 5.4.1 Register New Patient
+
+User must be able to register:
+
+* Local patient
+* Foreign patient
+
+### 5.4.2 Create New Record / Assessment
+
+User must be able to create a new prosthetic or orthotic assessment under an existing patient number.
+
+### 5.4.3 Create New Appointment
+
+Appointment creation should support:
+
+* Assessment
+* Fitting
+* Delivery
+
+Follow-up should be handled in follow-up records and reports, not as a pending appointment queue.
+
+---
+
+## 5.5 Recent Activities
+
+Dashboard must show recent activities.
+
+Examples:
+
+* New patient registered
+* Assessment created
+* Prescription selected
+* Fitting date added
+* Delivery date changed
+* Follow-up added
+* Document uploaded
+
+Each activity should show:
+
+* Date/time
+* Patient number
+* Patient name
+* Activity type
+* User
+* Location
+
+---
+
+## 5.6 Top Navigation
+
+Top navigation should include:
+
+* Dashboard
+* Patient Folder
+* Records
+* Reports
+
+---
+
+# 6. Patient Registration
+
+## 6.1 Registration Form Source
+
+The system-generated registration form should be based on the Exceed Lanka Patient Registration Form.
+
+The printed form is not just a scanned upload. The system must generate this form as a printout from entered data.
+
+## 6.2 Patient File Number / PNO
+
+The patient file number must be auto-generated by the system.
+
+Rules:
+
+* User should not manually type the patient file number.
+* Patient number is the primary business tracking number.
+* Colombo patients receive a number with a Colombo flag/code.
+* Other patients receive the general patient number.
+* Numbers increase yearly.
+* Duplicate patient numbers must not be allowed.
+
+## 6.3 Centre / Location
+
+Registration must capture the centre/location.
+
+Current location options:
+
+* Ragama
+* Colombo
+
+New locations must be addable later.
+
+## 6.4 Patient Category
+
+The system must support:
+
+* Local patient
+* Foreign patient
+
+For foreign patients:
+
+* Nationality must be captured.
+* Passport can be used as the identification type.
+* Other identification types may still be selected if applicable.
+
+For local patients:
+
+* Operator must select the identification type.
+* NIC, Driving License, or Passport can be used.
+
+## 6.5 Identification Details
+
+Identification is mandatory, but the type must be selected by the operator.
+
+Fields:
+
+* Identification Type
+* Identification Number
+
+Identification Type options:
+
+* NIC
+* Driving License
+* Passport
+
+Duplicate checking should be done against:
+
+* NIC
+* Driving License
+* Passport
+
+If the same ID number already exists, the system should warn or block according to final business rule.
+
+Recommended behavior:
+
+* Block exact duplicate for same identification type and number.
+* Show warning if name/date of birth also looks similar.
+
+---
+
+## 6.6 Patient Name Fields
+
+Both of the following fields are required:
+
+* Full Name
+* Name with Initials
+
+Preferred Name is not required and should be removed.
+
+## 6.7 Patient Details Fields
+
+The registration form must capture:
+
+* Full Name
+* Name with Initials
+* Date of Birth
+* Gender
+* Employment
+* Address
+* Province
+* District
+* City
+* Email
+* Nationality
+* Patient Category: Local / Foreign
+* Identification Type
+* Identification Number
+* Centre / Location
+* Patient Number / PNO
+
+## 6.8 Province, District, City
+
+The system must capture:
+
+* Province
+* District
+* City
+
+Recommended behavior:
+
+* Province as dropdown
+* District as dropdown filtered by province
+* City as dropdown or text field filtered by district
+
+## 6.9 Contact Numbers
+
+The system must support telephone confirmation tracking.
+
+Each telephone record must include:
+
+* Telephone No.
+* Date Confirmed
+* Person Checked
+
+Multiple telephone numbers must be allowed.
+
+## 6.10 Referral Source
+
+The field “How the patient get to know Exceed” should be represented as:
+
+**Referral Source**
+
+Suggested dropdown values:
+
+* Doctor referral
+* Hospital referral
+* NGO referral
+* Friend / family
+* Social media
+* Website
+* Walk-in
+* Other
+
+If Other is selected, show a text box.
+
+## 6.11 Guardian / Carer Details
+
+Guardian / carer details are required.
+
+Fields:
+
+* Guardian / Carer Name
+* Relationship
+* Phone
+* Mobile
+* Address
+
+## 6.12 Travel Information
+
+Capture:
+
+* Time / Distance to Travel to Centre
+
+## 6.13 Registration Processing Details
+
+Capture:
+
+* Date of Registration
+* Registration Processed By
+
+Recommended behavior:
+
+* Date of Registration defaults to current date.
+* Registration Processed By defaults to logged-in user.
+
+---
+
+# 7. Patient Folder
+
+Each patient must have a patient folder.
+
+The patient folder must be organized under the patient number.
+
+Patient folder must show:
+
+* Patient number / PNO
+* Full name
+* Name with initials
+* Location
+* Local / foreign status
+* Identification details
+* Contact details
+* Guardian / carer details
+* Uploaded files
+* Assessment history
+* Prescription history
+* Fitting history
+* Delivery history
+* Follow-up history
+* Print forms
+
+Search options:
+
+* Patient number
+* Full name
+* Name with initials
+* NIC
+* Passport
+* Driving License
+* Telephone number
+* Location
+
+---
+
+# 8. Patient Record / Episode
+
+A patient can have one or more records or episodes under the same patient number.
+
+A record or episode represents a prosthetic or orthotic service case.
+
+Each record should include:
+
+* Patient number
+* Patient
+* Location
+* Assessment type
+* Record status
+* Date of assessment
+* Prescription details
+* Fitting records
+* Delivery records
+* Follow-up records
+* Uploaded files
+
+Recommended record status options:
+
+* Active
+* Completed
+* Cancelled
+
+Open date and closed date are not required for now.
+
+---
+
+# 9. Assessment Creation
+
+## 9.1 Assessment Type
+
+The user must select:
+
+* Prosthetic
+* Orthotic
+
+When Prosthetic is selected, show prosthetic assessment workflow.
+
+When Orthotic is selected, show orthotic assessment workflow.
+
+## 9.2 Common Assessment Fields
+
+All assessments should include:
+
+* Patient number
+* Patient
+* Location
+* Date of Assessment
+* Assessment Type
+* Main Problem Type
+* Side
+* Cause / Reason / Pathology Type
+* Additional Assessment Information
+* Prescription Type
+
+## 9.3 Side Selection
+
+The handwritten notes show the values under Main Problem / Side section.
+
+Side options:
+
+* Left
+* Right
+* Bilateral
+
+If Bilateral is selected:
+
+* Show Prescription for Left
+* Show Prescription for Right
+* Each prescription should be selected from dropdown
+* Left and right prescriptions can be different
+
+## 9.4 Main Problem Type
+
+Main Problem Type should be a dropdown field.
+
+The exact list should be confirmed from the client if there are more values.
+
+From the handwritten pattern, the side values are:
+
+* Left
+* Right
+* Bilateral
+
+These belong to Side, not Main Problem Type.
+
+## 9.5 Cause / Reason / Pathology Type
+
+Cause / Reason / Pathology Type should be a dropdown field.
+
+The exact list must be confirmed if the client has standard values.
+
+Suggested values for first version:
+
+* Congenital
+* Trauma
+* Disease
+* Amputation
+* Stroke
+* Diabetes-related
+* Other
+
+If Other is selected, show text box.
+
+---
+
+# 10. Prosthetic Assessment
+
+## 10.1 Type of Prosthetic Assessment
+
+The system must support:
+
+* Upper Limb Prosthetic Assessment
+* Lower Limb Prosthetic Assessment
+
+---
+
+## 10.2 Upper Limb Prosthetic Assessment
+
+Fields:
+
+* Main Problem Type
+* Side: Left, Right, Bilateral
+* Cause / Reason / Pathology Type
+* Additional Assessment Information
+* Date of Assessment
+
+If Bilateral:
+
+* Prescription for Left
+* Prescription for Right
+
+### 10.2.1 Upper Limb Prosthetic Prescription Dropdown
+
+This must be a hardcoded dropdown list.
+
+Options:
+
+1. Finger Prosthesis
+2. Partial Hand Prosthesis
+3. Hand Prosthesis
+4. Wrist Disarticulation Prosthesis
+5. Trans-Radial Prosthesis
+6. Elbow Disarticulation Prosthesis
+7. Trans-Humeral Prosthesis
+8. Shoulder Disarticulation Prosthesis
+9. Forequarter Prosthesis
+10. Other
+
+If Other is selected:
+
+* Show text box to enter other prosthesis type.
+
+---
+
+## 10.3 Lower Limb Prosthetic Assessment
+
+Fields:
+
+* Main Problem Type
+* Side: Left, Right, Bilateral
+* Cause / Reason / Pathology Type
+* Additional Assessment Information
+* Date of Assessment
+
+If Bilateral:
+
+* Prescription for Left
+* Prescription for Right
+
+### 10.3.1 Lower Limb Prosthetic Prescription Dropdown
+
+This must be a hardcoded dropdown list.
+
+Options:
+
+1. Toe Prosthesis
+2. Partial Foot Prosthesis, Insole Type
+3. Partial Foot Prosthesis, Slipper Type
+4. Partial Foot Prosthesis, AFO Type
+5. Ankle Disarticulation Prosthesis
+6. Trans-Tibial Prosthesis
+7. Knee Disarticulation Prosthesis
+8. Transfemoral Prosthesis
+9. Hip Disarticulation Prosthesis
+10. Other
+
+If Other is selected:
+
+* Show text box to enter other prosthesis type.
+
+---
+
+# 11. Orthotic Assessment
+
+## 11.1 Type of Orthosis
+
+The system must support:
+
+* Upper Limb Orthosis
+* Lower Limb Orthosis
+* Spinal Orthosis
+
+---
+
+## 11.2 Upper Limb Orthotic Assessment
+
+Fields:
+
+* Main Problem Type
+* Side: Left, Right, Bilateral
+* Cause / Reason / Pathology Type
+* Additional Assessment Information
+* Date of Assessment
+
+If Bilateral:
+
+* Prescription for Left
+* Prescription for Right
+
+### 11.2.1 Upper Limb Orthotic Prescription Dropdown
+
+This must be a hardcoded dropdown list.
+
+Options:
+
+1. Finger Orthosis
+2. Wrist Hand Orthosis, WHO
+3. Elbow Orthosis
+4. Elbow Wrist Hand Orthosis
+5. Shoulder Orthosis
+6. Shoulder Elbow Wrist Hand Orthosis
+7. Other
+
+If Other is selected:
+
+* Show text box to enter other orthosis type.
+
+---
+
+## 11.3 Lower Limb Orthotic Assessment
+
+Fields:
+
+* Main Problem Type
+* Side: Left, Right, Bilateral
+* Cause / Reason / Pathology Type
+* Additional Assessment Information
+* Date of Assessment
+
+If Bilateral:
+
+* Prescription for Left
+* Prescription for Right
+
+### 11.3.1 Lower Limb Orthotic Prescription Dropdown
+
+This must be a hardcoded dropdown list.
+
+#### Insole Options
+
+1. Soft Insole, Casted
+2. Insole with Foot Print
+3. Rigid Insole
+
+#### AFO Options
+
+4. Ankle Foot Orthosis, AFO
+
+Sub-types:
+
+* Supra Malleolus Orthosis, SMO
+* Flexible AFO
+* Rigid AFO
+* Jointed AFO
+
+#### KO Options
+
+5. Knee Orthosis, KO
+
+Sub-types:
+
+* KO with Side Bars
+* KO Splint Type
+
+#### KAFO Options
+
+6. Knee Ankle Foot Orthosis, KAFO
+
+Sub-types:
+
+* KAFO with Side Bars
+* KAFO Splint Type
+
+#### HKAFO Option
+
+7. Hip Knee Ankle Foot Orthosis, HKAFO
+
+#### Hip Abduction Brace Options
+
+8. Hip Abduction Brace
+
+Sub-types:
+
+* Pavlik Harness
+* Soft Hip Abduction Brace
+* Rigid Hip Abduction Brace
+
+#### Other
+
+9. Other
+
+If Other is selected:
+
+* Show text box to enter other orthosis type.
+
+---
+
+## 11.4 Spinal Orthosis
+
+Spinal Orthosis must be available as a selectable orthosis type.
+
+The handwritten pages do not provide spinal orthosis prescription dropdown values.
+
+For now:
+
+* Show Spinal Orthosis as a category.
+* Provide Other / Type text field until final spinal prescription list is given.
+
+---
+
+# 12. Fitting Details
+
+## 12.1 Unlimited Fitting Dates
+
+The system must allow unlimited fitting dates.
+
+The handwritten notes mention 2nd, 3rd, and 4th fitting dates, but the confirmed requirement is unlimited fitting entries.
+
+Each fitting entry must include:
+
+* Fitting date
+* Notes
+* Created by
+* Created date
+* Updated by
+* Updated date
+
+## 12.2 Fitting Notes
+
+Each fitting date must have its own note.
+
+Example:
+
+* 1st fitting date and note
+* 2nd fitting date and note
+* 3rd fitting date and note
+* Additional fitting dates and notes
+
+## 12.3 Add / Change Fitting Date
+
+Fitting date add/change option should be available from the main record screen or first screen.
+
+Users should not need to go deep into the record to update fitting dates.
+
+---
+
+# 13. Delivery Details
+
+## 13.1 Delivery in Appointment Creation
+
+Delivery must be available in the appointment creation screen.
+
+## 13.2 Delivery Record
+
+Delivery must also be stored as a delivery record under the patient number and record/episode.
+
+Delivery fields:
+
+* Date of Delivery
+* Notes / Remarks
+* Delivery confirmation attachment, if uploaded
+* Created by
+* Created date
+* Updated by
+* Updated date
+
+## 13.3 Delivery Not Pending
+
+Delivery must not be shown as a pending appointment.
+
+Delivery should appear in:
+
+* Delivery records
+* Delivery reports
+* Patient folder
+* Printable delivery note
+
+## 13.4 Change Delivery Date
+
+Delivery date must be editable for now.
+
+---
+
+# 14. Follow-up Details
+
+## 14.1 Multiple Follow-ups
+
+The system must allow multiple follow-up records.
+
+Each follow-up record must include:
+
+* Follow-up date
+* Remarks / Notes
+* Created by
+* Created date
+* Updated by
+* Updated date
+
+## 14.2 Edit Follow-up Date
+
+Follow-up dates can be edited after creation.
+
+## 14.3 Follow-ups in Reports
+
+Follow-ups should only appear in reports and patient folder history.
+
+Follow-ups should not appear as pending dashboard items.
+
+---
+
+# 15. File Uploads
+
+The system must support file uploads under the patient number.
+
+Supported uploaded document types:
+
+1. Scanned registration form
+2. NIC copy
+3. Passport copy
+4. Driving License copy, if applicable
+5. Medical documents
+6. Prescription documents
+7. Assessment photos
+8. Delivery confirmation
+9. Other supporting documents
+
+Each uploaded file should store:
+
+* Patient number
+* Related record/episode, if applicable
+* File type
+* File name
+* Uploaded by
+* Uploaded date
+* Notes, optional
+
+---
+
+# 16. Printable Documents
+
+The system must generate printable forms.
+
+Required print outputs:
+
+1. Patient Registration Form
+2. Assessment Form
+3. Prescription Form
+4. Delivery Note
+5. Follow-up Note
+
+The printed Patient Registration Form must be generated from system data using the Exceed Lanka registration form layout.
+
+---
+
+# 17. Reports
+
+## 17.1 Required Reports
+
+The system must include the following reports:
+
+1. Patient Registration Report
+2. Active Records Report
+3. Assessment Report
+4. Prosthetic Assessment Report
+5. Orthotic Assessment Report
+6. Fitting Report
+7. Delivery Report
+8. Follow-up Report
+9. Location-wise Report
+10. Foreign Patient Report
+11. Date-wise Report
+12. Province-wise Report
+13. Year-wise Report
+
+## 17.2 Report Export
+
+Reports must support export to:
+
+* PDF
+
+## 17.3 Report Filters
+
+Reports must support the following filters:
+
+* Location
+* Date range
+* Patient
+* Patient file number / PNO
+* Local / foreign patient
+* Assessment type
+* Prosthetic / orthotic type
+* Prescription type
+* Fitting date
+* Delivery date
+* Follow-up date
+* Record status
+* Province
+* Year
+
+---
+
+# 18. Search Requirements
+
+The system must allow searching by:
+
+* Patient number / PNO
+* Full name
+* Name with initials
+* NIC
+* Passport
+* Driving License
+* Telephone number
+* Location
+* Province
+* District
+* City
+
+---
+
+# 19. Duplicate Checking
+
+The system must check duplicates using:
+
+* NIC
+* Passport
+* Driving License
+
+Recommended rules:
+
+* Same identification type plus same identification number should not be allowed for another patient unless admin override is provided.
+* If duplicate is found, show existing patient number and patient name.
+* Telephone number can be used as a warning check, but not as a strict duplicate blocker.
+
+---
+
+# 20. Master Data and Hardcoded Lists
+
+## 20.1 Hardcoded Prescription Lists
+
+Prosthetic and orthotic prescription types should be hardcoded fixed lists.
+
+These lists should not be admin-configurable in the first version.
+
+Hardcoded areas:
+
+* Upper limb prosthetic prescription types
+* Lower limb prosthetic prescription types
+* Upper limb orthotic prescription types
+* Lower limb orthotic prescription types
+
+## 20.2 Configurable Master Data
+
+The following should still be configurable:
+
+* Locations
+* Nationalities
+* Provinces
+* Districts
+* Cities
+* Referral sources
+* Users
+* Roles
+
+## 20.3 Lists Requiring Final Confirmation
+
+The following lists need final confirmation if exact values are required:
+
+* Main Problem Type
+* Cause / Reason / Pathology Type
+* Spinal Orthosis prescription types
+
+---
+
+# 21. Validation Rules
+
+## 21.1 Registration Required Fields
+
+Required:
+
+* Location
+* Patient category: Local / Foreign
+* Full Name
+* Name with Initials
+* Identification Type
+* Identification Number
+* Date of Birth
+* Gender
+* Address
+* Province
+* District
+* City
+* Guardian / Carer Details
+* Date of Registration
+* Registration Processed By
+
+For foreign patients:
+
+* Nationality is required.
+
+## 21.2 Assessment Required Fields
+
+Required:
+
+* Patient number
+* Assessment type
+* Date of assessment
+* Main problem type
+* Side
+* Cause / reason / pathology type
+* Prescription type
+
+If Side = Bilateral:
+
+* Prescription for left is required.
+* Prescription for right is required.
+
+## 21.3 Fitting Required Fields
+
+Required:
+
+* Patient number
+* Related record/episode
+* Fitting date
+
+Each fitting can have notes.
+
+## 21.4 Delivery Required Fields
+
+Required:
+
+* Patient number
+* Related record/episode
+* Date of delivery
+
+## 21.5 Follow-up Required Fields
+
+Required:
+
+* Patient number
+* Related record/episode
+* Follow-up date
+
+---
+
+# 22. Non-Functional Requirements
+
+## 22.1 Usability
+
+The system should be simple and fast for clinical and administrative staff.
+
+Important actions should be accessible from the patient folder or main record screen:
+
+* Add fitting
+* Change fitting date
+* Add delivery
+* Change delivery date
+* Add follow-up
+* Edit follow-up
+* Upload document
+* Print form
+
+## 22.2 Data Integrity
+
+The system must prevent:
+
+* Duplicate patient numbers
+* Duplicate identification numbers for same ID type
+* Missing required assessment prescriptions
+* Missing patient location
+* Missing required guardian/carer details
+
+## 22.3 Security
+
+The system must require login.
+
+User actions should store created/updated metadata.
+
+## 22.4 Performance
+
+Dashboard, patient search, and reports should load quickly for normal daily use.
+
+## 22.5 File Storage
+
+Uploaded documents and images must be stored securely and linked to the patient number.
+
+---
+
+# 23. Suggested Data Model
+
+## 23.1 Core Tables
+
+1. Users
+2. Roles
+3. Locations
+4. PatientNumberSequence
+5. Patients
+6. PatientContacts
+7. GuardianCarerDetails
+8. PatientRecords
+9. Assessments
+10. ProstheticAssessments
+11. OrthoticAssessments
+12. Prescriptions
+13. Fittings
+14. Deliveries
+15. FollowUps
+16. Appointments
+17. UploadedFiles
+18. ReferralSources
+19. Provinces
+20. Districts
+21. Cities
+
+## 23.2 Technical IDs
+
+Each table should have its own internal primary key.
+
+Example:
+
+* patient_id
+* assessment_id
+* prescription_id
+* fitting_id
+* delivery_id
+* followup_id
+* file_id
+
+These are internal database IDs only.
+
+The visible business tracking number remains:
+
+* Patient Number / PNO
+
+---
+
+# 24. MVP Scope
+
+The first version should include:
+
+1. Login
+2. User roles
+3. Location setup
+4. Yearly patient number generation
+5. Colombo patient number flag
+6. Patient registration
+7. Duplicate checking by NIC / Passport / Driving License
+8. Patient folder
+9. File uploads
+10. Create assessment
+11. Prosthetic assessment
+12. Orthotic assessment
+13. Hardcoded prescription dropdowns
+14. Bilateral left/right prescription handling
+15. Unlimited fitting dates with notes
+16. Delivery records
+17. Follow-up records
+18. Printable forms
+19. Dashboard
+20. Reports
+21. PDF export
+
+---
+
+# 25. Final Remaining Confirmations
+
+Only these items still need confirmation:
+
+1. Exact patient number format.
+2. Exact Colombo flag/code in the patient number.
+3. Exact yearly reset rule and starting number.
+4. Final Main Problem Type dropdown values, if they are not only free text.
+5. Final Cause / Reason / Pathology dropdown values.
+6. Final Spinal Orthosis prescription dropdown values.
+7. Whether duplicate ID should block registration completely or only warn admin.
+8. Final design/layout of printable forms.
+
+
+My recommendation for the dashboard is: use Active Records as the main card, meaning active treatment episodes. Add Active Patients only if they want a separate unique patient count. This avoids confusion when one patient has more than one active prosthetic or orthotic case.

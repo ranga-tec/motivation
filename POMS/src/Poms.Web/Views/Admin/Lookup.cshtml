@@ -1,0 +1,26 @@
+@model IEnumerable<Poms.Web.ViewModels.LookupItemViewModel>
+
+@{
+    ViewData["Title"] = ViewBag.LookupTitle;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>@ViewBag.LookupTitle</h1>
+    <a asp-action="LookupCreate" asp-route-type="@ViewBag.LookupType" class="btn btn-primary">+ Add</a>
+</div>
+
+<table class="table table-striped">
+    <thead><tr><th>Name</th><th>Active</th><th>Actions</th></tr></thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Name</td>
+                <td>@(item.IsActive ? "Yes" : "No")</td>
+                <td><a asp-action="LookupEdit" asp-route-type="@ViewBag.LookupType" asp-route-id="@item.Id" class="btn btn-sm btn-warning">Edit</a></td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<a asp-action="Index" class="btn btn-secondary">Back to Admin</a>

@@ -4,8 +4,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Poms.Infrastructure.Data;
 using Poms.Infrastructure.Services;
+using Poms.Reporting.Services;
 using Poms.Web.Models;
 using Serilog;
+
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -110,8 +113,11 @@ builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
 
 builder.Services.AddScoped<IPatientNumberService, PatientNumberService>();
+builder.Services.AddScoped<IDuplicateCheckService, DuplicateCheckService>();
 builder.Services.AddScoped<IFileStorageService>(_ =>
     new FileStorageService(rootPath, maxFileSizeMB, allowedExtensions));
+builder.Services.AddScoped<IPrintFormService, PrintFormService>();
+builder.Services.AddScoped<IReportQueryService, ReportQueryService>();
 
 // Add AutoMapper
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
@@ -125,6 +131,8 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("ADMIN"));
     options.AddPolicy("ClinicianOrAdmin", policy => policy.RequireRole("CLINICIAN", "ADMIN"));
     options.AddPolicy("DataEntry", policy => policy.RequireRole("DATA_ENTRY", "ADMIN"));
+    options.AddPolicy("ManagementOrAdmin", policy => policy.RequireRole("MANAGEMENT", "ADMIN"));
+    options.AddPolicy("ReportOrAdmin", policy => policy.RequireRole("VIEWER", "MANAGEMENT", "ADMIN"));
     options.AddPolicy("AnyAuthenticatedUser", policy => policy.RequireAuthenticatedUser());
 });
 
@@ -151,7 +159,11 @@ using (var scope = app.Services.CreateScope())
         }
 
         await DbInitializer.SeedUsersAndRolesAsync(services);
-        await SampleDataSeeder.SeedSampleConditionsAsync(context);
+        await SampleDataSeeder.SeedLocationsAsync(context);
+        await SampleDataSeeder.SeedReferralSourcesAsync(context);
+        await SampleDataSeeder.SeedMainProblemTypesAsync(context);
+        await SampleDataSeeder.SeedCauseReasonTypesAsync(context);
+        await SampleDataSeeder.SeedNationalitiesAsync(context);
         Log.Information("Database seeded successfully");
     }
     catch (Exception ex)

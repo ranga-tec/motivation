@@ -1,11 +1,11 @@
-﻿@model IEnumerable<Poms.Domain.Entities.Patient>
+@model IEnumerable<Poms.Domain.Entities.Patient>
 
 @{
-    ViewData["Title"] = "Patients";
+    ViewData["Title"] = "Patient Folder";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>Patients</h1>
+    <h1>Patient Folder</h1>
     <a asp-action="Create" class="btn btn-primary">
         <i class="bi bi-person-plus"></i> Register New Patient
     </a>
@@ -15,33 +15,48 @@
     <div class="card-body">
         <form asp-action="Index" method="get" class="row g-3">
             <div class="col-md-4">
-                <input type="text" name="searchString" value="@ViewBag.SearchString" 
-                       class="form-control" placeholder="Search by Name, Number, or NIC" />
+                <input type="text" name="searchString" value="@ViewBag.SearchString"
+                       class="form-control" placeholder="Search by Name, PNO, NIC/Passport/DL, Phone" />
             </div>
-            <div class="col-md-3">
-                <select name="districtId" class="form-select">
-                    <option value="">All Districts</option>
-                    @foreach (var district in ViewBag.Districts as SelectList)
+            <div class="col-md-2">
+                <select name="provinceId" id="provinceFilter" class="form-select">
+                    <option value="">All Provinces</option>
+                    @foreach (var province in ViewBag.Provinces as SelectList)
                     {
-                        <option value="@district.Value" selected="@(district.Value == ViewBag.DistrictId?.ToString())">
-                            @district.Text
-                        </option>
-                    }
-                </select>
-            </div>
-            <div class="col-md-3">
-                <select name="centerId" class="form-select">
-                    <option value="">All Centers</option>
-                    @foreach (var center in ViewBag.Centers as SelectList)
-                    {
-                        <option value="@center.Value" selected="@(center.Value == ViewBag.CenterId?.ToString())">
-                            @center.Text
-                        </option>
+                        <option value="@province.Value" selected="@(province.Value == ViewBag.ProvinceId?.ToString())">@province.Text</option>
                     }
                 </select>
             </div>
             <div class="col-md-2">
-                <button type="submit" class="btn btn-secondary w-100">Search</button>
+                <select name="districtId" id="districtFilter" class="form-select">
+                    <option value="">All Districts</option>
+                    @foreach (var district in ViewBag.Districts as SelectList)
+                    {
+                        <option value="@district.Value" selected="@(district.Value == ViewBag.DistrictId?.ToString())">@district.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="cityId" id="cityFilter" class="form-select">
+                    <option value="">All Cities</option>
+                    @foreach (var city in ViewBag.Cities as SelectList)
+                    {
+                        <option value="@city.Value" selected="@(city.Value == ViewBag.CityId?.ToString())">@city.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="centerId" class="form-select">
+                    <option value="">All Locations</option>
+                    @foreach (var center in ViewBag.Centers as SelectList)
+                    {
+                        <option value="@center.Value" selected="@(center.Value == ViewBag.CenterId?.ToString())">@center.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-12 col-lg-auto">
+                <button type="submit" class="btn btn-secondary">Search</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
             </div>
         </form>
     </div>
@@ -54,9 +69,9 @@
                 <th>Patient Number</th>
                 <th>Name</th>
                 <th>DOB</th>
-                <th>Sex</th>
-                <th>District</th>
-                <th>Center</th>
+                <th>Category</th>
+                <th>Identification</th>
+                <th>Location</th>
                 <th>Registration Date</th>
                 <th>Actions</th>
             </tr>
@@ -65,17 +80,15 @@
             @foreach (var item in Model)
             {
                 <tr>
-                    <td>
-                        <strong>@item.PatientNumber</strong>
-                    </td>
-                    <td>@item.FirstName @item.LastName</td>
-                    <td>@item.Dob?.ToString("dd-MMM-yyyy")</td>
-                    <td>@item.Sex</td>
-                    <td>@item.District.Name</td>
+                    <td><strong>@item.PatientNumber</strong></td>
+                    <td>@item.FullName</td>
+                    <td>@item.Dob.ToString("dd-MMM-yyyy")</td>
+                    <td>@item.Category</td>
+                    <td>@item.IdentificationType: @item.IdentificationNumber</td>
                     <td>@item.Center.Name</td>
                     <td>@item.RegistrationDate.ToString("dd-MMM-yyyy")</td>
                     <td>
-                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info">View</a>
+                        <a asp-action="Folder" asp-route-id="@item.Id" class="btn btn-sm btn-info">View</a>
                         <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning">Edit</a>
                     </td>
                 </tr>
@@ -91,12 +104,41 @@
             @for (int i = 1; i <= ViewBag.TotalPages; i++)
             {
                 <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
-                    <a class="page-link" asp-action="Index" asp-route-page="@i" 
+                    <a class="page-link" asp-action="Index" asp-route-page="@i"
                        asp-route-searchString="@ViewBag.SearchString"
+                       asp-route-provinceId="@ViewBag.ProvinceId"
                        asp-route-districtId="@ViewBag.DistrictId"
+                       asp-route-cityId="@ViewBag.CityId"
                        asp-route-centerId="@ViewBag.CenterId">@i</a>
                 </li>
             }
         </ul>
     </nav>
+}
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#provinceFilter').change(function () {
+                var provinceId = $(this).val();
+                $('#districtFilter').empty().append('<option value="">All Districts</option>');
+                $('#cityFilter').empty().append('<option value="">All Cities</option>');
+                if (provinceId) {
+                    $.get('/Patients/GetDistrictsByProvince', { provinceId: provinceId }, function (data) {
+                        $.each(data, function (i, d) { $('#districtFilter').append($('<option>').val(d.id).text(d.name)); });
+                    });
+                }
+            });
+
+            $('#districtFilter').change(function () {
+                var districtId = $(this).val();
+                $('#cityFilter').empty().append('<option value="">All Cities</option>');
+                if (districtId) {
+                    $.get('/Patients/GetCitiesByDistrict', { districtId: districtId }, function (data) {
+                        $.each(data, function (i, c) { $('#cityFilter').append($('<option>').val(c.id).text(c.name)); });
+                    });
+                }
+            });
+        });
+    </script>
 }

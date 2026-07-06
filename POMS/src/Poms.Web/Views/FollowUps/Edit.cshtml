@@ -1,0 +1,27 @@
+@model Poms.Web.ViewModels.FollowUpViewModel
+
+@{
+    ViewData["Title"] = "Edit Follow-up";
+}
+
+<h1>Edit Follow-up</h1>
+<p class="text-muted">Patient: <strong>@Model.PatientNumber - @Model.PatientName</strong></p>
+
+<form asp-action="Edit" method="post">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="EpisodeId" />
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+    <div class="mb-3">
+        <label asp-for="FollowUpDate" class="form-label"></label>
+        <input asp-for="FollowUpDate" class="form-control" type="date" />
+        <span asp-validation-for="FollowUpDate" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Notes" class="form-label"></label>
+        <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-warning">Update Follow-up</button>
+    <a asp-controller="Episodes" asp-action="Details" asp-route-id="@Model.EpisodeId" class="btn btn-secondary">Cancel</a>
+</form>

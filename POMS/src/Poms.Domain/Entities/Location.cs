@@ -29,5 +29,8 @@ public class Center
     public string Name { get; set; } = default!;
     public string? Address { get; set; }
     public string? Phone { get; set; }
+    public bool IsActive { get; set; } = true;
+    public bool RequiresPatientNumberFlag { get; set; }
+    public string? PatientNumberFlagCode { get; set; }
     public District District { get; set; } = default!;
 }

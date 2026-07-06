@@ -1,0 +1,29 @@
+@model IEnumerable<Poms.Domain.Entities.Center>
+
+@{
+    ViewData["Title"] = "Locations";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Locations</h1>
+    <a asp-action="LocationCreate" class="btn btn-primary">+ Add Location</a>
+</div>
+
+<table class="table table-striped">
+    <thead><tr><th>Code</th><th>Name</th><th>District</th><th>Active</th><th>PNO Flag</th><th>Actions</th></tr></thead>
+    <tbody>
+        @foreach (var c in Model)
+        {
+            <tr>
+                <td>@c.Code</td>
+                <td>@c.Name</td>
+                <td>@c.District.Name</td>
+                <td>@(c.IsActive ? "Yes" : "No")</td>
+                <td>@(c.RequiresPatientNumberFlag ? c.PatientNumberFlagCode : "-")</td>
+                <td><a asp-action="LocationEdit" asp-route-id="@c.Id" class="btn btn-sm btn-warning">Edit</a></td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<a asp-action="Index" class="btn btn-secondary">Back to Admin</a>

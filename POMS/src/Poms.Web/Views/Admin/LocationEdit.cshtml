@@ -1,0 +1,54 @@
+@model Poms.Web.ViewModels.LocationViewModel
+
+@{
+    ViewData["Title"] = "Edit Location";
+}
+
+<h1>Edit Location</h1>
+
+<form asp-action="LocationEdit" method="post">
+    <input type="hidden" asp-for="Id" />
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label asp-for="Name" class="form-label"></label>
+            <input asp-for="Name" class="form-control" />
+        </div>
+        <div class="col-md-4 mb-3">
+            <label asp-for="Code" class="form-label"></label>
+            <input asp-for="Code" class="form-control" />
+        </div>
+        <div class="col-md-4 mb-3">
+            <label asp-for="DistrictId" class="form-label"></label>
+            <select asp-for="DistrictId" class="form-select" asp-items="ViewBag.Districts"></select>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label asp-for="Address" class="form-label"></label>
+            <input asp-for="Address" class="form-control" />
+        </div>
+        <div class="col-md-6 mb-3">
+            <label asp-for="Phone" class="form-label"></label>
+            <input asp-for="Phone" class="form-control" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4 mb-3 form-check">
+            <input asp-for="IsActive" class="form-check-input" />
+            <label asp-for="IsActive" class="form-check-label"></label>
+        </div>
+        <div class="col-md-4 mb-3 form-check">
+            <input asp-for="RequiresPatientNumberFlag" class="form-check-input" />
+            <label asp-for="RequiresPatientNumberFlag" class="form-check-label"></label>
+        </div>
+        <div class="col-md-4 mb-3">
+            <label asp-for="PatientNumberFlagCode" class="form-label"></label>
+            <input asp-for="PatientNumberFlagCode" class="form-control" placeholder="e.g. C" />
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-warning">Save</button>
+    <a asp-action="Locations" class="btn btn-secondary">Cancel</a>
+</form>

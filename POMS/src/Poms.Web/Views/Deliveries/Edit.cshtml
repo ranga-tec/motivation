@@ -1,0 +1,35 @@
+@model Poms.Web.ViewModels.DeliveryViewModel
+
+@{
+    ViewData["Title"] = "Edit Delivery";
+}
+
+<h1>Edit Delivery</h1>
+<p class="text-muted">Patient: <strong>@Model.PatientNumber - @Model.PatientName</strong></p>
+
+<form asp-action="Edit" method="post">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="EpisodeId" />
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label asp-for="DeliveryDate" class="form-label"></label>
+            <input asp-for="DeliveryDate" class="form-control" type="date" />
+            <span asp-validation-for="DeliveryDate" class="text-danger"></span>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label asp-for="DeviceId" class="form-label"></label>
+            <select asp-for="DeviceId" class="form-select" asp-items="ViewBag.Devices">
+                <option value="">-- None --</option>
+            </select>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Notes" class="form-label"></label>
+        <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-warning">Update Delivery</button>
+    <a asp-controller="Episodes" asp-action="Details" asp-route-id="@Model.EpisodeId" class="btn btn-secondary">Cancel</a>
+</form>

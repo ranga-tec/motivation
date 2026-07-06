@@ -1,38 +1,43 @@
 @model IEnumerable<Poms.Domain.Entities.Episode>
+@using Microsoft.AspNetCore.Mvc.Rendering
 
 @{
-    ViewData["Title"] = "Episodes";
+    ViewData["Title"] = "Records";
 }
 
 <div class="row">
     <div class="col-md-12">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2>Treatment Episodes</h2>
-            <a asp-action="Create" class="btn btn-primary">
-                <i class="fas fa-plus"></i> New Episode
-            </a>
+            <h2>Patient Records</h2>
         </div>
 
         <div class="card">
             <div class="card-header">
                 <form asp-action="Index" method="get" class="row g-3">
-                    <div class="col-md-6">
+                    <div class="col-md-5">
                         <input type="text" name="searchString" value="@ViewBag.SearchString"
                                class="form-control" placeholder="Search by patient number or name..." />
                     </div>
-                    <div class="col-md-4">
-                        <select name="type" class="form-select">
-                            <option value="">All Types</option>
-                            @foreach (var type in Enum.GetValues(typeof(Poms.Domain.Enums.EpisodeType)))
+                    <div class="col-md-3">
+                        <select name="status" class="form-select">
+                            <option value="">All Statuses</option>
+                            @foreach (var status in Enum.GetValues(typeof(Poms.Domain.Enums.RecordStatus)))
                             {
-                                <option value="@type" selected="@(ViewBag.Type?.ToString() == type.ToString())">@type</option>
+                                <option value="@status" selected="@(ViewBag.Status?.ToString() == status.ToString())">@status</option>
                             }
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <button type="submit" class="btn btn-outline-secondary w-100">
-                            <i class="fas fa-search"></i> Search
-                        </button>
+                        <select name="centerId" class="form-select">
+                            <option value="">All Locations</option>
+                            @foreach (var center in ViewBag.Centers as SelectList)
+                            {
+                                <option value="@center.Value" selected="@(center.Value == ViewBag.CenterId?.ToString())">@center.Text</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-outline-secondary w-100">Search</button>
                     </div>
                 </form>
             </div>
@@ -45,10 +50,9 @@
                             <thead>
                                 <tr>
                                     <th>Patient</th>
-                                    <th>Type</th>
-                                    <th>Opened</th>
+                                    <th>Location</th>
+                                    <th>Record Date</th>
                                     <th>Status</th>
-                                    <th>Details</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -58,51 +62,18 @@
                                     <tr>
                                         <td>
                                             <strong>@item.Patient.PatientNumber</strong><br />
-                                            <small class="text-muted">@item.Patient.FirstName @item.Patient.LastName</small>
+                                            <small class="text-muted">@item.Patient.FullName</small>
                                         </td>
+                                        <td>@item.Center.Name</td>
+                                        <td>@item.RecordDate.ToString("dd/MM/yyyy")</td>
                                         <td>
-                                            <span class="badge @(item.Type == Poms.Domain.Enums.EpisodeType.Prosthetic ? "bg-primary" :
-                                                                  item.Type == Poms.Domain.Enums.EpisodeType.Orthotic ? "bg-success" : "bg-info")">
-                                                @item.Type
+                                            <span class="badge @(item.Status == Poms.Domain.Enums.RecordStatus.Active ? "bg-success" : item.Status == Poms.Domain.Enums.RecordStatus.Completed ? "bg-secondary" : "bg-danger")">
+                                                @item.Status
                                             </span>
                                         </td>
-                                        <td>@item.OpenedOn.ToString("dd/MM/yyyy")</td>
                                         <td>
-                                            @if (item.ClosedOn.HasValue)
-                                            {
-                                                <span class="badge bg-secondary">Closed</span><br />
-                                                <small class="text-muted">@item.ClosedOn.Value.ToString("dd/MM/yyyy")</small>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-warning">Active</span>
-                                            }
-                                        </td>
-                                        <td>
-                                            @if (item.Type == Poms.Domain.Enums.EpisodeType.Prosthetic && item.Prosthetic != null)
-                                            {
-                                                <small>@item.Prosthetic.AmputationType - @item.Prosthetic.Side</small>
-                                            }
-                                            else if (item.Type == Poms.Domain.Enums.EpisodeType.Orthotic && item.Orthotic != null)
-                                            {
-                                                <small>@item.Orthotic.BodyRegion - @item.Orthotic.Side</small>
-                                            }
-                                            else if (item.Type == Poms.Domain.Enums.EpisodeType.SpinalOrthosis)
-                                            {
-                                                <small>Spinal Support</small>
-                                            }
-                                        </td>
-                                        <td>
-                                            <div class="btn-group" role="group">
-                                                <a asp-action="Details" asp-route-id="@item.Id"
-                                                   class="btn btn-sm btn-outline-info">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
-                                                <a asp-action="Edit" asp-route-id="@item.Id"
-                                                   class="btn btn-sm btn-outline-warning">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                            </div>
+                                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-info">View</a>
+                                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-warning">Edit</a>
                                         </td>
                                     </tr>
                                 }
@@ -119,7 +90,8 @@
                                     <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
                                         <a class="page-link" asp-action="Index" asp-route-page="@i"
                                            asp-route-searchString="@ViewBag.SearchString"
-                                           asp-route-type="@ViewBag.Type">@i</a>
+                                           asp-route-status="@ViewBag.Status"
+                                           asp-route-centerId="@ViewBag.CenterId">@i</a>
                                     </li>
                                 }
                             </ul>
@@ -129,18 +101,8 @@
                 else
                 {
                     <div class="text-center py-4">
-                        <i class="fas fa-stethoscope fa-3x text-muted mb-3"></i>
-                        <h5 class="text-muted">No episodes found</h5>
-                        <p class="text-muted">
-                            @if (string.IsNullOrEmpty(ViewBag.SearchString as string))
-                            {
-                                <text>Start by creating the first treatment episode.</text>
-                            }
-                            else
-                            {
-                                <text>Try adjusting your search criteria.</text>
-                            }
-                        </p>
+                        <h5 class="text-muted">No records found</h5>
+                        <p class="text-muted">Records are created from a patient's folder.</p>
                     </div>
                 }
             </div>

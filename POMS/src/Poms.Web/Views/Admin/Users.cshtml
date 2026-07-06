@@ -1,0 +1,62 @@
+@model List<(Microsoft.AspNetCore.Identity.IdentityUser User, System.Collections.Generic.IList<string> Roles)>
+
+@{
+    ViewData["Title"] = "Users";
+}
+
+<h1>Users &amp; Roles</h1>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<div class="card mb-4">
+    <div class="card-header">Create User</div>
+    <div class="card-body">
+        <form asp-action="UserCreate" method="post" class="row g-2">
+            <div class="col-md-4"><input name="email" type="email" class="form-control" placeholder="Email" required /></div>
+            <div class="col-md-3"><input name="password" type="password" class="form-control" placeholder="Password" required /></div>
+            <div class="col-md-3">
+                <select name="role" class="form-select" required>
+                    @foreach (var r in (List<string>)ViewBag.AllRoles)
+                    {
+                        <option value="@r">@r</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2"><button type="submit" class="btn btn-primary w-100">Create</button></div>
+        </form>
+    </div>
+</div>
+
+<table class="table table-striped">
+    <thead><tr><th>Email</th><th>Roles</th><th>Change Role</th></tr></thead>
+    <tbody>
+        @foreach (var (user, roles) in Model)
+        {
+            <tr>
+                <td>@user.Email</td>
+                <td>@string.Join(", ", roles)</td>
+                <td>
+                    <form asp-action="UserChangeRole" method="post" class="d-flex gap-2">
+                        <input type="hidden" name="userId" value="@user.Id" />
+                        <select name="role" class="form-select form-select-sm">
+                            @foreach (var r in (List<string>)ViewBag.AllRoles)
+                            {
+                                <option value="@r" selected="@(roles.Contains(r))">@r</option>
+                            }
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-warning">Set</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<a asp-action="Index" class="btn btn-secondary">Back to Admin</a>

@@ -1,0 +1,67 @@
+@model IEnumerable<Poms.Domain.Entities.City>
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Cities";
+}
+
+<h1>Provinces / Districts / Cities</h1>
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item"><a class="nav-link" asp-action="Provinces">Provinces</a></li>
+    <li class="nav-item"><a class="nav-link" asp-action="Districts">Districts</a></li>
+    <li class="nav-item"><a class="nav-link active" asp-action="Cities">Cities</a></li>
+</ul>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<form asp-action="CityCreate" method="post" class="row g-2 mb-3">
+    <div class="col-md-4">
+        <select name="districtId" class="form-select" asp-items="ViewBag.Districts" required></select>
+    </div>
+    <div class="col-md-4"><input name="name" class="form-control" placeholder="Name" required /></div>
+    <div class="col-md-2"><button type="submit" class="btn btn-primary">Add</button></div>
+</form>
+
+<table class="table table-striped">
+    <thead><tr><th>Name</th><th>District</th><th>Active</th><th></th></tr></thead>
+    <tbody>
+        @foreach (var c in Model)
+        {
+            <tr>
+                <td>@c.Name</td>
+                <td>@c.District.Name</td>
+                <td>@(c.IsActive ? "Yes" : "No")</td>
+                <td>
+                    <details>
+                        <summary class="btn btn-sm btn-outline-warning">Edit</summary>
+                        <form asp-action="CityEdit" method="post" class="row g-2 mt-2">
+                            <input type="hidden" name="id" value="@c.Id" />
+                            <div class="col-md-3">
+                                <select name="districtId" class="form-select form-select-sm">
+                                    @foreach (var dist in (SelectList)ViewBag.Districts)
+                                    {
+                                        <option value="@dist.Value" selected="@(dist.Value == c.DistrictId.ToString())">@dist.Text</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-4"><input name="name" class="form-control form-control-sm" value="@c.Name" required /></div>
+                            <div class="col-md-2 form-check d-flex align-items-center">
+                                <input type="checkbox" name="isActive" class="form-check-input me-1" value="true" checked="@c.IsActive" />
+                                <label class="form-check-label">Active</label>
+                            </div>
+                            <div class="col-md-3"><button type="submit" class="btn btn-sm btn-warning w-100">Save</button></div>
+                        </form>
+                    </details>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<a asp-action="Index" class="btn btn-secondary">Back to Admin</a>

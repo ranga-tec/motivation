@@ -220,20 +220,88 @@ namespace Poms.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("Poms.Domain.Entities.Appointment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("AppointmentDate")
+                        .HasColumnType("date");
+
+                    b.Property<TimeOnly?>("AppointmentTime")
+                        .HasColumnType("time");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("EpisodeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AppointmentDate");
+
+                    b.HasIndex("EpisodeId");
+
+                    b.HasIndex("PatientId");
+
+                    b.ToTable("Appointments");
+                });
+
             modelBuilder.Entity("Poms.Domain.Entities.Assessment", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("AdditionalInformation")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateOnly>("AssessedOn")
                         .HasColumnType("date");
 
-                    b.Property<string>("AttachmentsJson")
+                    b.Property<string>("AssessmentType")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("ClinicianId")
+                    b.Property<string>("CauseReasonOther")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("CauseReasonTypeId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -250,14 +318,18 @@ namespace Poms.Infrastructure.Migrations
                     b.Property<Guid>("EpisodeId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Findings")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Remarks")
+                    b.Property<string>("LimbCategory")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("MainProblemTypeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Side")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -268,7 +340,13 @@ namespace Poms.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AssessedOn");
+
+                    b.HasIndex("CauseReasonTypeId");
+
                     b.HasIndex("EpisodeId");
+
+                    b.HasIndex("MainProblemTypeId");
 
                     b.ToTable("Assessments");
                 });
@@ -309,6 +387,29 @@ namespace Poms.Infrastructure.Migrations
                     b.ToTable("AuditLogs");
                 });
 
+            modelBuilder.Entity("Poms.Domain.Entities.CauseReasonType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("CauseReasonTypes");
+                });
+
             modelBuilder.Entity("Poms.Domain.Entities.Center", b =>
                 {
                     b.Property<int>("Id")
@@ -328,13 +429,22 @@ namespace Poms.Infrastructure.Migrations
                     b.Property<int>("DistrictId")
                         .HasColumnType("int");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("PatientNumberFlagCode")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Phone")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("RequiresPatientNumberFlag")
+                        .HasColumnType("bit");
 
                     b.HasKey("Id");
 
@@ -344,35 +454,32 @@ namespace Poms.Infrastructure.Migrations
                     b.HasIndex("DistrictId");
 
                     b.ToTable("Centers");
+                });
 
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Address = "Ragama",
-                            Code = "RAG",
-                            DistrictId = 1,
-                            Name = "Ragama Rehabilitation Center",
-                            Phone = "011-1234567"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Address = "Kandy",
-                            Code = "KDY",
-                            DistrictId = 3,
-                            Name = "Kandy P&O Center",
-                            Phone = "081-1234567"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Address = "Galle",
-                            Code = "GAL",
-                            DistrictId = 4,
-                            Name = "Galle Orthotic Center",
-                            Phone = "091-1234567"
-                        });
+            modelBuilder.Entity("Poms.Domain.Entities.City", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DistrictId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DistrictId", "Name");
+
+                    b.ToTable("Cities");
                 });
 
             modelBuilder.Entity("Poms.Domain.Entities.ComponentCatalog", b =>
@@ -407,60 +514,11 @@ namespace Poms.Infrastructure.Migrations
                     b.ToTable("ComponentCatalogs");
                 });
 
-            modelBuilder.Entity("Poms.Domain.Entities.Condition", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("BodyRegion")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique();
-
-                    b.ToTable("Conditions");
-                });
-
             modelBuilder.Entity("Poms.Domain.Entities.Delivery", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("ComponentsJson")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -474,10 +532,7 @@ namespace Poms.Infrastructure.Migrations
                     b.Property<string>("DeletedBy")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("DeliveredBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateOnly?>("DeliveryDate")
+                    b.Property<DateOnly>("DeliveryDate")
                         .HasColumnType("date");
 
                     b.Property<int?>("DeviceId")
@@ -489,10 +544,10 @@ namespace Poms.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Remarks")
+                    b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("SerialNumber")
+                    b.Property<string>("Remarks")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -503,10 +558,11 @@ namespace Poms.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("DeliveryDate");
+
                     b.HasIndex("DeviceId");
 
-                    b.HasIndex("EpisodeId")
-                        .IsUnique();
+                    b.HasIndex("EpisodeId");
 
                     b.ToTable("Deliveries");
                 });
@@ -616,43 +672,6 @@ namespace Poms.Infrastructure.Migrations
                     b.HasIndex("ProvinceId");
 
                     b.ToTable("Districts");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Code = "CO",
-                            Name = "Colombo",
-                            ProvinceId = 1
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Code = "GM",
-                            Name = "Gampaha",
-                            ProvinceId = 1
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Code = "KA",
-                            Name = "Kandy",
-                            ProvinceId = 2
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Code = "GL",
-                            Name = "Galle",
-                            ProvinceId = 3
-                        },
-                        new
-                        {
-                            Id = 5,
-                            Code = "JA",
-                            Name = "Jaffna",
-                            ProvinceId = 4
-                        });
                 });
 
             modelBuilder.Entity("Poms.Domain.Entities.Episode", b =>
@@ -661,8 +680,8 @@ namespace Poms.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateOnly?>("ClosedOn")
-                        .HasColumnType("date");
+                    b.Property<int>("CenterId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -679,18 +698,18 @@ namespace Poms.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<DateOnly>("OpenedOn")
-                        .HasColumnType("date");
-
                     b.Property<Guid>("PatientId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("RecordDate")
+                        .HasColumnType("date");
 
                     b.Property<string>("Remarks")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Type")
+                    b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -700,7 +719,11 @@ namespace Poms.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CenterId");
+
                     b.HasIndex("PatientId");
+
+                    b.HasIndex("Status");
 
                     b.ToTable("Episodes");
                 });
@@ -727,6 +750,10 @@ namespace Poms.Infrastructure.Migrations
                     b.Property<string>("DeletedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("DocumentType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<Guid>("EpisodeId")
                         .HasColumnType("uniqueidentifier");
 
@@ -740,17 +767,10 @@ namespace Poms.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Remarks")
+                    b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("StoragePath")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("TagsJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -817,6 +837,8 @@ namespace Poms.Infrastructure.Migrations
 
                     b.HasIndex("EpisodeId");
 
+                    b.HasIndex("FittingDate");
+
                     b.ToTable("Fittings");
                 });
 
@@ -825,10 +847,6 @@ namespace Poms.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("ActionTaken")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -851,13 +869,7 @@ namespace Poms.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<DateOnly?>("NextAppointmentDate")
-                        .HasColumnType("date");
-
-                    b.Property<string>("NextPlan")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Remarks")
+                    b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -870,7 +882,55 @@ namespace Poms.Infrastructure.Migrations
 
                     b.HasIndex("EpisodeId");
 
+                    b.HasIndex("FollowUpDate");
+
                     b.ToTable("FollowUps");
+                });
+
+            modelBuilder.Entity("Poms.Domain.Entities.MainProblemType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("MainProblemTypes");
+                });
+
+            modelBuilder.Entity("Poms.Domain.Entities.Nationality", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Nationalities");
                 });
 
             modelBuilder.Entity("Poms.Domain.Entities.NumberSeries", b =>
@@ -881,8 +941,9 @@ namespace Poms.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("CenterId")
-                        .HasColumnType("int");
+                    b.Property<string>("FlagCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("LastSeq")
                         .HasColumnType("int");
@@ -892,47 +953,10 @@ namespace Poms.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CenterId", "Year")
+                    b.HasIndex("FlagCode", "Year")
                         .IsUnique();
 
                     b.ToTable("NumberSeries");
-                });
-
-            modelBuilder.Entity("Poms.Domain.Entities.OrthoticEpisode", b =>
-                {
-                    b.Property<Guid>("EpisodeId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("BodyRegion")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("MainProblem")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("OrthosisTypeId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ReasonForProblem")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ReasonOther")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Remarks")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Side")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("EpisodeId");
-
-                    b.HasIndex("OrthosisTypeId");
-
-                    b.ToTable("OrthoticEpisodes");
                 });
 
             modelBuilder.Entity("Poms.Domain.Entities.Patient", b =>
@@ -948,8 +972,18 @@ namespace Poms.Infrastructure.Migrations
                     b.Property<string>("Address2")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("CenterId")
                         .HasColumnType("int");
+
+                    b.Property<int?>("CityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CityOther")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -966,68 +1000,86 @@ namespace Poms.Infrastructure.Migrations
                     b.Property<int>("DistrictId")
                         .HasColumnType("int");
 
-                    b.Property<DateOnly?>("Dob")
+                    b.Property<DateOnly>("Dob")
                         .HasColumnType("date");
 
                     b.Property<string>("Email")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("FirstName")
+                    b.Property<string>("Employment")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FullName")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("GuardianAddress")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("GuardianMobile")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("GuardianName")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("GuardianPhone1")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("GuardianPhone2")
+                    b.Property<string>("GuardianPhone")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("GuardianRelationship")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IdentificationNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("IdentificationType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<string>("LastName")
+                    b.Property<string>("NameWithInitials")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("NationalId")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                    b.Property<string>("Nationality")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PatientNumber")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("Phone1")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Phone2")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int>("ProvinceId")
                         .HasColumnType("int");
 
-                    b.Property<string>("ReferredBy")
+                    b.Property<int?>("ReferralSourceId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReferralSourceOther")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateOnly>("RegistrationDate")
                         .HasColumnType("date");
+
+                    b.Property<string>("RegistrationProcessedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Remarks")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Sex")
                         .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TravelTimeDistance")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -1040,6 +1092,8 @@ namespace Poms.Infrastructure.Migrations
 
                     b.HasIndex("CenterId");
 
+                    b.HasIndex("CityId");
+
                     b.HasIndex("DistrictId");
 
                     b.HasIndex("PatientNumber")
@@ -1047,42 +1101,58 @@ namespace Poms.Infrastructure.Migrations
 
                     b.HasIndex("ProvinceId");
 
+                    b.HasIndex("ReferralSourceId");
+
+                    b.HasIndex("IdentificationType", "IdentificationNumber");
+
                     b.ToTable("Patients");
                 });
 
-            modelBuilder.Entity("Poms.Domain.Entities.PatientCondition", b =>
+            modelBuilder.Entity("Poms.Domain.Entities.PatientContact", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("ConditionId")
-                        .HasColumnType("int");
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
 
-                    b.Property<DateOnly?>("OnsetDate")
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateOnly?>("DateConfirmed")
                         .HasColumnType("date");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
 
                     b.Property<Guid>("PatientId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Remarks")
+                    b.Property<string>("PersonChecked")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Side")
+                    b.Property<string>("TelephoneNo")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Type")
-                        .IsRequired()
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ConditionId");
-
                     b.HasIndex("PatientId");
 
-                    b.ToTable("PatientConditions");
+                    b.ToTable("PatientContacts");
                 });
 
             modelBuilder.Entity("Poms.Domain.Entities.PatientDocument", b =>
@@ -1107,6 +1177,10 @@ namespace Poms.Infrastructure.Migrations
                     b.Property<string>("DeletedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("DocumentType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("FileName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -1114,20 +1188,13 @@ namespace Poms.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<Guid>("PatientId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Remarks")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("StoragePath")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("TagsJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -1151,47 +1218,60 @@ namespace Poms.Infrastructure.Migrations
                     b.ToTable("PatientDocuments");
                 });
 
-            modelBuilder.Entity("Poms.Domain.Entities.ProstheticEpisode", b =>
+            modelBuilder.Entity("Poms.Domain.Entities.Prescription", b =>
                 {
-                    b.Property<Guid>("EpisodeId")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("AmputationType")
+                    b.Property<Guid>("AssessmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("OtherText")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PrescriptionCode")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateOnly?>("DateOfAmputation")
-                        .HasColumnType("date");
-
-                    b.Property<int?>("DesiredDeviceId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Level")
+                    b.Property<string>("PrescriptionLabel")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ReasonOther")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Remarks")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("SelectedComponentsJson")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Side")
                         .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("SubType")
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("EpisodeId");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
 
-                    b.HasIndex("DesiredDeviceId");
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
 
-                    b.ToTable("ProstheticEpisodes");
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssessmentId", "Side")
+                        .IsUnique();
+
+                    b.ToTable("Prescriptions");
                 });
 
             modelBuilder.Entity("Poms.Domain.Entities.Province", b =>
@@ -1218,110 +1298,29 @@ namespace Poms.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Provinces");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Code = "WP",
-                            Name = "Western Province"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Code = "CP",
-                            Name = "Central Province"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Code = "SP",
-                            Name = "Southern Province"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Code = "NP",
-                            Name = "Northern Province"
-                        },
-                        new
-                        {
-                            Id = 5,
-                            Code = "EP",
-                            Name = "Eastern Province"
-                        });
                 });
 
-            modelBuilder.Entity("Poms.Domain.Entities.Repair", b =>
+            modelBuilder.Entity("Poms.Domain.Entities.ReferralSource", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
 
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Details")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("EpisodeId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("IsDeleted")
+                    b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Remarks")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateOnly>("RepairDate")
-                        .HasColumnType("date");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EpisodeId");
+                    b.HasIndex("Name")
+                        .IsUnique();
 
-                    b.ToTable("Repairs");
-                });
-
-            modelBuilder.Entity("Poms.Domain.Entities.SpinalEpisode", b =>
-                {
-                    b.Property<Guid>("EpisodeId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("OrthoticDesign")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PathologicalCondition")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Remarks")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("EpisodeId");
-
-                    b.ToTable("SpinalEpisodes");
+                    b.ToTable("ReferralSources");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -1375,21 +1374,66 @@ namespace Poms.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Poms.Domain.Entities.Appointment", b =>
+                {
+                    b.HasOne("Poms.Domain.Entities.Episode", "Episode")
+                        .WithMany("Appointments")
+                        .HasForeignKey("EpisodeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Poms.Domain.Entities.Patient", "Patient")
+                        .WithMany("Appointments")
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Episode");
+
+                    b.Navigation("Patient");
+                });
+
             modelBuilder.Entity("Poms.Domain.Entities.Assessment", b =>
                 {
+                    b.HasOne("Poms.Domain.Entities.CauseReasonType", "CauseReasonType")
+                        .WithMany()
+                        .HasForeignKey("CauseReasonTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("Poms.Domain.Entities.Episode", "Episode")
                         .WithMany("Assessments")
                         .HasForeignKey("EpisodeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Poms.Domain.Entities.MainProblemType", "MainProblemType")
+                        .WithMany()
+                        .HasForeignKey("MainProblemTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CauseReasonType");
+
                     b.Navigation("Episode");
+
+                    b.Navigation("MainProblemType");
                 });
 
             modelBuilder.Entity("Poms.Domain.Entities.Center", b =>
                 {
                     b.HasOne("Poms.Domain.Entities.District", "District")
                         .WithMany("Centers")
+                        .HasForeignKey("DistrictId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("District");
+                });
+
+            modelBuilder.Entity("Poms.Domain.Entities.City", b =>
+                {
+                    b.HasOne("Poms.Domain.Entities.District", "District")
+                        .WithMany()
                         .HasForeignKey("DistrictId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1412,11 +1456,12 @@ namespace Poms.Infrastructure.Migrations
                 {
                     b.HasOne("Poms.Domain.Entities.DeviceCatalog", "Device")
                         .WithMany()
-                        .HasForeignKey("DeviceId");
+                        .HasForeignKey("DeviceId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Poms.Domain.Entities.Episode", "Episode")
-                        .WithOne("Delivery")
-                        .HasForeignKey("Poms.Domain.Entities.Delivery", "EpisodeId")
+                        .WithMany("Deliveries")
+                        .HasForeignKey("EpisodeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -1449,11 +1494,19 @@ namespace Poms.Infrastructure.Migrations
 
             modelBuilder.Entity("Poms.Domain.Entities.Episode", b =>
                 {
+                    b.HasOne("Poms.Domain.Entities.Center", "Center")
+                        .WithMany()
+                        .HasForeignKey("CenterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("Poms.Domain.Entities.Patient", "Patient")
                         .WithMany("Episodes")
                         .HasForeignKey("PatientId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Center");
 
                     b.Navigation("Patient");
                 });
@@ -1491,23 +1544,6 @@ namespace Poms.Infrastructure.Migrations
                     b.Navigation("Episode");
                 });
 
-            modelBuilder.Entity("Poms.Domain.Entities.OrthoticEpisode", b =>
-                {
-                    b.HasOne("Poms.Domain.Entities.Episode", "Episode")
-                        .WithOne("Orthotic")
-                        .HasForeignKey("Poms.Domain.Entities.OrthoticEpisode", "EpisodeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Poms.Domain.Entities.DeviceCatalog", "OrthosisType")
-                        .WithMany()
-                        .HasForeignKey("OrthosisTypeId");
-
-                    b.Navigation("Episode");
-
-                    b.Navigation("OrthosisType");
-                });
-
             modelBuilder.Entity("Poms.Domain.Entities.Patient", b =>
                 {
                     b.HasOne("Poms.Domain.Entities.Center", "Center")
@@ -1515,6 +1551,11 @@ namespace Poms.Infrastructure.Migrations
                         .HasForeignKey("CenterId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Poms.Domain.Entities.City", "City")
+                        .WithMany()
+                        .HasForeignKey("CityId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Poms.Domain.Entities.District", "District")
                         .WithMany()
@@ -1528,28 +1569,29 @@ namespace Poms.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Poms.Domain.Entities.ReferralSource", "ReferralSource")
+                        .WithMany()
+                        .HasForeignKey("ReferralSourceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Center");
+
+                    b.Navigation("City");
 
                     b.Navigation("District");
 
                     b.Navigation("Province");
+
+                    b.Navigation("ReferralSource");
                 });
 
-            modelBuilder.Entity("Poms.Domain.Entities.PatientCondition", b =>
+            modelBuilder.Entity("Poms.Domain.Entities.PatientContact", b =>
                 {
-                    b.HasOne("Poms.Domain.Entities.Condition", "Condition")
-                        .WithMany()
-                        .HasForeignKey("ConditionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Poms.Domain.Entities.Patient", "Patient")
-                        .WithMany("Conditions")
+                        .WithMany("Contacts")
                         .HasForeignKey("PatientId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Condition");
 
                     b.Navigation("Patient");
                 });
@@ -1565,43 +1607,20 @@ namespace Poms.Infrastructure.Migrations
                     b.Navigation("Patient");
                 });
 
-            modelBuilder.Entity("Poms.Domain.Entities.ProstheticEpisode", b =>
+            modelBuilder.Entity("Poms.Domain.Entities.Prescription", b =>
                 {
-                    b.HasOne("Poms.Domain.Entities.DeviceCatalog", "DesiredDevice")
-                        .WithMany()
-                        .HasForeignKey("DesiredDeviceId");
-
-                    b.HasOne("Poms.Domain.Entities.Episode", "Episode")
-                        .WithOne("Prosthetic")
-                        .HasForeignKey("Poms.Domain.Entities.ProstheticEpisode", "EpisodeId")
+                    b.HasOne("Poms.Domain.Entities.Assessment", "Assessment")
+                        .WithMany("Prescriptions")
+                        .HasForeignKey("AssessmentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("DesiredDevice");
-
-                    b.Navigation("Episode");
+                    b.Navigation("Assessment");
                 });
 
-            modelBuilder.Entity("Poms.Domain.Entities.Repair", b =>
+            modelBuilder.Entity("Poms.Domain.Entities.Assessment", b =>
                 {
-                    b.HasOne("Poms.Domain.Entities.Episode", "Episode")
-                        .WithMany("Repairs")
-                        .HasForeignKey("EpisodeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Episode");
-                });
-
-            modelBuilder.Entity("Poms.Domain.Entities.SpinalEpisode", b =>
-                {
-                    b.HasOne("Poms.Domain.Entities.Episode", "Episode")
-                        .WithOne("Spinal")
-                        .HasForeignKey("Poms.Domain.Entities.SpinalEpisode", "EpisodeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Episode");
+                    b.Navigation("Prescriptions");
                 });
 
             modelBuilder.Entity("Poms.Domain.Entities.District", b =>
@@ -1611,28 +1630,24 @@ namespace Poms.Infrastructure.Migrations
 
             modelBuilder.Entity("Poms.Domain.Entities.Episode", b =>
                 {
+                    b.Navigation("Appointments");
+
                     b.Navigation("Assessments");
 
-                    b.Navigation("Delivery");
+                    b.Navigation("Deliveries");
 
                     b.Navigation("Documents");
 
                     b.Navigation("Fittings");
 
                     b.Navigation("FollowUps");
-
-                    b.Navigation("Orthotic");
-
-                    b.Navigation("Prosthetic");
-
-                    b.Navigation("Repairs");
-
-                    b.Navigation("Spinal");
                 });
 
             modelBuilder.Entity("Poms.Domain.Entities.Patient", b =>
                 {
-                    b.Navigation("Conditions");
+                    b.Navigation("Appointments");
+
+                    b.Navigation("Contacts");
 
                     b.Navigation("Documents");
 

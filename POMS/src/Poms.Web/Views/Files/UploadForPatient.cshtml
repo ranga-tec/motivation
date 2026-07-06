@@ -1,0 +1,31 @@
+@model Poms.Web.ViewModels.FileUploadViewModel
+
+@{
+    ViewData["Title"] = "Upload Document";
+}
+
+<h1>Upload Document</h1>
+<p class="text-muted">Patient: <strong>@Model.PatientNumber - @Model.PatientName</strong></p>
+
+<form asp-action="UploadForPatient" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="PatientId" />
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+    <div class="mb-3">
+        <label asp-for="DocumentType" class="form-label"></label>
+        <select asp-for="DocumentType" class="form-select" asp-items="ViewBag.DocumentTypes"></select>
+    </div>
+    <div class="mb-3">
+        <label asp-for="File" class="form-label"></label>
+        <input asp-for="File" class="form-control" type="file" />
+        <small class="text-muted">Allowed: PDF, JPG, PNG, DOCX (max 10MB)</small>
+        <span asp-validation-for="File" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Notes" class="form-label"></label>
+        <textarea asp-for="Notes" class="form-control" rows="2"></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Upload</button>
+    <a asp-controller="Patients" asp-action="Folder" asp-route-id="@Model.PatientId" class="btn btn-secondary">Cancel</a>
+</form>

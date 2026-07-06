@@ -1,0 +1,38 @@
+@model IEnumerable<dynamic>
+
+@{
+    ViewData["Title"] = "Active Records";
+}
+
+<h1>Active Records</h1>
+<a asp-action="Index" class="btn btn-secondary mb-3">Back to Dashboard</a>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Patient Number</th>
+            <th>Patient Name</th>
+            <th>Location</th>
+            <th>Assessment Type</th>
+            <th>Limb Category</th>
+            <th>Last Activity</th>
+            <th>Current Stage</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var row in Model)
+        {
+            <tr>
+                <td><strong>@row.PatientNumber</strong></td>
+                <td>@row.PatientName</td>
+                <td>@row.Location</td>
+                <td>@row.AssessmentType</td>
+                <td>@row.LimbCategory</td>
+                <td>@(((DateTime)row.LastActivityDate).ToString("dd-MMM-yyyy"))</td>
+                <td><span class="badge bg-info">@row.CurrentStage</span></td>
+                <td>@row.RecordStatus</td>
+            </tr>
+        }
+    </tbody>
+</table>

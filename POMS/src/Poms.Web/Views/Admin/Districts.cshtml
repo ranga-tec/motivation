@@ -1,0 +1,65 @@
+@model IEnumerable<Poms.Domain.Entities.District>
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Districts";
+}
+
+<h1>Provinces / Districts / Cities</h1>
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item"><a class="nav-link" asp-action="Provinces">Provinces</a></li>
+    <li class="nav-item"><a class="nav-link active" asp-action="Districts">Districts</a></li>
+    <li class="nav-item"><a class="nav-link" asp-action="Cities">Cities</a></li>
+</ul>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<form asp-action="DistrictCreate" method="post" class="row g-2 mb-3">
+    <div class="col-md-3">
+        <select name="provinceId" class="form-select" asp-items="ViewBag.Provinces" required></select>
+    </div>
+    <div class="col-md-3"><input name="code" class="form-control" placeholder="Code" required /></div>
+    <div class="col-md-3"><input name="name" class="form-control" placeholder="Name" required /></div>
+    <div class="col-md-2"><button type="submit" class="btn btn-primary">Add</button></div>
+</form>
+
+<table class="table table-striped">
+    <thead><tr><th>Code</th><th>Name</th><th>Province</th><th></th></tr></thead>
+    <tbody>
+        @foreach (var d in Model)
+        {
+            <tr>
+                <td>@d.Code</td>
+                <td>@d.Name</td>
+                <td>@d.Province.Name</td>
+                <td>
+                    <details>
+                        <summary class="btn btn-sm btn-outline-warning">Edit</summary>
+                        <form asp-action="DistrictEdit" method="post" class="row g-2 mt-2">
+                            <input type="hidden" name="id" value="@d.Id" />
+                            <div class="col-md-3">
+                                <select name="provinceId" class="form-select form-select-sm">
+                                    @foreach (var prov in (SelectList)ViewBag.Provinces)
+                                    {
+                                        <option value="@prov.Value" selected="@(prov.Value == d.ProvinceId.ToString())">@prov.Text</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-3"><input name="code" class="form-control form-control-sm" value="@d.Code" required /></div>
+                            <div class="col-md-3"><input name="name" class="form-control form-control-sm" value="@d.Name" required /></div>
+                            <div class="col-md-3"><button type="submit" class="btn btn-sm btn-warning w-100">Save</button></div>
+                        </form>
+                    </details>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<a asp-action="Index" class="btn btn-secondary">Back to Admin</a>

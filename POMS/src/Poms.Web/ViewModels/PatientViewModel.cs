@@ -1,9 +1,9 @@
-﻿using Poms.Domain.Enums;
+using Poms.Domain.Enums;
 using System.ComponentModel.DataAnnotations;
 
 namespace Poms.Web.ViewModels;
 
-public class PatientViewModel
+public class PatientViewModel : IValidatableObject
 {
     public Guid Id { get; set; }
 
@@ -11,24 +11,41 @@ public class PatientViewModel
     public string? PatientNumber { get; set; }
 
     [Required]
-    [Display(Name = "First Name")]
-    [StringLength(100)]
-    public string FirstName { get; set; } = default!;
+    [Display(Name = "Full Name")]
+    [StringLength(200)]
+    public string FullName { get; set; } = default!;
 
-    [Display(Name = "Last Name")]
+    [Required]
+    [Display(Name = "Name with Initials")]
     [StringLength(100)]
-    public string? LastName { get; set; }
+    public string NameWithInitials { get; set; } = default!;
 
+    [Required]
     [Display(Name = "Date of Birth")]
     [DataType(DataType.Date)]
-    public DateOnly? Dob { get; set; }
+    public DateOnly Dob { get; set; }
 
     [Required]
     public Sex Sex { get; set; }
 
-    [Display(Name = "National ID / NIC")]
+    [Display(Name = "Employment")]
+    public string? Employment { get; set; }
+
+    [Required]
+    [Display(Name = "Patient Category")]
+    public PatientCategory Category { get; set; } = PatientCategory.Local;
+
+    [Display(Name = "Nationality")]
+    public string? Nationality { get; set; }
+
+    [Required]
+    [Display(Name = "Identification Type")]
+    public IdentificationType IdentificationType { get; set; }
+
+    [Required]
+    [Display(Name = "Identification Number")]
     [StringLength(50)]
-    public string? NationalId { get; set; }
+    public string IdentificationNumber { get; set; } = default!;
 
     [Required]
     [Display(Name = "Address Line 1")]
@@ -45,52 +62,81 @@ public class PatientViewModel
     [Display(Name = "District")]
     public int DistrictId { get; set; }
 
-    [Display(Name = "Phone 1")]
-    [Phone]
-    public string? Phone1 { get; set; }
+    [Display(Name = "City")]
+    public int? CityId { get; set; }
 
-    [Display(Name = "Phone 2")]
-    [Phone]
-    public string? Phone2 { get; set; }
+    [Display(Name = "City (if not listed)")]
+    public string? CityOther { get; set; }
 
     [EmailAddress]
     public string? Email { get; set; }
 
+    public List<PatientContactViewModel> Contacts { get; set; } = new();
+
+    [Display(Name = "Referral Source")]
+    public int? ReferralSourceId { get; set; }
+
+    [Display(Name = "Referral Source (Other)")]
+    public string? ReferralSourceOther { get; set; }
+
+    [Display(Name = "Time/Distance to Travel to Centre")]
+    public string? TravelTimeDistance { get; set; }
+
     [Required]
-    [Display(Name = "Registration Center")]
+    [Display(Name = "Centre / Location")]
     public int CenterId { get; set; }
 
-    [Display(Name = "Registration Date")]
+    [Display(Name = "Date of Registration")]
     [DataType(DataType.Date)]
     public DateOnly? RegistrationDate { get; set; }
 
-    [Display(Name = "Referred By")]
-    public string? ReferredBy { get; set; }
-
     [Required]
+    [Display(Name = "Registration Processed By")]
+    public string RegistrationProcessedBy { get; set; } = default!;
+
     [Display(Name = "Remarks")]
     [DataType(DataType.MultilineText)]
-    public string? Remarks { get; set; } = "";
+    public string? Remarks { get; set; }
 
-    // Guardian Information
+    // Guardian / Carer Information
     [Required]
-    [Display(Name = "Guardian Name")]
+    [Display(Name = "Guardian / Carer Name")]
     [StringLength(100)]
     public string GuardianName { get; set; } = default!;
 
-    [Display(Name = "Guardian Relationship")]
+    [Required]
+    [Display(Name = "Relationship")]
     [StringLength(50)]
-    public string? GuardianRelationship { get; set; }
+    public string GuardianRelationship { get; set; } = default!;
 
     [Display(Name = "Guardian Address")]
     public string? GuardianAddress { get; set; }
 
-    [Required]
-    [Display(Name = "Guardian Phone 1")]
+    [Display(Name = "Guardian Phone")]
     [Phone]
-    public string GuardianPhone1 { get; set; } = default!;
+    public string? GuardianPhone { get; set; }
 
-    [Display(Name = "Guardian Phone 2")]
+    [Display(Name = "Guardian Mobile")]
     [Phone]
-    public string? GuardianPhone2 { get; set; }
+    public string? GuardianMobile { get; set; }
+
+    // Duplicate-check confirmation flag (Phase 2.2/2.3)
+    public bool ConfirmDuplicateWarning { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (Category == PatientCategory.Foreign && string.IsNullOrWhiteSpace(Nationality))
+        {
+            yield return new ValidationResult(
+                "Nationality is required for foreign patients.",
+                new[] { nameof(Nationality) });
+        }
+
+        if (CityId == null && string.IsNullOrWhiteSpace(CityOther))
+        {
+            yield return new ValidationResult(
+                "Select a city or enter one if not listed.",
+                new[] { nameof(CityOther) });
+        }
+    }
 }

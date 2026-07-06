@@ -1,0 +1,52 @@
+@model IEnumerable<Poms.Domain.Entities.Province>
+
+@{
+    ViewData["Title"] = "Provinces";
+}
+
+<h1>Provinces / Districts / Cities</h1>
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item"><a class="nav-link active" asp-action="Provinces">Provinces</a></li>
+    <li class="nav-item"><a class="nav-link" asp-action="Districts">Districts</a></li>
+    <li class="nav-item"><a class="nav-link" asp-action="Cities">Cities</a></li>
+</ul>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<form asp-action="ProvinceCreate" method="post" class="row g-2 mb-3">
+    <div class="col-md-3"><input name="code" class="form-control" placeholder="Code" required /></div>
+    <div class="col-md-4"><input name="name" class="form-control" placeholder="Name" required /></div>
+    <div class="col-md-2"><button type="submit" class="btn btn-primary">Add</button></div>
+</form>
+
+<table class="table table-striped">
+    <thead><tr><th>Code</th><th>Name</th><th></th></tr></thead>
+    <tbody>
+        @foreach (var p in Model)
+        {
+            <tr>
+                <td>@p.Code</td>
+                <td>@p.Name</td>
+                <td>
+                    <details>
+                        <summary class="btn btn-sm btn-outline-warning">Edit</summary>
+                        <form asp-action="ProvinceEdit" method="post" class="row g-2 mt-2">
+                            <input type="hidden" name="id" value="@p.Id" />
+                            <div class="col-md-4"><input name="code" class="form-control form-control-sm" value="@p.Code" required /></div>
+                            <div class="col-md-5"><input name="name" class="form-control form-control-sm" value="@p.Name" required /></div>
+                            <div class="col-md-3"><button type="submit" class="btn btn-sm btn-warning w-100">Save</button></div>
+                        </form>
+                    </details>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<a asp-action="Index" class="btn btn-secondary">Back to Admin</a>

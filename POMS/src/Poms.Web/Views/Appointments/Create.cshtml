@@ -1,0 +1,78 @@
+@model Poms.Web.ViewModels.AppointmentViewModel
+
+@{
+    ViewData["Title"] = "New Appointment";
+}
+
+<h1>New Appointment</h1>
+
+<form asp-action="Create" method="post">
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+    <div class="mb-3">
+        <label asp-for="PatientId" class="form-label"></label>
+        @if (!string.IsNullOrEmpty(Model.PatientNumber))
+        {
+            <input type="hidden" asp-for="PatientId" />
+            <p><strong>@Model.PatientNumber - @Model.PatientName</strong></p>
+        }
+        else
+        {
+            <select asp-for="PatientId" id="patientSelect" class="form-select" asp-items="ViewBag.Patients">
+                <option value="">-- Select Patient --</option>
+            </select>
+        }
+        <span asp-validation-for="PatientId" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="EpisodeId" class="form-label"></label>
+        <select asp-for="EpisodeId" id="episodeSelect" class="form-select">
+            <option value="">-- None / Not yet created --</option>
+        </select>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label asp-for="Type" class="form-label"></label>
+            <select asp-for="Type" class="form-select" asp-items="ViewBag.TypeOptions"></select>
+        </div>
+        <div class="col-md-4 mb-3">
+            <label asp-for="AppointmentDate" class="form-label"></label>
+            <input asp-for="AppointmentDate" class="form-control" type="date" />
+        </div>
+        <div class="col-md-4 mb-3">
+            <label asp-for="AppointmentTime" class="form-label"></label>
+            <input asp-for="AppointmentTime" class="form-control" type="time" />
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Notes" class="form-label"></label>
+        <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save Appointment</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+</form>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        $(document).ready(function () {
+            function loadEpisodes(patientId) {
+                $('#episodeSelect').empty().append('<option value="">-- None / Not yet created --</option>');
+                if (patientId) {
+                    $.get('/Appointments/GetEpisodesByPatient', { patientId: patientId }, function (data) {
+                        $.each(data, function (i, e) { $('#episodeSelect').append($('<option>').val(e.id).text(e.displayName)); });
+                    });
+                }
+            }
+            $('#patientSelect').change(function () { loadEpisodes($(this).val()); });
+            var preselected = '@Model.PatientId';
+            if (preselected && preselected !== '00000000-0000-0000-0000-000000000000') {
+                loadEpisodes(preselected);
+            }
+        });
+    </script>
+}

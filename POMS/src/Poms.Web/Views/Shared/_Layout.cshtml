@@ -1,13 +1,3 @@
-@using Microsoft.Extensions.Options
-@inject IOptions<VersionSwitchOptions> VersionSwitchOptionsAccessor
-@{
-    var versionSwitch = VersionSwitchOptionsAccessor.Value;
-    var isProductionVariant = string.Equals(versionSwitch.CurrentVariant, "production", StringComparison.OrdinalIgnoreCase);
-    var bannerBackground = isProductionVariant ? "#0f766e" : "#f59e0b";
-    var bannerForeground = isProductionVariant ? "#ecfeff" : "#1a1a1a";
-    var buttonBackground = isProductionVariant ? "#ecfeff" : "#1a1a1a";
-    var buttonForeground = isProductionVariant ? "#0f766e" : "#f59e0b";
-}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -34,13 +24,13 @@
                             <a class="nav-link text-light" asp-controller="Home" asp-action="Index">Dashboard</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-light" asp-controller="Patients" asp-action="Index">Patients</a>
+                            <a class="nav-link text-light" asp-controller="Patients" asp-action="Index">Patient Folder</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-light" asp-controller="Episodes" asp-action="Index">Episodes</a>
+                            <a class="nav-link text-light" asp-controller="Episodes" asp-action="Index">Records</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-light" asp-controller="Conditions" asp-action="Index">Conditions</a>
+                            <a class="nav-link text-light" asp-controller="Appointments" asp-action="Index">Appointments</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link text-light" asp-controller="Reports" asp-action="Index">Reports</a>
@@ -57,17 +47,6 @@
             </div>
         </nav>
     </header>
-    @if (versionSwitch.IsConfigured)
-    {
-        <div style="background:@bannerBackground;color:@bannerForeground;text-align:center;padding:8px 16px;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:16px;">
-            <span>&#128196; You are viewing the <strong>@versionSwitch.CurrentLabel</strong> version</span>
-            <a href="/Switch/Go?target=@versionSwitch.TargetVariant"
-               style="background:@buttonBackground;color:@buttonForeground;padding:4px 14px;border-radius:4px;text-decoration:none;font-weight:700;font-size:13px;">
-                Switch to @versionSwitch.TargetLabel Version &rarr;
-            </a>
-        </div>
-    }
-
     <div class="container-fluid">
         <main role="main" class="pb-3">
             @RenderBody()

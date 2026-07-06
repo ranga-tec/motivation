@@ -9,6 +9,9 @@ using Poms.Web.ViewModels;
 
 namespace Poms.Web.Controllers;
 
+// Pure Patient Record ("Episode" in code, "PatientRecord" per the PRD) CRUD.
+// Clinical content (assessments/prescriptions/fittings/deliveries/follow-ups) lives in
+// their own dedicated controllers, reachable from Details.
 [Authorize(Policy = "ClinicianOrAdmin")]
 public class EpisodesController : Controller
 {
@@ -22,38 +25,40 @@ public class EpisodesController : Controller
     }
 
     // GET: Episodes
-    public async Task<IActionResult> Index(string searchString, EpisodeType? type, int page = 1)
+    public async Task<IActionResult> Index(string searchString, RecordStatus? status, int? centerId, int page = 1)
     {
         var query = _context.Episodes
             .Include(e => e.Patient)
-            .Include(e => e.Prosthetic)
-            .Include(e => e.Orthotic)
-            .Include(e => e.Spinal)
+            .Include(e => e.Center)
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(searchString))
         {
             query = query.Where(e =>
                 e.Patient.PatientNumber.Contains(searchString) ||
-                e.Patient.FirstName.Contains(searchString) ||
-                (e.Patient.LastName != null && e.Patient.LastName.Contains(searchString)));
+                e.Patient.FullName.Contains(searchString));
         }
 
-        if (type.HasValue)
-            query = query.Where(e => e.Type == type.Value);
+        if (status.HasValue)
+            query = query.Where(e => e.Status == status.Value);
+
+        if (centerId.HasValue)
+            query = query.Where(e => e.CenterId == centerId.Value);
 
         var pageSize = 20;
         var totalCount = await query.CountAsync();
         var episodes = await query
-            .OrderByDescending(e => e.OpenedOn)
+            .OrderByDescending(e => e.RecordDate)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
 
         ViewBag.SearchString = searchString;
-        ViewBag.Type = type;
+        ViewBag.Status = status;
+        ViewBag.CenterId = centerId;
         ViewBag.CurrentPage = page;
         ViewBag.TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+        ViewBag.Centers = new SelectList(await _context.Centers.ToListAsync(), "Id", "Name");
 
         return View(episodes);
     }
@@ -65,14 +70,14 @@ public class EpisodesController : Controller
 
         var episode = await _context.Episodes
             .Include(e => e.Patient)
-            .Include(e => e.Prosthetic)
-            .Include(e => e.Orthotic)
-            .Include(e => e.Spinal)
-            .Include(e => e.Assessments)
+            .Include(e => e.Center)
+            .Include(e => e.Assessments).ThenInclude(a => a.Prescriptions)
+            .Include(e => e.Assessments).ThenInclude(a => a.MainProblemType)
+            .Include(e => e.Assessments).ThenInclude(a => a.CauseReasonType)
             .Include(e => e.Fittings)
-            .Include(e => e.Delivery)
+            .Include(e => e.Deliveries)
             .Include(e => e.FollowUps)
-            .Include(e => e.Repairs)
+            .Include(e => e.Documents)
             .FirstOrDefaultAsync(m => m.Id == id);
 
         if (episode == null) return NotFound();
@@ -92,7 +97,8 @@ public class EpisodesController : Controller
             {
                 viewModel.PatientId = patient.Id;
                 viewModel.PatientNumber = patient.PatientNumber;
-                viewModel.PatientName = $"{patient.FirstName} {patient.LastName}".Trim();
+                viewModel.PatientName = patient.FullName;
+                viewModel.CenterId = patient.CenterId;
             }
         }
 
@@ -112,9 +118,9 @@ public class EpisodesController : Controller
                 var episode = new Episode
                 {
                     PatientId = model.PatientId,
-                    Type = model.Type,
-                    OpenedOn = model.OpenedOn,
-                    ClosedOn = model.ClosedOn,
+                    CenterId = model.CenterId,
+                    Status = model.Status,
+                    RecordDate = model.RecordDate,
                     Remarks = model.Remarks,
                     CreatedBy = User.Identity?.Name
                 };
@@ -122,19 +128,16 @@ public class EpisodesController : Controller
                 _context.Add(episode);
                 await _context.SaveChangesAsync();
 
-                // Add type-specific details
-                await CreateTypeSpecificDetails(episode, model);
-
-                _logger.LogInformation("Episode {EpisodeId} created for patient {PatientId} by {User}",
+                _logger.LogInformation("Record {EpisodeId} created for patient {PatientId} by {User}",
                     episode.Id, model.PatientId, User.Identity?.Name);
 
-                TempData["Success"] = "Episode created successfully!";
+                TempData["Success"] = "Record created successfully!";
                 return RedirectToAction(nameof(Details), new { id = episode.Id });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating episode");
-                ModelState.AddModelError("", "An error occurred while creating the episode.");
+                _logger.LogError(ex, "Error creating record");
+                ModelState.AddModelError("", "An error occurred while creating the record.");
             }
         }
 
@@ -147,40 +150,20 @@ public class EpisodesController : Controller
     {
         if (id == null) return NotFound();
 
-        var episode = await _context.Episodes
-            .Include(e => e.Patient)
-            .Include(e => e.Prosthetic)
-            .Include(e => e.Orthotic)
-            .Include(e => e.Spinal)
-            .FirstOrDefaultAsync(e => e.Id == id);
-
+        var episode = await _context.Episodes.Include(e => e.Patient).FirstOrDefaultAsync(e => e.Id == id);
         if (episode == null) return NotFound();
 
         var model = new EpisodeViewModel
         {
             Id = episode.Id,
             PatientId = episode.PatientId,
-            Type = episode.Type,
-            OpenedOn = episode.OpenedOn,
-            ClosedOn = episode.ClosedOn,
+            CenterId = episode.CenterId,
+            Status = episode.Status,
+            RecordDate = episode.RecordDate,
             Remarks = episode.Remarks,
             PatientNumber = episode.Patient.PatientNumber,
-            PatientName = $"{episode.Patient.FirstName} {episode.Patient.LastName}".Trim()
+            PatientName = episode.Patient.FullName
         };
-
-        // Load type-specific details
-        if (episode.Type == EpisodeType.Prosthetic && episode.Prosthetic != null)
-        {
-            model.AmputationType = episode.Prosthetic.AmputationType;
-            model.Level = episode.Prosthetic.Level;
-            model.ProstheticSide = episode.Prosthetic.Side;
-            model.Reason = episode.Prosthetic.Reason;
-        }
-        else if (episode.Type == EpisodeType.Orthotic && episode.Orthotic != null)
-        {
-            model.BodyRegion = episode.Orthotic.BodyRegion;
-            model.OrthoticSide = episode.Orthotic.Side;
-        }
 
         await PopulateDropdowns();
         return View(model);
@@ -197,33 +180,26 @@ public class EpisodesController : Controller
         {
             try
             {
-                var episode = await _context.Episodes
-                    .Include(e => e.Prosthetic)
-                    .Include(e => e.Orthotic)
-                    .Include(e => e.Spinal)
-                    .FirstOrDefaultAsync(e => e.Id == id);
-
+                var episode = await _context.Episodes.FirstOrDefaultAsync(e => e.Id == id);
                 if (episode == null) return NotFound();
 
-                episode.OpenedOn = model.OpenedOn;
-                episode.ClosedOn = model.ClosedOn;
+                episode.CenterId = model.CenterId;
+                episode.Status = model.Status;
+                episode.RecordDate = model.RecordDate;
                 episode.Remarks = model.Remarks;
                 episode.UpdatedBy = User.Identity?.Name;
                 episode.UpdatedAt = DateTime.UtcNow;
 
-                // Update type-specific details
-                await UpdateTypeSpecificDetails(episode, model);
-
                 _context.Update(episode);
                 await _context.SaveChangesAsync();
 
-                TempData["Success"] = "Episode updated successfully!";
+                TempData["Success"] = "Record updated successfully!";
                 return RedirectToAction(nameof(Details), new { id = episode.Id });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating episode {EpisodeId}", id);
-                ModelState.AddModelError("", "An error occurred while updating the episode.");
+                _logger.LogError(ex, "Error updating record {EpisodeId}", id);
+                ModelState.AddModelError("", "An error occurred while updating the record.");
             }
         }
 
@@ -231,125 +207,15 @@ public class EpisodesController : Controller
         return View(model);
     }
 
-    private async Task CreateTypeSpecificDetails(Episode episode, EpisodeViewModel model)
-    {
-        switch (model.Type)
-        {
-            case EpisodeType.Prosthetic:
-                var prosthetic = new ProstheticEpisode
-                {
-                    EpisodeId = episode.Id,
-                    AmputationType = model.AmputationType ?? AmputationType.BelowKnee,
-                    Level = model.Level ?? "Not Specified",
-                    Side = model.ProstheticSide ?? Side.Left,
-                    Reason = model.Reason ?? Reason.Disease
-                };
-                _context.ProstheticEpisodes.Add(prosthetic);
-                break;
-
-            case EpisodeType.Orthotic:
-                var orthotic = new OrthoticEpisode
-                {
-                    EpisodeId = episode.Id,
-                    MainProblem = model.MainProblem ?? "General Orthotic Need",
-                    BodyRegion = model.BodyRegion ?? BodyRegion.LowerLimb,
-                    Side = model.OrthoticSide ?? Side.Left,
-                    OrthosisTypeId = model.OrthosisTypeId,
-                    ReasonForProblem = model.ReasonForProblem ?? "Assessment Required"
-                };
-                _context.OrthoticEpisodes.Add(orthotic);
-                break;
-
-            case EpisodeType.SpinalOrthosis:
-                var spinal = new SpinalEpisode
-                {
-                    EpisodeId = episode.Id,
-                    PathologicalCondition = model.PathologicalCondition ?? "Not Specified",
-                    OrthoticDesign = model.OrthoticDesign ?? "Not Specified"
-                };
-                _context.SpinalEpisodes.Add(spinal);
-                break;
-        }
-
-        // Create Assessment if data provided
-        if (model.AssessmentDate.HasValue || !string.IsNullOrWhiteSpace(model.AssessmentFindings))
-        {
-            var assessment = new Assessment
-            {
-                EpisodeId = episode.Id,
-                AssessedOn = model.AssessmentDate ?? DateOnly.FromDateTime(DateTime.Today),
-                Findings = model.AssessmentFindings ?? "",
-                Remarks = "Created with episode"
-            };
-            _context.Assessments.Add(assessment);
-        }
-
-        // Create Fitting if data provided
-        if (model.FittingDate.HasValue || !string.IsNullOrWhiteSpace(model.FittingNotes))
-        {
-            var fitting = new Fitting
-            {
-                EpisodeId = episode.Id,
-                FittingDate = model.FittingDate ?? DateOnly.FromDateTime(DateTime.Today),
-                Notes = model.FittingNotes ?? "",
-                Remarks = "Created with episode"
-            };
-            _context.Fittings.Add(fitting);
-        }
-
-        // Create Delivery if data provided
-        if (model.DeliveryDate.HasValue)
-        {
-            var delivery = new Delivery
-            {
-                EpisodeId = episode.Id,
-                DeliveryDate = model.DeliveryDate,
-                DeliveredBy = User.Identity?.Name ?? "System",
-                Remarks = "Created with episode"
-            };
-            _context.Deliveries.Add(delivery);
-        }
-
-        await _context.SaveChangesAsync();
-    }
-
-    private async Task UpdateTypeSpecificDetails(Episode episode, EpisodeViewModel model)
-    {
-        switch (episode.Type)
-        {
-            case EpisodeType.Prosthetic when episode.Prosthetic != null:
-                episode.Prosthetic.AmputationType = model.AmputationType ?? AmputationType.BelowKnee;
-                episode.Prosthetic.Level = model.Level ?? "Not Specified";
-                episode.Prosthetic.Side = model.ProstheticSide ?? Side.Left;
-                episode.Prosthetic.Reason = model.Reason ?? Reason.Disease;
-                break;
-
-            case EpisodeType.Orthotic when episode.Orthotic != null:
-                episode.Orthotic.BodyRegion = model.BodyRegion ?? BodyRegion.LowerLimb;
-                episode.Orthotic.Side = model.OrthoticSide ?? Side.Left;
-                if (string.IsNullOrEmpty(episode.Orthotic.MainProblem))
-                    episode.Orthotic.MainProblem = "General Orthotic Need";
-                if (string.IsNullOrEmpty(episode.Orthotic.ReasonForProblem))
-                    episode.Orthotic.ReasonForProblem = "Assessment Required";
-                break;
-        }
-
-        await _context.SaveChangesAsync();
-    }
-
     private async Task PopulateDropdowns()
     {
         ViewBag.Patients = new SelectList(
             await _context.Patients
-                .Select(p => new { p.Id, DisplayName = p.PatientNumber + " - " + p.FirstName + " " + p.LastName })
+                .Select(p => new { p.Id, DisplayName = p.PatientNumber + " - " + p.FullName })
                 .ToListAsync(),
             "Id", "DisplayName");
 
-        ViewBag.OrthosisTypes = new SelectList(
-            await _context.DeviceCatalogs
-                .Include(d => d.DeviceType)
-                .Where(d => d.DeviceType.Code == "ORTHOTIC" && d.IsActive)
-                .ToListAsync(),
-            "Id", "Name");
+        ViewBag.Centers = new SelectList(await _context.Centers.Where(c => c.IsActive).ToListAsync(), "Id", "Name");
+        ViewBag.StatusOptions = new SelectList(Enum.GetValues(typeof(RecordStatus)).Cast<RecordStatus>());
     }
 }
