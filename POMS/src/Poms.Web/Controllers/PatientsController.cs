@@ -133,12 +133,14 @@ public class PatientsController : Controller
     public async Task<IActionResult> Create()
     {
         await PopulateDropdowns();
-        return View(new PatientViewModel
+        var model = new PatientViewModel
         {
             RegistrationDate = DateOnly.FromDateTime(DateTime.Today),
             RegistrationProcessedBy = User.Identity?.Name ?? "",
             Contacts = new List<PatientContactViewModel> { new() }
-        });
+        };
+
+        return PatientFormResult(model, "create");
     }
 
     // POST: Patients/Create
@@ -210,7 +212,7 @@ public class PatientsController : Controller
                     {
                         patient.Contacts.Add(new PatientContact
                         {
-                            TelephoneNo = c.TelephoneNo,
+                            TelephoneNo = c.TelephoneNo!,
                             DateConfirmed = c.DateConfirmed,
                             PersonChecked = c.PersonChecked,
                             CreatedBy = User.Identity?.Name
@@ -235,7 +237,7 @@ public class PatientsController : Controller
         }
 
         await PopulateDropdowns();
-        return View(model);
+        return PatientFormResult(model, "create");
     }
 
     // GET: Patients/Edit/5
@@ -291,7 +293,7 @@ public class PatientsController : Controller
             model.Contacts.Add(new PatientContactViewModel());
 
         await PopulateDropdowns();
-        return View(model);
+        return PatientFormResult(model, "edit");
     }
 
     // POST: Patients/Edit/5
@@ -358,7 +360,7 @@ public class PatientsController : Controller
                     {
                         patient.Contacts.Add(new PatientContact
                         {
-                            TelephoneNo = c.TelephoneNo,
+                            TelephoneNo = c.TelephoneNo!,
                             DateConfirmed = c.DateConfirmed,
                             PersonChecked = c.PersonChecked,
                             CreatedBy = User.Identity?.Name
@@ -386,7 +388,7 @@ public class PatientsController : Controller
         }
 
         await PopulateDropdowns();
-        return View(model);
+        return PatientFormResult(model, "edit");
     }
 
     // GET: Patients/Delete/5
@@ -470,6 +472,20 @@ public class PatientsController : Controller
     private bool PatientExists(Guid id)
     {
         return _context.Patients.Any(e => e.Id == id);
+    }
+
+    private IActionResult PatientFormResult(PatientViewModel model, string mode)
+    {
+        var isModalRequest =
+            string.Equals(Request.Query["modal"], "true", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+
+        ViewData["PatientFormMode"] = mode;
+        ViewData["PatientFormModal"] = isModalRequest;
+
+        return isModalRequest
+            ? PartialView("_PatientWizard", model)
+            : View(mode == "edit" ? "Edit" : "Create", model);
     }
 
     private async Task PopulateDropdowns()

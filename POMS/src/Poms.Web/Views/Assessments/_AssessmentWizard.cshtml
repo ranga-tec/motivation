@@ -1,0 +1,218 @@
+@model Poms.Web.ViewModels.AssessmentViewModel
+
+@{
+    var isEdit = string.Equals(ViewData["AssessmentFormMode"] as string, "edit", StringComparison.OrdinalIgnoreCase);
+    var action = isEdit ? "Edit" : "Create";
+    var title = isEdit ? "Edit assessment" : "Create assessment";
+    var submitLabel = isEdit ? "Save assessment changes" : "Create assessment";
+}
+
+<form asp-action="@action"
+      asp-route-id="@(isEdit ? Model.Id : null)"
+      method="post"
+      class="modal-content workflow-wizard assessment-wizard"
+      data-workflow-wizard
+      data-assessment-form
+      novalidate>
+    @Html.AntiForgeryToken()
+    @if (isEdit)
+    {
+        <input type="hidden" asp-for="Id" />
+    }
+    <input type="hidden" asp-for="EpisodeId" />
+
+    <header class="modal-header workflow-header">
+        <div>
+            <span class="workflow-eyebrow">Clinical assessment</span>
+            <h1 class="modal-title h3 mb-1" tabindex="-1">@title</h1>
+            <p class="text-secondary mb-0">
+                Patient: <strong>@Model.PatientNumber — @Model.PatientName</strong>
+            </p>
+        </div>
+    </header>
+
+    <div class="modal-body workflow-body">
+        <div class="workflow-progress" aria-label="Assessment progress">
+            <div class="d-flex justify-content-between align-items-center gap-3 mb-2">
+                <p class="workflow-step-count mb-0" aria-live="polite">Step 1 of 4</p>
+                <span class="small text-secondary">Fields marked <span aria-hidden="true">*</span> are required</span>
+            </div>
+            <div class="progress" role="progressbar" aria-label="Assessment progress" aria-valuemin="1" aria-valuemax="4" aria-valuenow="1">
+                <div class="progress-bar" style="width: 25%"></div>
+            </div>
+            <ol class="workflow-stepper list-unstyled mb-0" style="--workflow-steps: 4">
+                <li data-step-indicator class="is-current" aria-current="step"><span>1</span><strong>Overview</strong></li>
+                <li data-step-indicator><span>2</span><strong>Clinical details</strong></li>
+                <li data-step-indicator><span>3</span><strong>Prescription</strong></li>
+                <li data-step-indicator><span>4</span><strong>Review</strong></li>
+            </ol>
+        </div>
+
+        <div asp-validation-summary="All" class="alert alert-danger validation-summary-valid" role="alert" tabindex="-1"></div>
+
+        <section data-wizard-step class="workflow-step" aria-labelledby="assessmentOverview">
+            <div class="workflow-section-heading">
+                <span class="workflow-section-icon" aria-hidden="true"><i class="fa-solid fa-stethoscope"></i></span>
+                <div>
+                    <span class="workflow-eyebrow">Step 1</span>
+                    <h2 id="assessmentOverview" class="h4">Assessment overview</h2>
+                    <p>Choose the assessment pathway, body region, date, and side.</p>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="AssessmentType" class="form-label required-label"></label>
+                    <select asp-for="AssessmentType" class="form-select" required data-review-label="Assessment type">
+                        <option value="Prosthetic">Prosthetic</option>
+                        <option value="Orthotic">Orthotic</option>
+                    </select>
+                    <span asp-validation-for="AssessmentType" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="LimbCategory" class="form-label required-label"></label>
+                    <select asp-for="LimbCategory" class="form-select" required data-review-label="Limb category">
+                        <option value="UpperLimb">Upper limb</option>
+                        <option value="LowerLimb">Lower limb</option>
+                        <option value="Spinal" class="spinal-option">Spinal</option>
+                    </select>
+                    <span asp-validation-for="LimbCategory" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="AssessedOn" class="form-label required-label"></label>
+                    <input asp-for="AssessedOn" class="form-control" type="date" required data-review-label="Assessment date" />
+                    <span asp-validation-for="AssessedOn" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Side" class="form-label required-label"></label>
+                    <select asp-for="Side" class="form-select" required data-review-label="Side">
+                        <option value="Left">Left</option>
+                        <option value="Right">Right</option>
+                        <option value="Bilateral">Bilateral</option>
+                    </select>
+                    <span asp-validation-for="Side" class="text-danger"></span>
+                </div>
+            </div>
+        </section>
+
+        <section data-wizard-step class="workflow-step" aria-labelledby="assessmentClinical" hidden>
+            <div class="workflow-section-heading">
+                <span class="workflow-section-icon" aria-hidden="true"><i class="fa-solid fa-notes-medical"></i></span>
+                <div>
+                    <span class="workflow-eyebrow">Step 2</span>
+                    <h2 id="assessmentClinical" class="h4">Clinical details</h2>
+                    <p>Record the main problem and its cause or pathology.</p>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="MainProblemTypeId" class="form-label required-label"></label>
+                    <select asp-for="MainProblemTypeId" class="form-select" required asp-items="ViewBag.MainProblemTypes" data-review-label="Main problem">
+                        <option value="">Select main problem</option>
+                    </select>
+                    <span asp-validation-for="MainProblemTypeId" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="CauseReasonTypeId" class="form-label required-label"></label>
+                    <select asp-for="CauseReasonTypeId" class="form-select" required asp-items="ViewBag.CauseReasonTypes" data-review-label="Cause or pathology">
+                        <option value="">Select cause or pathology</option>
+                    </select>
+                    <span asp-validation-for="CauseReasonTypeId" class="text-danger"></span>
+                </div>
+                <div class="col-12" id="causeReasonOtherField">
+                    <label asp-for="CauseReasonOther" class="form-label"></label>
+                    <input asp-for="CauseReasonOther" class="form-control" />
+                    <span asp-validation-for="CauseReasonOther" class="text-danger"></span>
+                </div>
+                <div class="col-12">
+                    <label asp-for="AdditionalInformation" class="form-label"></label>
+                    <textarea asp-for="AdditionalInformation" class="form-control" rows="4" data-review-label="Additional information"></textarea>
+                </div>
+            </div>
+        </section>
+
+        <section data-wizard-step class="workflow-step" aria-labelledby="assessmentPrescription" hidden>
+            <div class="workflow-section-heading">
+                <span class="workflow-section-icon" aria-hidden="true"><i class="fa-solid fa-file-prescription"></i></span>
+                <div>
+                    <span class="workflow-eyebrow">Step 3</span>
+                    <h2 id="assessmentPrescription" class="h4">Prescription</h2>
+                    <p>Select the recommended device. Bilateral assessments require a prescription for each side.</p>
+                </div>
+            </div>
+
+            <div id="singlePrescriptionBlock" class="workflow-subsection">
+                <label asp-for="PrescriptionCode" class="form-label required-label"></label>
+                <select asp-for="PrescriptionCode" class="form-select prescription-select" data-selected="@Model.PrescriptionCode" data-review-label="Prescription"></select>
+                <span asp-validation-for="PrescriptionCode" class="text-danger"></span>
+
+                <div class="mt-3">
+                    <label asp-for="SubType" class="form-label">Subtype</label>
+                    <select asp-for="SubType" class="form-select subtype-select" data-selected="@Model.SubType"></select>
+                </div>
+                <div class="mt-3 other-text-field">
+                    <label asp-for="OtherText" class="form-label">Specify other prescription</label>
+                    <input asp-for="OtherText" class="form-control other-text" />
+                    <span asp-validation-for="OtherText" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div id="bilateralPrescriptionBlock" class="row g-3" hidden>
+                <div class="col-md-6">
+                    <div class="workflow-subsection h-100">
+                        <label asp-for="LeftPrescriptionCode" class="form-label required-label"></label>
+                        <select asp-for="LeftPrescriptionCode" class="form-select prescription-select" data-side="left" data-selected="@Model.LeftPrescriptionCode" data-review-label="Left prescription"></select>
+                        <span asp-validation-for="LeftPrescriptionCode" class="text-danger"></span>
+                        <select asp-for="LeftSubType" class="form-select subtype-select mt-3" data-side="left" data-selected="@Model.LeftSubType" aria-label="Left prescription subtype"></select>
+                        <div class="mt-3 other-text-field">
+                            <label asp-for="LeftOtherText" class="form-label">Specify other left prescription</label>
+                            <input asp-for="LeftOtherText" class="form-control other-text" data-side="left" />
+                            <span asp-validation-for="LeftOtherText" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="workflow-subsection h-100">
+                        <label asp-for="RightPrescriptionCode" class="form-label required-label"></label>
+                        <select asp-for="RightPrescriptionCode" class="form-select prescription-select" data-side="right" data-selected="@Model.RightPrescriptionCode" data-review-label="Right prescription"></select>
+                        <span asp-validation-for="RightPrescriptionCode" class="text-danger"></span>
+                        <select asp-for="RightSubType" class="form-select subtype-select mt-3" data-side="right" data-selected="@Model.RightSubType" aria-label="Right prescription subtype"></select>
+                        <div class="mt-3 other-text-field">
+                            <label asp-for="RightOtherText" class="form-label">Specify other right prescription</label>
+                            <input asp-for="RightOtherText" class="form-control other-text" data-side="right" />
+                            <span asp-validation-for="RightOtherText" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section data-wizard-step class="workflow-step" aria-labelledby="assessmentReview" hidden>
+            <div class="workflow-section-heading">
+                <span class="workflow-section-icon" aria-hidden="true"><i class="fa-solid fa-circle-check"></i></span>
+                <div>
+                    <span class="workflow-eyebrow">Step 4</span>
+                    <h2 id="assessmentReview" class="h4">Review assessment</h2>
+                    <p>Confirm the clinical details and prescription before saving.</p>
+                </div>
+            </div>
+            <div class="review-panel" data-wizard-review aria-live="polite"></div>
+        </section>
+    </div>
+
+    <footer class="modal-footer workflow-footer">
+        <div class="me-auto">
+            <a asp-controller="Episodes" asp-action="Details" asp-route-id="@Model.EpisodeId" class="btn btn-link text-secondary">Cancel</a>
+        </div>
+        <button type="button" class="btn btn-outline-secondary" data-wizard-back hidden>
+            <i class="fa-solid fa-arrow-left me-1" aria-hidden="true"></i> Back
+        </button>
+        <button type="button" class="btn btn-primary" data-wizard-next>
+            Continue <i class="fa-solid fa-arrow-right ms-1" aria-hidden="true"></i>
+        </button>
+        <button type="submit" class="btn btn-success" data-wizard-submit hidden>
+            <i class="fa-solid fa-check me-1" aria-hidden="true"></i> @submitLabel
+        </button>
+    </footer>
+</form>

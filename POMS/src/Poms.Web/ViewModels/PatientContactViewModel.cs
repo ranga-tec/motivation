@@ -6,10 +6,9 @@ public class PatientContactViewModel
 {
     public Guid? Id { get; set; }
 
-    [Required]
     [Display(Name = "Telephone No.")]
     [Phone]
-    public string TelephoneNo { get; set; } = default!;
+    public string? TelephoneNo { get; set; }
 
     [Display(Name = "Date Confirmed")]
     [DataType(DataType.Date)]

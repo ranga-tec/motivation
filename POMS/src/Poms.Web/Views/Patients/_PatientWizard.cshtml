@@ -1,0 +1,373 @@
+@model Poms.Web.ViewModels.PatientViewModel
+
+@{
+    var isEdit = string.Equals(ViewData["PatientFormMode"] as string, "edit", StringComparison.OrdinalIgnoreCase);
+    var isModal = ViewData["PatientFormModal"] as bool? == true;
+    var action = isEdit ? "Edit" : "Create";
+    var title = isEdit ? "Edit patient" : "Register new patient";
+    var eyebrow = isEdit ? $"Patient {Model.PatientNumber}" : "New patient";
+    var submitLabel = isEdit ? "Save patient changes" : "Register patient";
+    var cancelAction = isEdit ? "Folder" : "Index";
+    var cancelRouteId = isEdit ? Model.Id : (Guid?)null;
+    var startStep = ViewBag.ShowDuplicateWarning == true ? 4 : 0;
+    var dobValue = ViewData.ModelState[nameof(Model.Dob)]?.AttemptedValue
+        ?? (Model.Dob == default ? "" : Model.Dob.ToString("yyyy-MM-dd"));
+}
+
+<form asp-action="@action"
+      asp-route-id="@(isEdit ? Model.Id : null)"
+      method="post"
+      class="modal-content workflow-wizard patient-wizard"
+      id="patientForm"
+      data-workflow-wizard
+      data-patient-form
+      data-modal-form="@isModal.ToString().ToLowerInvariant()"
+      data-start-step="@startStep"
+      novalidate>
+    @Html.AntiForgeryToken()
+    @if (isEdit)
+    {
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="PatientNumber" />
+    }
+    <input type="hidden" asp-for="ConfirmDuplicateWarning" id="confirmDuplicateWarning" />
+
+    <header class="modal-header workflow-header">
+        <div>
+            <span class="workflow-eyebrow">@eyebrow</span>
+            <h1 class="modal-title h3 mb-1" id="patientWizardTitle" tabindex="-1">@title</h1>
+            <p class="text-secondary mb-0">Complete one short section at a time. You can go back without losing your entries.</p>
+        </div>
+        @if (isModal)
+        {
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close patient registration"></button>
+        }
+    </header>
+
+    <div class="modal-body workflow-body">
+        <div class="workflow-progress" aria-label="Registration progress">
+            <div class="d-flex justify-content-between align-items-center gap-3 mb-2">
+                <p class="workflow-step-count mb-0" aria-live="polite">Step 1 of 5</p>
+                <span class="small text-secondary">Fields marked <span aria-hidden="true">*</span> are required</span>
+            </div>
+            <div class="progress" role="progressbar" aria-label="Patient registration progress" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1">
+                <div class="progress-bar" style="width: 20%"></div>
+            </div>
+            <ol class="workflow-stepper list-unstyled mb-0">
+                <li data-step-indicator class="is-current" aria-current="step"><span>1</span><strong>Identity</strong></li>
+                <li data-step-indicator><span>2</span><strong>Contact</strong></li>
+                <li data-step-indicator><span>3</span><strong>Guardian</strong></li>
+                <li data-step-indicator><span>4</span><strong>Registration</strong></li>
+                <li data-step-indicator><span>5</span><strong>Review</strong></li>
+            </ol>
+        </div>
+
+        <div asp-validation-summary="All" class="alert alert-danger validation-summary-valid" role="alert" tabindex="-1"></div>
+
+        @if (ViewBag.ShowDuplicateWarning == true)
+        {
+            <div class="alert alert-warning duplicate-review" role="alert">
+                <h2 class="h6">Possible matching patient</h2>
+                <p class="mb-2">
+                    <strong>@ViewBag.ExistingPatientNumber — @ViewBag.ExistingPatientName</strong>
+                    has a similar name or date of birth. Check the details before creating another record.
+                </p>
+                <button type="button" class="btn btn-warning btn-sm" data-confirm-duplicate>Details checked — continue registration</button>
+            </div>
+        }
+
+        <section data-wizard-step class="workflow-step" aria-labelledby="patientStepIdentity">
+            <div class="workflow-section-heading">
+                <span class="workflow-section-icon" aria-hidden="true"><i class="fa-solid fa-id-card"></i></span>
+                <div>
+                    <span class="workflow-eyebrow">Step 1</span>
+                    <h2 id="patientStepIdentity" class="h4">Patient identity</h2>
+                    <p>Start with the details used to identify the patient and prevent duplicate records.</p>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-lg-7">
+                    <label asp-for="FullName" class="form-label required-label"></label>
+                    <input asp-for="FullName" class="form-control" required autocomplete="name" data-review-label="Full name" />
+                    <span asp-validation-for="FullName" class="text-danger"></span>
+                </div>
+                <div class="col-lg-5">
+                    <label asp-for="NameWithInitials" class="form-label required-label"></label>
+                    <input asp-for="NameWithInitials" class="form-control" required autocomplete="nickname" data-review-label="Name with initials" />
+                    <span asp-validation-for="NameWithInitials" class="text-danger"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Dob" class="form-label required-label"></label>
+                    <input name="Dob"
+                           id="Dob"
+                           class="form-control"
+                           type="date"
+                           value="@dobValue"
+                           required
+                           data-val="true"
+                           data-val-required="Date of birth is required."
+                           autocomplete="bday"
+                           data-review-label="Date of birth" />
+                    <span asp-validation-for="Dob" class="text-danger"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Sex" class="form-label required-label"></label>
+                    <select asp-for="Sex" class="form-select" required asp-items="ViewBag.SexOptions" data-review-label="Sex"></select>
+                    <span asp-validation-for="Sex" class="text-danger"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Employment" class="form-label"></label>
+                    <input asp-for="Employment" class="form-control" autocomplete="organization-title" />
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Category" class="form-label required-label"></label>
+                    <select asp-for="Category" class="form-select" required asp-items="ViewBag.PatientCategories" data-review-label="Patient category"></select>
+                </div>
+                <div class="col-md-4" id="nationalityField">
+                    <label asp-for="Nationality" class="form-label"></label>
+                    <input asp-for="Nationality" class="form-control" autocomplete="country-name" />
+                    <span asp-validation-for="Nationality" class="text-danger"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="IdentificationType" class="form-label required-label"></label>
+                    <select asp-for="IdentificationType" class="form-select" required asp-items="ViewBag.IdentificationTypes" data-review-label="Identification type"></select>
+                </div>
+                <div class="col-lg-6">
+                    <label asp-for="IdentificationNumber" class="form-label required-label"></label>
+                    <input asp-for="IdentificationNumber" class="form-control" required autocomplete="off" data-review-label="Identification number" aria-describedby="identificationHint duplicateAlert" />
+                    <div id="identificationHint" class="form-text">Enter the number exactly as shown on the document.</div>
+                    <span asp-validation-for="IdentificationNumber" class="text-danger"></span>
+                    <div id="duplicateAlert" class="alert alert-warning mt-2 d-none" role="status"></div>
+                </div>
+            </div>
+        </section>
+
+        <section data-wizard-step class="workflow-step" aria-labelledby="patientStepContact" hidden>
+            <div class="workflow-section-heading">
+                <span class="workflow-section-icon" aria-hidden="true"><i class="fa-solid fa-location-dot"></i></span>
+                <div>
+                    <span class="workflow-eyebrow">Step 2</span>
+                    <h2 id="patientStepContact" class="h4">Contact and location</h2>
+                    <p>Record where the patient lives and the safest ways to contact them.</p>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-12">
+                    <label asp-for="Address1" class="form-label required-label"></label>
+                    <input asp-for="Address1" class="form-control" required autocomplete="address-line1" data-review-label="Address" />
+                    <span asp-validation-for="Address1" class="text-danger"></span>
+                </div>
+                <div class="col-12">
+                    <label asp-for="Address2" class="form-label"></label>
+                    <input asp-for="Address2" class="form-control" autocomplete="address-line2" />
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="ProvinceId" class="form-label required-label"></label>
+                    <select asp-for="ProvinceId" class="form-select" required asp-items="ViewBag.Provinces" data-review-label="Province">
+                        <option value="">Select province</option>
+                    </select>
+                    <span asp-validation-for="ProvinceId" class="text-danger"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="DistrictId" class="form-label required-label"></label>
+                    <select asp-for="DistrictId" class="form-select" required data-selected="@Model.DistrictId" data-review-label="District">
+                        <option value="">Select district</option>
+                    </select>
+                    <span asp-validation-for="DistrictId" class="text-danger"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="CityId" class="form-label"></label>
+                    <select asp-for="CityId" class="form-select" data-selected="@Model.CityId" data-review-label="City">
+                        <option value="">Select city</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="CityOther" class="form-label"></label>
+                    <input asp-for="CityOther" class="form-control" />
+                    <div class="form-text">Only use this when the city is not in the list.</div>
+                    <span asp-validation-for="CityOther" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Email" class="form-label"></label>
+                    <input asp-for="Email" class="form-control" type="email" autocomplete="email" inputmode="email" data-review-label="Email" />
+                    <span asp-validation-for="Email" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="CenterId" class="form-label required-label"></label>
+                    @if (isEdit)
+                    {
+                        <select asp-for="CenterId" class="form-select" disabled asp-items="ViewBag.Centers" data-review-label="Centre"></select>
+                        <input type="hidden" asp-for="CenterId" />
+                        <div class="form-text">The registration centre cannot be changed.</div>
+                    }
+                    else
+                    {
+                        <select asp-for="CenterId" class="form-select" required asp-items="ViewBag.Centers" data-review-label="Centre">
+                            <option value="">Select centre</option>
+                        </select>
+                    }
+                    <span asp-validation-for="CenterId" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="ReferralSourceId" class="form-label"></label>
+                    <select asp-for="ReferralSourceId" class="form-select" asp-items="ViewBag.ReferralSources">
+                        <option value="">Select referral source (optional)</option>
+                    </select>
+                </div>
+                <div class="col-12" id="referralOtherField">
+                    <label asp-for="ReferralSourceOther" class="form-label"></label>
+                    <input asp-for="ReferralSourceOther" class="form-control" />
+                </div>
+            </div>
+
+            <fieldset class="workflow-subsection mt-4">
+                <legend class="h6">Telephone numbers</legend>
+                <p class="small text-secondary">Add at least one number when available. Confirmation details are optional.</p>
+                <div id="contactsContainer" class="vstack gap-3">
+                    @for (var i = 0; i < Model.Contacts.Count; i++)
+                    {
+                        <div class="contact-row">
+                            <input type="hidden" name="Contacts[@i].Id" value="@Model.Contacts[i].Id" />
+                            <div class="row g-2 align-items-end">
+                                <div class="col-md-4">
+                                    <label class="form-label" for="contactTelephone_@i">Telephone number</label>
+                                    <input id="contactTelephone_@i" name="Contacts[@i].TelephoneNo" class="form-control" value="@Model.Contacts[i].TelephoneNo" autocomplete="tel" inputmode="tel" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label" for="contactDate_@i">Date confirmed</label>
+                                    <input id="contactDate_@i" name="Contacts[@i].DateConfirmed" type="date" class="form-control" value="@Model.Contacts[i].DateConfirmed?.ToString("yyyy-MM-dd")" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label" for="contactPerson_@i">Confirmed by</label>
+                                    <input id="contactPerson_@i" name="Contacts[@i].PersonChecked" class="form-control" value="@Model.Contacts[i].PersonChecked" autocomplete="name" />
+                                </div>
+                                <div class="col-md-1">
+                                    <button type="button" class="btn btn-outline-danger w-100" data-remove-contact aria-label="Remove telephone number">
+                                        <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <button type="button" id="addContactBtn" class="btn btn-sm btn-outline-primary mt-3">
+                    <i class="fa-solid fa-plus" aria-hidden="true"></i> Add another number
+                </button>
+            </fieldset>
+        </section>
+
+        <section data-wizard-step class="workflow-step" aria-labelledby="patientStepGuardian" hidden>
+            <div class="workflow-section-heading">
+                <span class="workflow-section-icon" aria-hidden="true"><i class="fa-solid fa-people-roof"></i></span>
+                <div>
+                    <span class="workflow-eyebrow">Step 3</span>
+                    <h2 id="patientStepGuardian" class="h4">Guardian or carer</h2>
+                    <p>Add the primary person supporting the patient.</p>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-7">
+                    <label asp-for="GuardianName" class="form-label required-label"></label>
+                    <input asp-for="GuardianName" class="form-control" required autocomplete="name" data-review-label="Guardian or carer" />
+                    <span asp-validation-for="GuardianName" class="text-danger"></span>
+                </div>
+                <div class="col-md-5">
+                    <label asp-for="GuardianRelationship" class="form-label required-label"></label>
+                    <input asp-for="GuardianRelationship" class="form-control" required data-review-label="Relationship" />
+                    <span asp-validation-for="GuardianRelationship" class="text-danger"></span>
+                </div>
+                <div class="col-12">
+                    <label asp-for="GuardianAddress" class="form-label"></label>
+                    <input asp-for="GuardianAddress" class="form-control" autocomplete="street-address" />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="GuardianPhone" class="form-label"></label>
+                    <input asp-for="GuardianPhone" class="form-control" autocomplete="tel" inputmode="tel" />
+                    <span asp-validation-for="GuardianPhone" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="GuardianMobile" class="form-label"></label>
+                    <input asp-for="GuardianMobile" class="form-control" autocomplete="tel" inputmode="tel" data-review-label="Guardian mobile" />
+                    <span asp-validation-for="GuardianMobile" class="text-danger"></span>
+                </div>
+            </div>
+        </section>
+
+        <section data-wizard-step class="workflow-step" aria-labelledby="patientStepRegistration" hidden>
+            <div class="workflow-section-heading">
+                <span class="workflow-section-icon" aria-hidden="true"><i class="fa-solid fa-clipboard-check"></i></span>
+                <div>
+                    <span class="workflow-eyebrow">Step 4</span>
+                    <h2 id="patientStepRegistration" class="h4">Registration details</h2>
+                    <p>Finish the administrative information for this registration.</p>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="TravelTimeDistance" class="form-label"></label>
+                    <input asp-for="TravelTimeDistance" class="form-control" placeholder="For example, 45 minutes / 25 km" />
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="RegistrationDate" class="form-label"></label>
+                    <input asp-for="RegistrationDate" class="form-control" type="date" readonly="@isEdit" data-review-label="Registration date" />
+                    @if (isEdit)
+                    {
+                        <div class="form-text">The original registration date is read-only.</div>
+                    }
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="RegistrationProcessedBy" class="form-label required-label"></label>
+                    <input asp-for="RegistrationProcessedBy" class="form-control" required autocomplete="name" data-review-label="Processed by" />
+                    <span asp-validation-for="RegistrationProcessedBy" class="text-danger"></span>
+                </div>
+                <div class="col-12">
+                    <label asp-for="Remarks" class="form-label"></label>
+                    <textarea asp-for="Remarks" class="form-control" rows="4" data-review-label="Remarks"></textarea>
+                </div>
+            </div>
+        </section>
+
+        <section data-wizard-step class="workflow-step" aria-labelledby="patientStepReview" hidden>
+            <div class="workflow-section-heading">
+                <span class="workflow-section-icon" aria-hidden="true"><i class="fa-solid fa-circle-check"></i></span>
+                <div>
+                    <span class="workflow-eyebrow">Step 5</span>
+                    <h2 id="patientStepReview" class="h4">Review and confirm</h2>
+                    <p>Check the key details before saving the patient record.</p>
+                </div>
+            </div>
+
+            <div class="review-panel" data-wizard-review aria-live="polite"></div>
+            <div class="alert alert-info mt-4 mb-0">
+                <i class="fa-solid fa-shield-halved me-2" aria-hidden="true"></i>
+                Patient information is sensitive. Confirm that it matches the source documents before saving.
+            </div>
+        </section>
+    </div>
+
+    <footer class="modal-footer workflow-footer">
+        <div class="me-auto">
+            @if (isModal)
+            {
+                <button type="button" class="btn btn-link text-secondary" data-bs-dismiss="modal">Close without saving</button>
+            }
+            else
+            {
+                <a asp-action="@cancelAction" asp-route-id="@cancelRouteId" class="btn btn-link text-secondary">Cancel</a>
+            }
+        </div>
+        <button type="button" class="btn btn-outline-secondary" data-wizard-back hidden>
+            <i class="fa-solid fa-arrow-left me-1" aria-hidden="true"></i> Back
+        </button>
+        <button type="button" class="btn btn-primary" data-wizard-next>
+            Continue <i class="fa-solid fa-arrow-right ms-1" aria-hidden="true"></i>
+        </button>
+        <button type="submit" class="btn btn-success" data-wizard-submit hidden>
+            <i class="fa-solid fa-check me-1" aria-hidden="true"></i> @submitLabel
+        </button>
+    </footer>
+</form>
