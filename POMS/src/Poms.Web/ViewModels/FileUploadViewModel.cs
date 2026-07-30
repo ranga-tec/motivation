@@ -21,4 +21,7 @@ public class FileUploadViewModel
 
     [Display(Name = "Notes")]
     public string? Notes { get; set; }
+
+    [Display(Name = "Restricted document")]
+    public bool IsRestricted { get; set; }
 }

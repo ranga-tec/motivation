@@ -12,6 +12,34 @@ public sealed class UserManagementViewModel
 public sealed class CreateUserViewModel
 {
     [Required]
+    [StringLength(200)]
+    [Display(Name = "Employee name")]
+    public string FullName { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(50)]
+    [Display(Name = "Employee number")]
+    public string EmployeeNumber { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(150)]
+    public string Designation { get; set; } = string.Empty;
+
+    [StringLength(150)]
+    public string? Department { get; set; }
+
+    [Required]
+    [Phone]
+    [StringLength(30)]
+    [Display(Name = "Mobile number")]
+    public string MobileNumber { get; set; } = string.Empty;
+
+    [Phone]
+    [StringLength(30)]
+    [Display(Name = "Work phone")]
+    public string? WorkPhoneNumber { get; set; }
+
+    [Required]
     [EmailAddress]
     [Display(Name = "Email address")]
     public string Email { get; set; } = string.Empty;
@@ -29,15 +57,57 @@ public sealed class CreateUserViewModel
 
     [MinLength(1, ErrorMessage = "Select at least one access role.")]
     public List<string> Roles { get; set; } = [];
+
+    [Display(Name = "Allow restricted clinical data")]
+    public bool CanAccessRestrictedClinicalData { get; set; }
 }
 
 public sealed class UserAccessRowViewModel
 {
     public string Id { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+    public string FullName { get; set; } = string.Empty;
+    public string EmployeeNumber { get; set; } = string.Empty;
+    public string Designation { get; set; } = string.Empty;
+    public string? Department { get; set; }
+    public string MobileNumber { get; set; } = string.Empty;
+    public string? WorkPhoneNumber { get; set; }
+    public bool CanAccessRestrictedClinicalData { get; set; }
     public IReadOnlyList<string> Roles { get; set; } = [];
     public bool IsLocked { get; set; }
     public bool IsCurrentUser { get; set; }
+}
+
+public sealed class UpdateEmployeeProfileViewModel
+{
+    [Required]
+    public string UserId { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(200)]
+    public string FullName { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(50)]
+    public string EmployeeNumber { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(150)]
+    public string Designation { get; set; } = string.Empty;
+
+    [StringLength(150)]
+    public string? Department { get; set; }
+
+    [Required]
+    [Phone]
+    [StringLength(30)]
+    public string MobileNumber { get; set; } = string.Empty;
+
+    [Phone]
+    [StringLength(30)]
+    public string? WorkPhoneNumber { get; set; }
+
+    public bool CanAccessRestrictedClinicalData { get; set; }
 }
 
 public sealed class UserRoleUpdateViewModel

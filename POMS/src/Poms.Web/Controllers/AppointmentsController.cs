@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Poms.Domain.Entities;
 using Poms.Domain.Enums;
 using Poms.Infrastructure.Data;
+using Poms.Infrastructure.Services;
 using Poms.Web.ViewModels;
 
 namespace Poms.Web.Controllers;
@@ -13,16 +14,22 @@ namespace Poms.Web.Controllers;
 public class AppointmentsController : Controller
 {
     private readonly PomsDbContext _context;
+    private readonly IRestrictedAccessService _restrictedAccess;
 
-    public AppointmentsController(PomsDbContext context)
+    public AppointmentsController(
+        PomsDbContext context,
+        IRestrictedAccessService restrictedAccess)
     {
         _context = context;
+        _restrictedAccess = restrictedAccess;
     }
 
     // GET: Appointments / Date-Based Actions tab (PRD 5.3)
     public async Task<IActionResult> Index(DateOnly? date, AppointmentType? type, AppointmentStatus? status)
     {
-        var query = _context.Appointments.Include(a => a.Patient).Include(a => a.Episode).AsQueryable();
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        var query = access.Filter(
+            _context.Appointments.Include(a => a.Patient).Include(a => a.Episode));
 
         if (date.HasValue)
             query = query.Where(a => a.AppointmentDate == date.Value);
@@ -68,8 +75,9 @@ public class AppointmentsController : Controller
     [HttpGet]
     public async Task<JsonResult> GetEpisodesByPatient(Guid patientId)
     {
-        var episodes = await _context.Episodes
-            .Where(e => e.PatientId == patientId)
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        var episodes = await access.Filter(_context.Episodes)
+            .Where(episode => episode.PatientId == patientId)
             .Select(e => new { e.Id, DisplayName = e.RecordDate.ToString() + " - " + e.Status })
             .ToListAsync();
         return Json(episodes);
@@ -80,6 +88,25 @@ public class AppointmentsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(AppointmentViewModel model)
     {
+        if (model.EpisodeId.HasValue)
+        {
+            var episode = await _context.Episodes
+                .FirstOrDefaultAsync(item => item.Id == model.EpisodeId.Value);
+            if (episode == null || episode.PatientId != model.PatientId)
+                return NotFound();
+
+            var access = await _restrictedAccess.GetScopeAsync(User);
+            var allowed = access.CanAccess(episode.IsRestricted, episode.CreatedBy);
+            await _restrictedAccess.AuditAsync(
+                access,
+                allowed ? "CreateAppointment" : "CreateAppointmentDenied",
+                nameof(Episode),
+                episode.Id,
+                episode.IsRestricted,
+                allowed);
+            if (!allowed) return NotFound();
+        }
+
         if (ModelState.IsValid)
         {
             var appointment = new Appointment
@@ -109,9 +136,14 @@ public class AppointmentsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Complete(Guid id)
     {
-        var appointment = await _context.Appointments.FindAsync(id);
+        var appointment = await _context.Appointments
+            .Include(item => item.Episode)
+            .FirstOrDefaultAsync(item => item.Id == id);
         if (appointment != null)
         {
+            if (!await CanAccessAppointmentAsync(appointment, "CompleteAppointment"))
+                return NotFound();
+
             appointment.Status = AppointmentStatus.Completed;
             appointment.UpdatedBy = User.Identity?.Name;
             appointment.UpdatedAt = DateTime.UtcNow;
@@ -125,9 +157,14 @@ public class AppointmentsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Cancel(Guid id)
     {
-        var appointment = await _context.Appointments.FindAsync(id);
+        var appointment = await _context.Appointments
+            .Include(item => item.Episode)
+            .FirstOrDefaultAsync(item => item.Id == id);
         if (appointment != null)
         {
+            if (!await CanAccessAppointmentAsync(appointment, "CancelAppointment"))
+                return NotFound();
+
             appointment.Status = AppointmentStatus.Cancelled;
             appointment.UpdatedBy = User.Identity?.Name;
             appointment.UpdatedAt = DateTime.UtcNow;
@@ -142,5 +179,24 @@ public class AppointmentsController : Controller
             await _context.Patients.Select(p => new { p.Id, DisplayName = p.PatientNumber + " - " + p.FullName }).ToListAsync(),
             "Id", "DisplayName");
         ViewBag.TypeOptions = new SelectList(Enum.GetValues(typeof(AppointmentType)).Cast<AppointmentType>());
+    }
+
+    private async Task<bool> CanAccessAppointmentAsync(Appointment appointment, string action)
+    {
+        if (appointment.Episode is null)
+            return true;
+
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        var allowed = access.CanAccess(
+            appointment.Episode.IsRestricted,
+            appointment.Episode.CreatedBy);
+        await _restrictedAccess.AuditAsync(
+            access,
+            allowed ? action : $"{action}Denied",
+            nameof(Episode),
+            appointment.Episode.Id,
+            appointment.Episode.IsRestricted,
+            allowed);
+        return allowed;
     }
 }

@@ -16,6 +16,7 @@ public class PatientDocument : BaseEntity
     public string? Notes { get; set; }
     public string UploadedBy { get; set; } = default!;
     public DateTime UploadedAt { get; set; }
+    public bool IsRestricted { get; set; }
 
     public Patient Patient { get; set; } = default!;
 }

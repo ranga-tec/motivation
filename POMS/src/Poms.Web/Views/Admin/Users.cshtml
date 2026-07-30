@@ -4,6 +4,8 @@
     ViewData["Title"] = "User access";
     var activeUsers = Model.Users.Count(user => !user.IsLocked);
     var administrators = Model.Users.Count(user => user.Roles.Contains("ADMIN"));
+    var restrictedUsers = Model.Users.Count(user =>
+        user.CanAccessRestrictedClinicalData || user.Roles.Contains("ADMIN"));
 }
 
 <div class="admin-page">
@@ -64,6 +66,36 @@
                         <form asp-action="UserCreate" method="post">
                             <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
                             <div class="row g-3">
+                                <div class="col-md-8">
+                                    <label asp-for="NewUser.FullName" class="form-label"></label>
+                                    <input asp-for="NewUser.FullName" class="form-control" autocomplete="name" />
+                                    <span asp-validation-for="NewUser.FullName" class="text-danger"></span>
+                                </div>
+                                <div class="col-md-4">
+                                    <label asp-for="NewUser.EmployeeNumber" class="form-label"></label>
+                                    <input asp-for="NewUser.EmployeeNumber" class="form-control" autocomplete="off" />
+                                    <span asp-validation-for="NewUser.EmployeeNumber" class="text-danger"></span>
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="NewUser.Designation" class="form-label"></label>
+                                    <input asp-for="NewUser.Designation" class="form-control" />
+                                    <span asp-validation-for="NewUser.Designation" class="text-danger"></span>
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="NewUser.Department" class="form-label"></label>
+                                    <input asp-for="NewUser.Department" class="form-control" />
+                                    <span asp-validation-for="NewUser.Department" class="text-danger"></span>
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="NewUser.MobileNumber" class="form-label"></label>
+                                    <input asp-for="NewUser.MobileNumber" class="form-control" autocomplete="tel" />
+                                    <span asp-validation-for="NewUser.MobileNumber" class="text-danger"></span>
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="NewUser.WorkPhoneNumber" class="form-label"></label>
+                                    <input asp-for="NewUser.WorkPhoneNumber" class="form-control" autocomplete="tel" />
+                                    <span asp-validation-for="NewUser.WorkPhoneNumber" class="text-danger"></span>
+                                </div>
                                 <div class="col-md-6">
                                     <label asp-for="NewUser.Email" class="form-label"></label>
                                     <input asp-for="NewUser.Email" class="form-control" autocomplete="off" />
@@ -86,6 +118,15 @@
                                         </div>
                                         <span asp-validation-for="NewUser.Roles" class="text-danger"></span>
                                     </fieldset>
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-check border rounded-3 p-3 ps-5 bg-body-tertiary">
+                                        <input asp-for="NewUser.CanAccessRestrictedClinicalData" class="form-check-input" />
+                                        <label asp-for="NewUser.CanAccessRestrictedClinicalData" class="form-check-label fw-semibold"></label>
+                                        <div class="form-text">
+                                            Grants access to records and documents marked Restricted. Administrators receive this access automatically.
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
                                     <label asp-for="NewUser.Password" class="form-label"></label>
@@ -129,6 +170,10 @@
                 <span class="admin-stat-icon is-warning"><i class="fa-solid fa-shield-alt" aria-hidden="true"></i></span>
                 <div><strong>@administrators</strong><span>Administrators</span></div>
             </div>
+            <div class="admin-stat-card">
+                <span class="admin-stat-icon is-warning"><i class="fa-solid fa-user-lock" aria-hidden="true"></i></span>
+                <div><strong>@restrictedUsers</strong><span>Restricted-data access</span></div>
+            </div>
         </div>
 
         <div class="card admin-table-card">
@@ -156,15 +201,18 @@
                     <tbody data-user-list>
                         @foreach (var user in Model.Users)
                         {
-                            <tr data-user-row data-search-text="@($"{user.Email} {string.Join(" ", user.Roles)}")">
+                            <tr data-user-row data-search-text="@($"{user.FullName} {user.EmployeeNumber} {user.Email} {user.Designation} {user.Department} {string.Join(" ", user.Roles)}")">
                                 <td>
                                     <div class="d-flex align-items-center gap-3">
-                                        <span class="account-avatar" aria-hidden="true">@user.Email[..1].ToUpperInvariant()</span>
+                                        <span class="account-avatar" aria-hidden="true">@user.FullName[..1].ToUpperInvariant()</span>
                                         <div>
-                                            <strong class="d-block">@user.Email</strong>
+                                            <strong class="d-block">@user.FullName</strong>
+                                            <span class="small d-block">@user.EmployeeNumber · @user.Designation</span>
+                                            <span class="small text-body-secondary d-block">@user.Email</span>
+                                            <span class="small text-body-secondary">@user.MobileNumber</span>
                                             @if (user.IsCurrentUser)
                                             {
-                                                <span class="small text-body-secondary">Your account</span>
+                                                <span class="badge text-bg-primary-subtle text-primary-emphasis ms-1">Your account</span>
                                             }
                                         </div>
                                     </div>
@@ -180,6 +228,12 @@
                                     {
                                         <span class="badge text-bg-success-subtle border border-success-subtle text-success-emphasis">
                                             <i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>Active
+                                        </span>
+                                    }
+                                    @if (user.CanAccessRestrictedClinicalData || user.Roles.Contains("ADMIN"))
+                                    {
+                                        <span class="badge text-bg-warning-subtle border border-warning-subtle text-warning-emphasis d-block mt-2">
+                                            <i class="fa-solid fa-user-lock me-1" aria-hidden="true"></i>Restricted data
                                         </span>
                                     }
                                 </td>
@@ -205,6 +259,19 @@
                                 </td>
                                 <td class="text-end">
                                     <div class="d-flex flex-wrap justify-content-end gap-2">
+                                        <button class="btn btn-sm btn-outline-primary" type="button"
+                                                data-bs-toggle="modal" data-bs-target="#editProfileModal"
+                                                data-profile-user-id="@user.Id"
+                                                data-profile-email="@user.Email"
+                                                data-profile-full-name="@user.FullName"
+                                                data-profile-employee-number="@user.EmployeeNumber"
+                                                data-profile-designation="@user.Designation"
+                                                data-profile-department="@user.Department"
+                                                data-profile-mobile="@user.MobileNumber"
+                                                data-profile-work-phone="@user.WorkPhoneNumber"
+                                                data-profile-restricted="@user.CanAccessRestrictedClinicalData.ToString().ToLowerInvariant()">
+                                            <i class="fa-solid fa-address-card me-1" aria-hidden="true"></i>Edit profile
+                                        </button>
                                         <button class="btn btn-sm btn-outline-secondary" type="button"
                                                 data-bs-toggle="modal" data-bs-target="#resetPasswordModal"
                                                 data-user-id="@user.Id" data-user-email="@user.Email">
@@ -234,6 +301,67 @@
             </div>
         </div>
     </section>
+</div>
+
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="UserUpdateProfile" method="post">
+                <div class="modal-header">
+                    <div>
+                        <span class="page-eyebrow">Staff directory</span>
+                        <h2 class="modal-title fs-5" id="editProfileTitle">Edit employee profile</h2>
+                        <p class="small text-body-secondary mb-0" data-profile-email-label></p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="UserId" data-profile-user-id-input />
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label for="profileFullName" class="form-label">Employee name</label>
+                            <input id="profileFullName" name="FullName" class="form-control" required maxlength="200" data-profile-full-name-input />
+                        </div>
+                        <div class="col-md-4">
+                            <label for="profileEmployeeNumber" class="form-label">Employee number</label>
+                            <input id="profileEmployeeNumber" name="EmployeeNumber" class="form-control" required maxlength="50" data-profile-employee-number-input />
+                        </div>
+                        <div class="col-md-6">
+                            <label for="profileDesignation" class="form-label">Designation</label>
+                            <input id="profileDesignation" name="Designation" class="form-control" required maxlength="150" data-profile-designation-input />
+                        </div>
+                        <div class="col-md-6">
+                            <label for="profileDepartment" class="form-label">Department</label>
+                            <input id="profileDepartment" name="Department" class="form-control" maxlength="150" data-profile-department-input />
+                        </div>
+                        <div class="col-md-6">
+                            <label for="profileMobile" class="form-label">Mobile number</label>
+                            <input id="profileMobile" name="MobileNumber" class="form-control" type="tel" required maxlength="30" data-profile-mobile-input />
+                        </div>
+                        <div class="col-md-6">
+                            <label for="profileWorkPhone" class="form-label">Work phone</label>
+                            <input id="profileWorkPhone" name="WorkPhoneNumber" class="form-control" type="tel" maxlength="30" data-profile-work-phone-input />
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check border rounded-3 p-3 ps-5 bg-body-tertiary">
+                                <input id="profileRestrictedAccess" name="CanAccessRestrictedClinicalData"
+                                       class="form-check-input" type="checkbox" value="true" data-profile-restricted-input />
+                                <input name="CanAccessRestrictedClinicalData" type="hidden" value="false" />
+                                <label for="profileRestrictedAccess" class="form-check-label fw-semibold">
+                                    Allow restricted clinical data
+                                </label>
+                                <div class="form-text">This is a high-trust permission. Assign only when required for the employee's duties.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save employee profile</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordTitle" aria-hidden="true">
@@ -310,6 +438,20 @@
                 resetModal.querySelector("[data-reset-user-email]").textContent = trigger.dataset.userEmail;
                 resetModal.querySelector("[data-reset-username]").value = trigger.dataset.userEmail;
                 resetModal.querySelectorAll('input[type="password"]').forEach(input => input.value = "");
+            });
+
+            const profileModal = document.querySelector("#editProfileModal");
+            profileModal?.addEventListener("show.bs.modal", event => {
+                const trigger = event.relatedTarget;
+                profileModal.querySelector("[data-profile-user-id-input]").value = trigger.dataset.profileUserId;
+                profileModal.querySelector("[data-profile-email-label]").textContent = trigger.dataset.profileEmail;
+                profileModal.querySelector("[data-profile-full-name-input]").value = trigger.dataset.profileFullName;
+                profileModal.querySelector("[data-profile-employee-number-input]").value = trigger.dataset.profileEmployeeNumber;
+                profileModal.querySelector("[data-profile-designation-input]").value = trigger.dataset.profileDesignation;
+                profileModal.querySelector("[data-profile-department-input]").value = trigger.dataset.profileDepartment || "";
+                profileModal.querySelector("[data-profile-mobile-input]").value = trigger.dataset.profileMobile;
+                profileModal.querySelector("[data-profile-work-phone-input]").value = trigger.dataset.profileWorkPhone || "";
+                profileModal.querySelector("[data-profile-restricted-input]").checked = trigger.dataset.profileRestricted === "true";
             });
         })();
     </script>

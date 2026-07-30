@@ -15,11 +15,16 @@ public class FilesController : Controller
 {
     private readonly PomsDbContext _context;
     private readonly IFileStorageService _fileStorageService;
+    private readonly IRestrictedAccessService _restrictedAccess;
 
-    public FilesController(PomsDbContext context, IFileStorageService fileStorageService)
+    public FilesController(
+        PomsDbContext context,
+        IFileStorageService fileStorageService,
+        IRestrictedAccessService restrictedAccess)
     {
         _context = context;
         _fileStorageService = fileStorageService;
+        _restrictedAccess = restrictedAccess;
     }
 
     // GET: Files/UploadForPatient?patientId=
@@ -59,7 +64,9 @@ public class FilesController : Controller
                 ContentType = model.File.ContentType,
                 Notes = model.Notes,
                 UploadedBy = User.Identity?.Name ?? "",
-                UploadedAt = DateTime.UtcNow
+                UploadedAt = DateTime.UtcNow,
+                IsRestricted = model.IsRestricted,
+                CreatedBy = User.Identity?.Name
             });
             await _context.SaveChangesAsync();
 
@@ -76,6 +83,9 @@ public class FilesController : Controller
     {
         var episode = await _context.Episodes.Include(e => e.Patient).FirstOrDefaultAsync(e => e.Id == episodeId);
         if (episode == null) return NotFound();
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        if (!access.CanAccess(episode.IsRestricted, episode.CreatedBy))
+            return NotFound();
 
         PopulateDocumentTypes();
         return View(new FileUploadViewModel
@@ -95,6 +105,9 @@ public class FilesController : Controller
 
         var episode = await _context.Episodes.Include(e => e.Patient).FirstOrDefaultAsync(e => e.Id == model.EpisodeId.Value);
         if (episode == null) return NotFound();
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        if (!access.CanAccess(episode.IsRestricted, episode.CreatedBy))
+            return NotFound();
 
         if (ModelState.IsValid)
         {
@@ -109,7 +122,9 @@ public class FilesController : Controller
                 FileSize = model.File.Length,
                 Notes = model.Notes,
                 UploadedBy = User.Identity?.Name ?? "",
-                UploadedAt = DateTime.UtcNow
+                UploadedAt = DateTime.UtcNow,
+                IsRestricted = model.IsRestricted,
+                CreatedBy = User.Identity?.Name
             });
             await _context.SaveChangesAsync();
 
@@ -126,7 +141,8 @@ public class FilesController : Controller
     [ResponseCache(Duration = 300, Location = ResponseCacheLocation.Client)]
     public async Task<IActionResult> PatientPhoto(Guid patientId)
     {
-        var photo = await _context.PatientDocuments
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        var photo = await access.Filter(_context.PatientDocuments)
             .Where(d => d.PatientId == patientId && d.DocumentType == DocumentType.PatientPhoto)
             .OrderByDescending(d => d.UploadedAt)
             .FirstOrDefaultAsync();
@@ -147,22 +163,49 @@ public class FilesController : Controller
     public async Task<IActionResult> Download(Guid id, string scope)
     {
         string storagePath, fileName, contentType;
+        bool isRestricted;
+        var access = await _restrictedAccess.GetScopeAsync(User);
 
         if (scope == "episode")
         {
-            var doc = await _context.EpisodeDocuments.FindAsync(id);
+            var doc = await _context.EpisodeDocuments
+                .Include(document => document.Episode)
+                .FirstOrDefaultAsync(document => document.Id == id);
             if (doc == null) return NotFound();
+            isRestricted = doc.IsRestricted || doc.Episode.IsRestricted;
+            var allowed =
+                access.CanAccess(doc.Episode.IsRestricted, doc.Episode.CreatedBy) &&
+                access.CanAccess(doc.IsRestricted, doc.CreatedBy);
+            await _restrictedAccess.AuditAsync(
+                access, allowed ? "Download" : "DownloadDenied",
+                nameof(EpisodeDocument), doc.Id, isRestricted, allowed);
+            if (!allowed) return NotFound();
             storagePath = doc.StoragePath; fileName = doc.FileName; contentType = doc.ContentType;
         }
         else
         {
-            var doc = await _context.PatientDocuments.FindAsync(id);
+            var doc = await _context.PatientDocuments
+                .FirstOrDefaultAsync(document => document.Id == id);
             if (doc == null) return NotFound();
+            isRestricted = doc.IsRestricted;
+            var allowed = access.CanAccess(doc.IsRestricted, doc.CreatedBy);
+            await _restrictedAccess.AuditAsync(
+                access, allowed ? "Download" : "DownloadDenied",
+                nameof(PatientDocument), doc.Id, isRestricted, allowed);
+            if (!allowed) return NotFound();
             storagePath = doc.StoragePath; fileName = doc.FileName; contentType = doc.ContentType;
         }
 
-        var bytes = await _fileStorageService.GetFileAsync(storagePath);
-        return File(bytes, contentType, fileName);
+        Response.Headers.CacheControl = "no-store, private";
+        try
+        {
+            var bytes = await _fileStorageService.GetFileAsync(storagePath);
+            return File(bytes, contentType, fileName);
+        }
+        catch (FileNotFoundException)
+        {
+            return NotFound();
+        }
     }
 
     // POST: Files/Delete/5?scope=patient|episode
@@ -170,11 +213,22 @@ public class FilesController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(Guid id, string scope, Guid returnId)
     {
+        var access = await _restrictedAccess.GetScopeAsync(User);
         if (scope == "episode")
         {
-            var doc = await _context.EpisodeDocuments.FindAsync(id);
+            var doc = await _context.EpisodeDocuments
+                .Include(document => document.Episode)
+                .FirstOrDefaultAsync(document => document.Id == id);
             if (doc != null)
             {
+                var allowed =
+                    access.CanAccess(doc.Episode.IsRestricted, doc.Episode.CreatedBy) &&
+                    access.CanAccess(doc.IsRestricted, doc.CreatedBy);
+                await _restrictedAccess.AuditAsync(
+                    access, allowed ? "Delete" : "DeleteDenied",
+                    nameof(EpisodeDocument), doc.Id,
+                    doc.IsRestricted || doc.Episode.IsRestricted, allowed);
+                if (!allowed) return NotFound();
                 doc.IsDeleted = true;
                 doc.DeletedAt = DateTime.UtcNow;
                 doc.DeletedBy = User.Identity?.Name;
@@ -184,9 +238,15 @@ public class FilesController : Controller
         }
         else
         {
-            var doc = await _context.PatientDocuments.FindAsync(id);
+            var doc = await _context.PatientDocuments
+                .FirstOrDefaultAsync(document => document.Id == id);
             if (doc != null)
             {
+                var allowed = access.CanAccess(doc.IsRestricted, doc.CreatedBy);
+                await _restrictedAccess.AuditAsync(
+                    access, allowed ? "Delete" : "DeleteDenied",
+                    nameof(PatientDocument), doc.Id, doc.IsRestricted, allowed);
+                if (!allowed) return NotFound();
                 doc.IsDeleted = true;
                 doc.DeletedAt = DateTime.UtcNow;
                 doc.DeletedBy = User.Identity?.Name;

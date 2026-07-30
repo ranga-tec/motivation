@@ -25,4 +25,7 @@ public class DeliveryViewModel
 
     [Display(Name = "Delivery Confirmation Attachment")]
     public IFormFile? Attachment { get; set; }
+
+    [Display(Name = "Restricted clinical record")]
+    public bool IsRestricted { get; set; }
 }

@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Poms.Domain.Entities;
 
 namespace Poms.Infrastructure.Data;
 
@@ -9,6 +11,7 @@ public static class DbInitializer
     {
         var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
         var userManager = serviceProvider.GetRequiredService<UserManager<IdentityUser>>();
+        var context = serviceProvider.GetRequiredService<PomsDbContext>();
 
         // Create Roles - ADMIN, CLINICIAN, DATA_ENTRY, VIEWER, MANAGEMENT
         // (= Admin, Clinical user, Registration user, Report user, Management user per PRD 4.1)
@@ -50,5 +53,34 @@ public static class DbInitializer
                 }
             }
         }
+
+        var users = await userManager.Users.ToListAsync();
+        var existingProfileUserIds = await context.EmployeeProfiles
+            .Select(profile => profile.UserId)
+            .ToListAsync();
+
+        foreach (var user in users.Where(user => !existingProfileUserIds.Contains(user.Id)))
+        {
+            var roles = await userManager.GetRolesAsync(user);
+            var localPart = (user.Email ?? user.UserName ?? "Staff").Split('@')[0];
+            var displayName = string.Join(
+                " ",
+                localPart.Split(['.', '-', '_'], StringSplitOptions.RemoveEmptyEntries)
+                    .Select(part => char.ToUpperInvariant(part[0]) + part[1..].ToLowerInvariant()));
+
+            context.EmployeeProfiles.Add(new EmployeeProfile
+            {
+                UserId = user.Id,
+                EmployeeNumber = $"LEGACY-{user.Id.Replace("-", string.Empty)[..8].ToUpperInvariant()}",
+                FullName = string.IsNullOrWhiteSpace(displayName) ? "Staff member" : displayName,
+                Designation = roles.FirstOrDefault() ?? "Staff",
+                Department = "Not provided",
+                MobileNumber = "Not provided",
+                CanAccessRestrictedClinicalData = false,
+                CreatedBy = "System migration"
+            });
+        }
+
+        await context.SaveChangesAsync();
     }
 }

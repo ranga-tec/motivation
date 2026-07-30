@@ -17,6 +17,7 @@ public class Assessment : BaseEntity
     public int CauseReasonTypeId { get; set; }
     public string? CauseReasonOther { get; set; }
     public string? AdditionalInformation { get; set; }
+    public bool IsRestricted { get; set; }
 
     public Episode Episode { get; set; } = default!;
     public MainProblemType MainProblemType { get; set; } = default!;

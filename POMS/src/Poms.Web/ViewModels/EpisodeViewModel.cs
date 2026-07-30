@@ -22,6 +22,9 @@ public class EpisodeViewModel
 
     public string? Remarks { get; set; }
 
+    [Display(Name = "Restricted clinical record")]
+    public bool IsRestricted { get; set; }
+
     // Patient info for display
     public string? PatientNumber { get; set; }
     public string? PatientName { get; set; }

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Poms.Domain.Enums;
 using Poms.Infrastructure.Data;
+using Poms.Infrastructure.Services;
 using Poms.Web.Models;
 using Poms.Web.ViewModels;
 using System.Diagnostics;
@@ -15,32 +16,42 @@ public class HomeController : Controller
 {
     private readonly ILogger<HomeController> _logger;
     private readonly PomsDbContext _context;
+    private readonly IRestrictedAccessService _restrictedAccess;
 
-    public HomeController(ILogger<HomeController> logger, PomsDbContext context)
+    public HomeController(
+        ILogger<HomeController> logger,
+        PomsDbContext context,
+        IRestrictedAccessService restrictedAccess)
     {
         _logger = logger;
         _context = context;
+        _restrictedAccess = restrictedAccess;
     }
 
     public async Task<IActionResult> Index()
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
+        var access = await _restrictedAccess.GetScopeAsync(User);
 
         var totalPatients = await _context.Patients.CountAsync();
 
-        var activeRecordsQuery = _context.Episodes.Where(e => e.Status == RecordStatus.Active);
+        var activeRecordsQuery = access.Filter(
+            _context.Episodes.Where(e => e.Status == RecordStatus.Active));
         var activeRecords = await activeRecordsQuery.CountAsync();
         var activePatients = await activeRecordsQuery.Select(e => e.PatientId).Distinct().CountAsync();
 
-        var todaysAssessments = await _context.Assessments.CountAsync(a => a.AssessedOn == today);
-        var todaysFittings = await _context.Fittings.CountAsync(f => f.FittingDate == today);
-        var todaysDeliveries = await _context.Deliveries.CountAsync(d => d.DeliveryDate == today);
+        var todaysAssessments = await access.Filter(_context.Assessments)
+            .CountAsync(a => a.AssessedOn == today);
+        var todaysFittings = await access.Filter(_context.Fittings)
+            .CountAsync(f => f.FittingDate == today);
+        var todaysDeliveries = await access.Filter(_context.Deliveries)
+            .CountAsync(d => d.DeliveryDate == today);
         var todaysAppointments = await _context.Appointments
             .Where(a => a.AppointmentDate == today && a.Status == AppointmentStatus.Scheduled && a.Type != AppointmentType.Delivery)
             .Include(a => a.Patient)
             .ToListAsync();
 
-        var recentActivities = await BuildRecentActivitiesFeed();
+        var recentActivities = await BuildRecentActivitiesFeed(access);
 
         ViewBag.Patients = new SelectList(
             await _context.Patients.Select(p => new { p.Id, DisplayName = p.PatientNumber + " - " + p.FullName }).ToListAsync(),
@@ -61,7 +72,8 @@ public class HomeController : Controller
     // GET: Home/ActiveRecordsDrillDown (PRD 5.2.2)
     public async Task<IActionResult> ActiveRecordsDrillDown()
     {
-        var records = await _context.Episodes
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        var records = await access.Filter(_context.Episodes)
             .Where(e => e.Status == RecordStatus.Active)
             .Include(e => e.Patient)
             .Include(e => e.Center)
@@ -70,6 +82,22 @@ public class HomeController : Controller
             .Include(e => e.Deliveries)
             .Include(e => e.FollowUps)
             .ToListAsync();
+
+        foreach (var episode in records)
+        {
+            episode.Assessments = episode.Assessments
+                .Where(record => access.CanAccess(record.IsRestricted, record.CreatedBy))
+                .ToList();
+            episode.Fittings = episode.Fittings
+                .Where(record => access.CanAccess(record.IsRestricted, record.CreatedBy))
+                .ToList();
+            episode.Deliveries = episode.Deliveries
+                .Where(record => access.CanAccess(record.IsRestricted, record.CreatedBy))
+                .ToList();
+            episode.FollowUps = episode.FollowUps
+                .Where(record => access.CanAccess(record.IsRestricted, record.CreatedBy))
+                .ToList();
+        }
 
         var rows = records.Select(e =>
         {
@@ -116,7 +144,7 @@ public class HomeController : Controller
         return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
     }
 
-    private async Task<List<RecentActivityItem>> BuildRecentActivitiesFeed()
+    private async Task<List<RecentActivityItem>> BuildRecentActivitiesFeed(RestrictedAccessScope access)
     {
         const int take = 20;
 
@@ -129,7 +157,7 @@ public class HomeController : Controller
                 ActivityType = "Patient Registered", User = p.CreatedBy, Location = p.Center.Name
             }).ToListAsync();
 
-        var assessments = await _context.Assessments
+        var assessments = await access.Filter(_context.Assessments)
             .Include(a => a.Episode).ThenInclude(e => e.Patient)
             .Include(a => a.Episode).ThenInclude(e => e.Center)
             .OrderByDescending(a => a.CreatedAt).Take(take)
@@ -139,7 +167,7 @@ public class HomeController : Controller
                 ActivityType = "Assessment Created", User = a.CreatedBy, Location = a.Episode.Center.Name
             }).ToListAsync();
 
-        var fittings = await _context.Fittings
+        var fittings = await access.Filter(_context.Fittings)
             .Include(f => f.Episode).ThenInclude(e => e.Patient)
             .Include(f => f.Episode).ThenInclude(e => e.Center)
             .OrderByDescending(f => f.CreatedAt).Take(take)
@@ -149,7 +177,7 @@ public class HomeController : Controller
                 ActivityType = "Fitting Added", User = f.CreatedBy, Location = f.Episode.Center.Name
             }).ToListAsync();
 
-        var deliveries = await _context.Deliveries
+        var deliveries = await access.Filter(_context.Deliveries)
             .Include(d => d.Episode).ThenInclude(e => e.Patient)
             .Include(d => d.Episode).ThenInclude(e => e.Center)
             .OrderByDescending(d => d.CreatedAt).Take(take)
@@ -159,7 +187,7 @@ public class HomeController : Controller
                 ActivityType = "Delivery Recorded", User = d.CreatedBy, Location = d.Episode.Center.Name
             }).ToListAsync();
 
-        var followUps = await _context.FollowUps
+        var followUps = await access.Filter(_context.FollowUps)
             .Include(f => f.Episode).ThenInclude(e => e.Patient)
             .Include(f => f.Episode).ThenInclude(e => e.Center)
             .OrderByDescending(f => f.CreatedAt).Take(take)
@@ -169,7 +197,7 @@ public class HomeController : Controller
                 ActivityType = "Follow-up Added", User = f.CreatedBy, Location = f.Episode.Center.Name
             }).ToListAsync();
 
-        var patientDocs = await _context.PatientDocuments
+        var patientDocs = await access.Filter(_context.PatientDocuments)
             .Include(d => d.Patient).ThenInclude(p => p.Center)
             .OrderByDescending(d => d.UploadedAt).Take(take)
             .Select(d => new RecentActivityItem

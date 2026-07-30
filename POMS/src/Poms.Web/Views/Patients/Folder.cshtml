@@ -124,7 +124,13 @@
                             {
                                 <tr>
                                     <td>@episode.RecordDate.ToString("dd-MMM-yyyy")</td>
-                                    <td><span class="badge bg-info">@episode.Status</span></td>
+                                    <td>
+                                        <span class="badge bg-info">@episode.Status</span>
+                                        @if (episode.IsRestricted)
+                                        {
+                                            <span class="badge text-bg-warning text-dark ms-1"><i class="fa-solid fa-lock me-1"></i>Restricted</span>
+                                        }
+                                    </td>
                                     <td>@episode.Assessments.Count</td>
                                     <td>@episode.Fittings.Count</td>
                                     <td>@episode.Deliveries.Count</td>
@@ -158,7 +164,13 @@
                             @foreach (var doc in uploadedDocuments)
                             {
                                 <tr>
-                                    <td>@doc.DocumentType</td>
+                                    <td>
+                                        @doc.DocumentType
+                                        @if (doc.IsRestricted)
+                                        {
+                                            <span class="badge text-bg-warning text-dark ms-1"><i class="fa-solid fa-lock me-1"></i>Restricted</span>
+                                        }
+                                    </td>
                                     <td>@doc.FileName</td>
                                     <td>@doc.UploadedAt.ToString("dd-MMM-yyyy HH:mm")</td>
                                     <td>

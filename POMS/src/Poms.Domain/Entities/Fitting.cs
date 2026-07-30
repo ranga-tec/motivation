@@ -11,6 +11,7 @@ public class Fitting : BaseEntity
     public DateOnly FittingDate { get; set; }
     public string? Notes { get; set; }
     public string? Remarks { get; set; }
+    public bool IsRestricted { get; set; }
     
     public Episode Episode { get; set; } = default!;
 }

@@ -129,6 +129,15 @@
                     <label asp-for="AdditionalInformation" class="form-label"></label>
                     <textarea asp-for="AdditionalInformation" class="form-control" rows="4" data-review-label="Additional information"></textarea>
                 </div>
+                <div class="col-12">
+                    <div class="form-check border border-warning-subtle rounded-3 p-3 ps-5 bg-warning-subtle">
+                        <input asp-for="IsRestricted" class="form-check-input" data-review-label="Restricted access" />
+                        <label asp-for="IsRestricted" class="form-check-label fw-semibold"></label>
+                        <div class="form-text">
+                            Use for highly sensitive or potentially stigmatizing information. Only authorized staff and the original author can access it.
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 

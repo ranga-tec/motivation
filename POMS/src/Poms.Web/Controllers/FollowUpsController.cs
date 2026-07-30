@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Poms.Domain.Entities;
 using Poms.Domain.Enums;
 using Poms.Infrastructure.Data;
+using Poms.Infrastructure.Services;
 using Poms.Web.ViewModels;
 
 namespace Poms.Web.Controllers;
@@ -12,10 +13,12 @@ namespace Poms.Web.Controllers;
 public class FollowUpsController : Controller
 {
     private readonly PomsDbContext _context;
+    private readonly IRestrictedAccessService _restrictedAccess;
 
-    public FollowUpsController(PomsDbContext context)
+    public FollowUpsController(PomsDbContext context, IRestrictedAccessService restrictedAccess)
     {
         _context = context;
+        _restrictedAccess = restrictedAccess;
     }
 
     // GET: FollowUps/QuickAdd?patientId= - Dashboard Quick Action entry point (PRD 5.4)
@@ -31,6 +34,9 @@ public class FollowUpsController : Controller
     {
         var episode = await _context.Episodes.Include(e => e.Patient).FirstOrDefaultAsync(e => e.Id == episodeId);
         if (episode == null) return NotFound();
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        if (!access.CanAccess(episode.IsRestricted, episode.CreatedBy))
+            return NotFound();
 
         return View(new FollowUpViewModel
         {
@@ -45,6 +51,14 @@ public class FollowUpsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(FollowUpViewModel model)
     {
+        var episode = await _context.Episodes
+            .AsNoTracking()
+            .FirstOrDefaultAsync(record => record.Id == model.EpisodeId);
+        if (episode is null) return NotFound();
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        if (!access.CanAccess(episode.IsRestricted, episode.CreatedBy))
+            return NotFound();
+
         if (ModelState.IsValid)
         {
             var followUp = new FollowUp
@@ -52,6 +66,7 @@ public class FollowUpsController : Controller
                 EpisodeId = model.EpisodeId,
                 FollowUpDate = model.FollowUpDate,
                 Notes = model.Notes,
+                IsRestricted = model.IsRestricted,
                 CreatedBy = User.Identity?.Name
             };
             _context.FollowUps.Add(followUp);
@@ -69,6 +84,20 @@ public class FollowUpsController : Controller
     {
         var followUp = await _context.FollowUps.Include(f => f.Episode).ThenInclude(e => e.Patient).FirstOrDefaultAsync(f => f.Id == id);
         if (followUp == null) return NotFound();
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        var canAccess = access.CanAccess(followUp.Episode.IsRestricted, followUp.Episode.CreatedBy) &&
+            access.CanAccess(followUp.IsRestricted, followUp.CreatedBy);
+        if (!canAccess)
+        {
+            await _restrictedAccess.AuditAsync(
+                access, "EditDenied", nameof(FollowUp), followUp.Id, true, false);
+            return NotFound();
+        }
+        await _restrictedAccess.AuditAsync(
+            access, "EditView", nameof(FollowUp), followUp.Id,
+            followUp.IsRestricted || followUp.Episode.IsRestricted, true);
+        if (followUp.IsRestricted || followUp.Episode.IsRestricted)
+            Response.Headers.CacheControl = "no-store, private";
 
         return View(new FollowUpViewModel
         {
@@ -77,7 +106,8 @@ public class FollowUpsController : Controller
             PatientNumber = followUp.Episode.Patient.PatientNumber,
             PatientName = followUp.Episode.Patient.FullName,
             FollowUpDate = followUp.FollowUpDate,
-            Notes = followUp.Notes
+            Notes = followUp.Notes,
+            IsRestricted = followUp.IsRestricted
         });
     }
 
@@ -90,15 +120,37 @@ public class FollowUpsController : Controller
 
         if (ModelState.IsValid)
         {
-            var followUp = await _context.FollowUps.FindAsync(id);
+            var followUp = await _context.FollowUps
+                .Include(record => record.Episode)
+                .FirstOrDefaultAsync(record => record.Id == id);
             if (followUp == null) return NotFound();
 
+            var access = await _restrictedAccess.GetScopeAsync(User);
+            var canAccess = access.CanAccess(followUp.Episode.IsRestricted, followUp.Episode.CreatedBy) &&
+                access.CanAccess(followUp.IsRestricted, followUp.CreatedBy);
+            if (!canAccess)
+            {
+                await _restrictedAccess.AuditAsync(
+                    access, "EditDenied", nameof(FollowUp), followUp.Id, true, false);
+                return NotFound();
+            }
+
+            var wasRestricted = followUp.IsRestricted;
             followUp.FollowUpDate = model.FollowUpDate;
             followUp.Notes = model.Notes;
+            followUp.IsRestricted = model.IsRestricted;
             followUp.UpdatedBy = User.Identity?.Name;
             followUp.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+            await _restrictedAccess.AuditAsync(
+                access,
+                "Update",
+                nameof(FollowUp),
+                followUp.Id,
+                wasRestricted || followUp.IsRestricted || followUp.Episode.IsRestricted,
+                true,
+                new { followUp.IsRestricted });
 
             TempData["Success"] = "Follow-up updated.";
             return RedirectToAction("Details", "Episodes", new { id = followUp.EpisodeId });
@@ -115,6 +167,10 @@ public class FollowUpsController : Controller
             .Where(e => e.PatientId == patientId)
             .OrderByDescending(e => e.RecordDate)
             .ToListAsync();
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        episodes = episodes
+            .Where(episode => access.CanAccess(episode.IsRestricted, episode.CreatedBy))
+            .ToList();
 
         var active = episodes.Where(e => e.Status == RecordStatus.Active).ToList();
 

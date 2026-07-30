@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Poms.Domain.Entities;
 using Poms.Domain.Enums;
 using Poms.Infrastructure.Data;
+using Poms.Infrastructure.Services;
 using Poms.Web.ViewModels;
 
 namespace Poms.Web.Controllers;
@@ -12,10 +13,12 @@ namespace Poms.Web.Controllers;
 public class FittingsController : Controller
 {
     private readonly PomsDbContext _context;
+    private readonly IRestrictedAccessService _restrictedAccess;
 
-    public FittingsController(PomsDbContext context)
+    public FittingsController(PomsDbContext context, IRestrictedAccessService restrictedAccess)
     {
         _context = context;
+        _restrictedAccess = restrictedAccess;
     }
 
     // GET: Fittings/QuickAdd?patientId= - Dashboard Quick Action entry point (PRD 5.4)
@@ -31,6 +34,9 @@ public class FittingsController : Controller
     {
         var episode = await _context.Episodes.Include(e => e.Patient).FirstOrDefaultAsync(e => e.Id == episodeId);
         if (episode == null) return NotFound();
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        if (!access.CanAccess(episode.IsRestricted, episode.CreatedBy))
+            return NotFound();
 
         return View(new FittingViewModel
         {
@@ -45,6 +51,14 @@ public class FittingsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(FittingViewModel model)
     {
+        var episode = await _context.Episodes
+            .AsNoTracking()
+            .FirstOrDefaultAsync(record => record.Id == model.EpisodeId);
+        if (episode is null) return NotFound();
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        if (!access.CanAccess(episode.IsRestricted, episode.CreatedBy))
+            return NotFound();
+
         if (ModelState.IsValid)
         {
             var fitting = new Fitting
@@ -52,6 +66,7 @@ public class FittingsController : Controller
                 EpisodeId = model.EpisodeId,
                 FittingDate = model.FittingDate,
                 Notes = model.Notes,
+                IsRestricted = model.IsRestricted,
                 CreatedBy = User.Identity?.Name
             };
             _context.Fittings.Add(fitting);
@@ -69,6 +84,20 @@ public class FittingsController : Controller
     {
         var fitting = await _context.Fittings.Include(f => f.Episode).ThenInclude(e => e.Patient).FirstOrDefaultAsync(f => f.Id == id);
         if (fitting == null) return NotFound();
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        var canAccess = access.CanAccess(fitting.Episode.IsRestricted, fitting.Episode.CreatedBy) &&
+            access.CanAccess(fitting.IsRestricted, fitting.CreatedBy);
+        if (!canAccess)
+        {
+            await _restrictedAccess.AuditAsync(
+                access, "EditDenied", nameof(Fitting), fitting.Id, true, false);
+            return NotFound();
+        }
+        await _restrictedAccess.AuditAsync(
+            access, "EditView", nameof(Fitting), fitting.Id,
+            fitting.IsRestricted || fitting.Episode.IsRestricted, true);
+        if (fitting.IsRestricted || fitting.Episode.IsRestricted)
+            Response.Headers.CacheControl = "no-store, private";
 
         return View(new FittingViewModel
         {
@@ -77,7 +106,8 @@ public class FittingsController : Controller
             PatientNumber = fitting.Episode.Patient.PatientNumber,
             PatientName = fitting.Episode.Patient.FullName,
             FittingDate = fitting.FittingDate,
-            Notes = fitting.Notes
+            Notes = fitting.Notes,
+            IsRestricted = fitting.IsRestricted
         });
     }
 
@@ -90,15 +120,37 @@ public class FittingsController : Controller
 
         if (ModelState.IsValid)
         {
-            var fitting = await _context.Fittings.FindAsync(id);
+            var fitting = await _context.Fittings
+                .Include(record => record.Episode)
+                .FirstOrDefaultAsync(record => record.Id == id);
             if (fitting == null) return NotFound();
 
+            var access = await _restrictedAccess.GetScopeAsync(User);
+            var canAccess = access.CanAccess(fitting.Episode.IsRestricted, fitting.Episode.CreatedBy) &&
+                access.CanAccess(fitting.IsRestricted, fitting.CreatedBy);
+            if (!canAccess)
+            {
+                await _restrictedAccess.AuditAsync(
+                    access, "EditDenied", nameof(Fitting), fitting.Id, true, false);
+                return NotFound();
+            }
+
+            var wasRestricted = fitting.IsRestricted;
             fitting.FittingDate = model.FittingDate;
             fitting.Notes = model.Notes;
+            fitting.IsRestricted = model.IsRestricted;
             fitting.UpdatedBy = User.Identity?.Name;
             fitting.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+            await _restrictedAccess.AuditAsync(
+                access,
+                "Update",
+                nameof(Fitting),
+                fitting.Id,
+                wasRestricted || fitting.IsRestricted || fitting.Episode.IsRestricted,
+                true,
+                new { fitting.IsRestricted });
 
             TempData["Success"] = "Fitting updated.";
             return RedirectToAction("Details", "Episodes", new { id = fitting.EpisodeId });
@@ -115,6 +167,10 @@ public class FittingsController : Controller
             .Where(e => e.PatientId == patientId)
             .OrderByDescending(e => e.RecordDate)
             .ToListAsync();
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        episodes = episodes
+            .Where(episode => access.CanAccess(episode.IsRestricted, episode.CreatedBy))
+            .ToList();
 
         var active = episodes.Where(e => e.Status == RecordStatus.Active).ToList();
 

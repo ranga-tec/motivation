@@ -20,6 +20,11 @@
         <label asp-for="Notes" class="form-label"></label>
         <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
     </div>
+    <div class="form-check border border-warning-subtle rounded-3 p-3 ps-5 mb-3 bg-warning-subtle">
+        <input asp-for="IsRestricted" class="form-check-input" />
+        <label asp-for="IsRestricted" class="form-check-label fw-semibold"></label>
+        <div class="form-text">Only authorized staff and the original author can access this fitting record.</div>
+    </div>
 
     <button type="submit" class="btn btn-success">Save Fitting</button>
     <a asp-controller="Episodes" asp-action="Details" asp-route-id="@Model.EpisodeId" class="btn btn-secondary">Cancel</a>

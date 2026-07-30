@@ -9,6 +9,12 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h2>Record Details</h2>
+                @if (Model.IsRestricted)
+                {
+                    <span class="badge text-bg-warning text-dark mb-2">
+                        <i class="fa-solid fa-lock me-1" aria-hidden="true"></i>Restricted clinical record
+                    </span>
+                }
                 <p class="text-muted mb-0">
                     Record for <strong class="text-primary">@Model.Patient.PatientNumber</strong> - @Model.Patient.FullName
                     at @Model.Center.Name
@@ -62,6 +68,10 @@
                             {
                                 <div class="border-bottom pb-2 mb-2">
                                     <small class="text-muted">@a.AssessedOn.ToString("dd-MMM-yyyy")</small>
+                                    @if (a.IsRestricted)
+                                    {
+                                        <span class="badge text-bg-warning text-dark ms-2"><i class="fa-solid fa-lock me-1"></i>Restricted</span>
+                                    }
                                     <a asp-controller="Assessments" asp-action="Edit" asp-route-id="@a.Id" class="float-end ms-2">Edit</a>
                                     <a asp-controller="Print" asp-action="AssessmentForm" asp-route-assessmentId="@a.Id" class="float-end ms-2" target="_blank">Print Assessment</a>
                                     <a asp-controller="Print" asp-action="PrescriptionForm" asp-route-assessmentId="@a.Id" class="float-end" target="_blank">Print Prescription</a>
@@ -94,6 +104,10 @@
                             {
                                 <div class="border-bottom pb-2 mb-2">
                                     <small class="text-muted">@fitting.FittingDate.ToString("dd-MMM-yyyy")</small>
+                                    @if (fitting.IsRestricted)
+                                    {
+                                        <span class="badge text-bg-warning text-dark ms-2"><i class="fa-solid fa-lock me-1"></i>Restricted</span>
+                                    }
                                     <a asp-controller="Fittings" asp-action="Edit" asp-route-id="@fitting.Id" class="float-end">Edit</a>
                                     <p class="mb-1">@(fitting.Notes ?? "No notes recorded")</p>
                                 </div>
@@ -122,6 +136,10 @@
                             {
                                 <div class="border-bottom pb-2 mb-2">
                                     <small class="text-muted">@d.DeliveryDate.ToString("dd-MMM-yyyy")</small>
+                                    @if (d.IsRestricted)
+                                    {
+                                        <span class="badge text-bg-warning text-dark ms-2"><i class="fa-solid fa-lock me-1"></i>Restricted</span>
+                                    }
                                     <a asp-controller="Deliveries" asp-action="Edit" asp-route-id="@d.Id" class="float-end ms-2">Edit</a>
                                     <a asp-controller="Print" asp-action="DeliveryNote" asp-route-deliveryId="@d.Id" class="float-end" target="_blank">Print</a>
                                     <p class="mb-1">@(d.Notes ?? "No notes recorded")</p>
@@ -149,6 +167,10 @@
                             {
                                 <div class="border-bottom pb-2 mb-2">
                                     <small class="text-muted">@f.FollowUpDate.ToString("dd-MMM-yyyy")</small>
+                                    @if (f.IsRestricted)
+                                    {
+                                        <span class="badge text-bg-warning text-dark ms-2"><i class="fa-solid fa-lock me-1"></i>Restricted</span>
+                                    }
                                     <a asp-controller="FollowUps" asp-action="Edit" asp-route-id="@f.Id" class="float-end ms-2">Edit</a>
                                     <a asp-controller="Print" asp-action="FollowUpNote" asp-route-followUpId="@f.Id" class="float-end" target="_blank">Print</a>
                                     <p class="mb-1">@(f.Notes ?? "No notes recorded")</p>
@@ -178,7 +200,13 @@
                             @foreach (var doc in Model.Documents)
                             {
                                 <tr>
-                                    <td>@doc.DocumentType</td>
+                                    <td>
+                                        @doc.DocumentType
+                                        @if (doc.IsRestricted)
+                                        {
+                                            <span class="badge text-bg-warning text-dark ms-1"><i class="fa-solid fa-lock me-1"></i>Restricted</span>
+                                        }
+                                    </td>
                                     <td>@doc.FileName</td>
                                     <td>@doc.UploadedAt.ToString("dd-MMM-yyyy")</td>
                                     <td><a asp-controller="Files" asp-action="Download" asp-route-id="@doc.Id" asp-route-scope="episode" class="btn btn-sm btn-success">Download</a></td>

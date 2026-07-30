@@ -43,6 +43,9 @@ public class AssessmentViewModel : IValidatableObject
     [Display(Name = "Additional Assessment Information")]
     public string? AdditionalInformation { get; set; }
 
+    [Display(Name = "Restricted clinical record")]
+    public bool IsRestricted { get; set; }
+
     // Non-bilateral prescription
     [Display(Name = "Prescription")]
     public string? PrescriptionCode { get; set; }

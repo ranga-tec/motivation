@@ -19,4 +19,7 @@ public class FittingViewModel
     [Display(Name = "Notes")]
     [DataType(DataType.MultilineText)]
     public string? Notes { get; set; }
+
+    [Display(Name = "Restricted clinical record")]
+    public bool IsRestricted { get; set; }
 }

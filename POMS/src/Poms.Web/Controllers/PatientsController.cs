@@ -17,6 +17,7 @@ public class PatientsController : Controller
     private readonly IPatientNumberService _patientNumberService;
     private readonly IDuplicateCheckService _duplicateCheckService;
     private readonly IFileStorageService _fileStorageService;
+    private readonly IRestrictedAccessService _restrictedAccess;
     private readonly ILogger<PatientsController> _logger;
 
     public PatientsController(
@@ -24,12 +25,14 @@ public class PatientsController : Controller
         IPatientNumberService patientNumberService,
         IDuplicateCheckService duplicateCheckService,
         IFileStorageService fileStorageService,
+        IRestrictedAccessService restrictedAccess,
         ILogger<PatientsController> logger)
     {
         _context = context;
         _patientNumberService = patientNumberService;
         _duplicateCheckService = duplicateCheckService;
         _fileStorageService = fileStorageService;
+        _restrictedAccess = restrictedAccess;
         _logger = logger;
     }
 
@@ -103,6 +106,7 @@ public class PatientsController : Controller
 
         if (patient == null) return NotFound();
 
+        await ApplyRestrictedFiltersAndAudit(patient, "PatientDetails");
         return View(patient);
     }
 
@@ -129,6 +133,7 @@ public class PatientsController : Controller
             .FirstOrDefaultAsync(p => p.Id == id);
 
         if (patient == null) return NotFound();
+        await ApplyRestrictedFiltersAndAudit(patient, "PatientFolder");
         return View(patient);
     }
 
@@ -650,5 +655,65 @@ public class PatientsController : Controller
         ViewBag.PatientCategories = new SelectList(Enum.GetValues(typeof(PatientCategory)).Cast<PatientCategory>());
         ViewBag.IdentificationTypes = new SelectList(Enum.GetValues(typeof(IdentificationType)).Cast<IdentificationType>());
         ViewBag.ReferralSources = new SelectList(await _context.ReferralSources.Where(r => r.IsActive).ToListAsync(), "Id", "Name");
+    }
+
+    private async Task ApplyRestrictedFiltersAndAudit(Patient patient, string action)
+    {
+        var access = await _restrictedAccess.GetScopeAsync(User);
+
+        patient.Documents = patient.Documents
+            .Where(document => access.CanAccess(document.IsRestricted, document.CreatedBy))
+            .ToList();
+        patient.Episodes = patient.Episodes
+            .Where(episode => access.CanAccess(episode.IsRestricted, episode.CreatedBy))
+            .ToList();
+        var visibleEpisodeIds = patient.Episodes
+            .Select(episode => episode.Id)
+            .ToHashSet();
+        patient.Appointments = patient.Appointments
+            .Where(appointment =>
+                !appointment.EpisodeId.HasValue ||
+                visibleEpisodeIds.Contains(appointment.EpisodeId.Value))
+            .ToList();
+
+        foreach (var episode in patient.Episodes)
+        {
+            episode.Assessments = episode.Assessments
+                .Where(record => access.CanAccess(record.IsRestricted, record.CreatedBy))
+                .ToList();
+            episode.Fittings = episode.Fittings
+                .Where(record => access.CanAccess(record.IsRestricted, record.CreatedBy))
+                .ToList();
+            episode.Deliveries = episode.Deliveries
+                .Where(record => access.CanAccess(record.IsRestricted, record.CreatedBy))
+                .ToList();
+            episode.FollowUps = episode.FollowUps
+                .Where(record => access.CanAccess(record.IsRestricted, record.CreatedBy))
+                .ToList();
+            episode.Documents = episode.Documents
+                .Where(document => access.CanAccess(document.IsRestricted, document.CreatedBy))
+                .ToList();
+        }
+
+        var restrictedItemsShown =
+            patient.Documents.Count(document => document.IsRestricted) +
+            patient.Episodes.Sum(episode =>
+                (episode.IsRestricted ? 1 : 0) +
+                episode.Assessments.Count(record => record.IsRestricted) +
+                episode.Fittings.Count(record => record.IsRestricted) +
+                episode.Deliveries.Count(record => record.IsRestricted) +
+                episode.FollowUps.Count(record => record.IsRestricted) +
+                episode.Documents.Count(document => document.IsRestricted));
+
+        await _restrictedAccess.AuditAsync(
+            access,
+            action,
+            nameof(Patient),
+            patient.Id,
+            restrictedItemsShown > 0,
+            true,
+            new { RestrictedItemsShown = restrictedItemsShown });
+        if (restrictedItemsShown > 0)
+            Response.Headers.CacheControl = "no-store, private";
     }
 }

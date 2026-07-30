@@ -19,4 +19,7 @@ public class FollowUpViewModel
     [Display(Name = "Remarks / Notes")]
     [DataType(DataType.MultilineText)]
     public string? Notes { get; set; }
+
+    [Display(Name = "Restricted clinical record")]
+    public bool IsRestricted { get; set; }
 }

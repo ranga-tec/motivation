@@ -17,6 +17,7 @@ public class EpisodeDocument : BaseEntity
     public string? Notes { get; set; }
     public string UploadedBy { get; set; } = default!;
     public DateTime UploadedAt { get; set; }
+    public bool IsRestricted { get; set; }
 
     public Episode Episode { get; set; } = default!;
 }

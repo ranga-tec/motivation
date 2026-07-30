@@ -12,6 +12,7 @@ public class Delivery : BaseEntity
     public string? Notes { get; set; }
     public int? DeviceId { get; set; }
     public string? Remarks { get; set; }
+    public bool IsRestricted { get; set; }
 
     public Episode Episode { get; set; } = default!;
     public DeviceCatalog? Device { get; set; }

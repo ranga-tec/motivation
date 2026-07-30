@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Poms.Domain.Entities;
 using Poms.Infrastructure.Data;
+using Poms.Infrastructure.Services;
 using Poms.Reporting.Models;
 using Poms.Reporting.Services;
 
@@ -12,11 +14,16 @@ public class PrintController : Controller
 {
     private readonly PomsDbContext _context;
     private readonly IPrintFormService _printFormService;
+    private readonly IRestrictedAccessService _restrictedAccess;
 
-    public PrintController(PomsDbContext context, IPrintFormService printFormService)
+    public PrintController(
+        PomsDbContext context,
+        IPrintFormService printFormService,
+        IRestrictedAccessService restrictedAccess)
     {
         _context = context;
         _printFormService = printFormService;
+        _restrictedAccess = restrictedAccess;
     }
 
     // GET: Print/RegistrationForm/{patientId}
@@ -65,6 +72,7 @@ public class PrintController : Controller
         var model = await BuildAssessmentPrintModel(assessmentId);
         if (model == null) return NotFound();
 
+        Response.Headers.CacheControl = "no-store, private";
         var pdf = _printFormService.GenerateAssessmentForm(model);
         return File(pdf, "application/pdf", $"AssessmentForm_{model.PatientNumber}.pdf");
     }
@@ -75,6 +83,7 @@ public class PrintController : Controller
         var model = await BuildAssessmentPrintModel(assessmentId);
         if (model == null) return NotFound();
 
+        Response.Headers.CacheControl = "no-store, private";
         var pdf = _printFormService.GeneratePrescriptionForm(model);
         return File(pdf, "application/pdf", $"PrescriptionForm_{model.PatientNumber}.pdf");
     }
@@ -87,6 +96,15 @@ public class PrintController : Controller
             .Include(d => d.Device)
             .FirstOrDefaultAsync(d => d.Id == deliveryId);
         if (delivery == null) return NotFound();
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        var allowed =
+            access.CanAccess(delivery.Episode.IsRestricted, delivery.Episode.CreatedBy) &&
+            access.CanAccess(delivery.IsRestricted, delivery.CreatedBy);
+        await _restrictedAccess.AuditAsync(
+            access, allowed ? "Print" : "PrintDenied",
+            nameof(Delivery), delivery.Id,
+            delivery.IsRestricted || delivery.Episode.IsRestricted, allowed);
+        if (!allowed) return NotFound();
 
         var model = new DeliveryPrintModel
         {
@@ -99,6 +117,7 @@ public class PrintController : Controller
             CreatedAt = delivery.CreatedAt
         };
 
+        Response.Headers.CacheControl = "no-store, private";
         var pdf = _printFormService.GenerateDeliveryNote(model);
         return File(pdf, "application/pdf", $"DeliveryNote_{model.PatientNumber}.pdf");
     }
@@ -110,6 +129,15 @@ public class PrintController : Controller
             .Include(f => f.Episode).ThenInclude(e => e.Patient)
             .FirstOrDefaultAsync(f => f.Id == followUpId);
         if (followUp == null) return NotFound();
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        var allowed =
+            access.CanAccess(followUp.Episode.IsRestricted, followUp.Episode.CreatedBy) &&
+            access.CanAccess(followUp.IsRestricted, followUp.CreatedBy);
+        await _restrictedAccess.AuditAsync(
+            access, allowed ? "Print" : "PrintDenied",
+            nameof(FollowUp), followUp.Id,
+            followUp.IsRestricted || followUp.Episode.IsRestricted, allowed);
+        if (!allowed) return NotFound();
 
         var model = new FollowUpPrintModel
         {
@@ -121,6 +149,7 @@ public class PrintController : Controller
             CreatedAt = followUp.CreatedAt
         };
 
+        Response.Headers.CacheControl = "no-store, private";
         var pdf = _printFormService.GenerateFollowUpNote(model);
         return File(pdf, "application/pdf", $"FollowUpNote_{model.PatientNumber}.pdf");
     }
@@ -134,6 +163,16 @@ public class PrintController : Controller
             .Include(a => a.Prescriptions)
             .FirstOrDefaultAsync(a => a.Id == assessmentId);
         if (assessment == null) return null;
+
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        var allowed =
+            access.CanAccess(assessment.Episode.IsRestricted, assessment.Episode.CreatedBy) &&
+            access.CanAccess(assessment.IsRestricted, assessment.CreatedBy);
+        await _restrictedAccess.AuditAsync(
+            access, allowed ? "Print" : "PrintDenied",
+            nameof(Assessment), assessment.Id,
+            assessment.IsRestricted || assessment.Episode.IsRestricted, allowed);
+        if (!allowed) return null;
 
         return new AssessmentPrintModel
         {

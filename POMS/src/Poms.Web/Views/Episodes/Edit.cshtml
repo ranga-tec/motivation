@@ -31,6 +31,11 @@
         <label asp-for="Remarks" class="form-label"></label>
         <textarea asp-for="Remarks" class="form-control" rows="3"></textarea>
     </div>
+    <div class="form-check border border-warning-subtle rounded-3 p-3 ps-5 mb-3 bg-warning-subtle">
+        <input asp-for="IsRestricted" class="form-check-input" />
+        <label asp-for="IsRestricted" class="form-check-label fw-semibold"></label>
+        <div class="form-text">Restricts this complete clinical record to authorized staff and its original author.</div>
+    </div>
 
     <div class="mb-3">
         <button type="submit" class="btn btn-warning">Update Record</button>

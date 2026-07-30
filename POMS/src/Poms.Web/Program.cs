@@ -118,6 +118,8 @@ builder.Services.AddScoped<IFileStorageService>(_ =>
     new FileStorageService(rootPath, maxFileSizeMB, allowedExtensions));
 builder.Services.AddScoped<IPrintFormService, PrintFormService>();
 builder.Services.AddScoped<IReportQueryService, ReportQueryService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IRestrictedAccessService, RestrictedAccessService>();
 
 // Add AutoMapper
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
@@ -152,6 +154,7 @@ using (var scope = app.Services.CreateScope())
             // PostgreSQL deployments on Contabo start from a fresh database, so build the schema
             // directly from the current model instead of applying the existing SQL Server migration.
             await context.Database.EnsureCreatedAsync();
+            await PostgresSchemaUpgrader.ApplyAsync(context);
         }
         else
         {

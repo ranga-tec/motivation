@@ -15,11 +15,16 @@ public class DeliveriesController : Controller
 {
     private readonly PomsDbContext _context;
     private readonly IFileStorageService _fileStorageService;
+    private readonly IRestrictedAccessService _restrictedAccess;
 
-    public DeliveriesController(PomsDbContext context, IFileStorageService fileStorageService)
+    public DeliveriesController(
+        PomsDbContext context,
+        IFileStorageService fileStorageService,
+        IRestrictedAccessService restrictedAccess)
     {
         _context = context;
         _fileStorageService = fileStorageService;
+        _restrictedAccess = restrictedAccess;
     }
 
     // GET: Deliveries/QuickAdd?patientId= - Dashboard Quick Action entry point (PRD 5.4)
@@ -35,6 +40,9 @@ public class DeliveriesController : Controller
     {
         var episode = await _context.Episodes.Include(e => e.Patient).FirstOrDefaultAsync(e => e.Id == episodeId);
         if (episode == null) return NotFound();
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        if (!access.CanAccess(episode.IsRestricted, episode.CreatedBy))
+            return NotFound();
 
         await PopulateDropdowns();
         return View(new DeliveryViewModel
@@ -54,6 +62,9 @@ public class DeliveriesController : Controller
         {
             var episode = await _context.Episodes.Include(e => e.Patient).FirstOrDefaultAsync(e => e.Id == model.EpisodeId);
             if (episode == null) return NotFound();
+            var access = await _restrictedAccess.GetScopeAsync(User);
+            if (!access.CanAccess(episode.IsRestricted, episode.CreatedBy))
+                return NotFound();
 
             var delivery = new Delivery
             {
@@ -61,6 +72,7 @@ public class DeliveriesController : Controller
                 DeliveryDate = model.DeliveryDate,
                 Notes = model.Notes,
                 DeviceId = model.DeviceId,
+                IsRestricted = model.IsRestricted,
                 CreatedBy = User.Identity?.Name
             };
             _context.Deliveries.Add(delivery);
@@ -78,7 +90,9 @@ public class DeliveriesController : Controller
                     ContentType = model.Attachment.ContentType,
                     FileSize = model.Attachment.Length,
                     UploadedBy = User.Identity?.Name ?? "",
-                    UploadedAt = DateTime.UtcNow
+                    UploadedAt = DateTime.UtcNow,
+                    IsRestricted = model.IsRestricted,
+                    CreatedBy = User.Identity?.Name
                 });
                 await _context.SaveChangesAsync();
             }
@@ -96,6 +110,20 @@ public class DeliveriesController : Controller
     {
         var delivery = await _context.Deliveries.Include(d => d.Episode).ThenInclude(e => e.Patient).FirstOrDefaultAsync(d => d.Id == id);
         if (delivery == null) return NotFound();
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        var canAccess = access.CanAccess(delivery.Episode.IsRestricted, delivery.Episode.CreatedBy) &&
+            access.CanAccess(delivery.IsRestricted, delivery.CreatedBy);
+        if (!canAccess)
+        {
+            await _restrictedAccess.AuditAsync(
+                access, "EditDenied", nameof(Delivery), delivery.Id, true, false);
+            return NotFound();
+        }
+        await _restrictedAccess.AuditAsync(
+            access, "EditView", nameof(Delivery), delivery.Id,
+            delivery.IsRestricted || delivery.Episode.IsRestricted, true);
+        if (delivery.IsRestricted || delivery.Episode.IsRestricted)
+            Response.Headers.CacheControl = "no-store, private";
 
         await PopulateDropdowns();
         return View(new DeliveryViewModel
@@ -106,7 +134,8 @@ public class DeliveriesController : Controller
             PatientName = delivery.Episode.Patient.FullName,
             DeliveryDate = delivery.DeliveryDate,
             Notes = delivery.Notes,
-            DeviceId = delivery.DeviceId
+            DeviceId = delivery.DeviceId,
+            IsRestricted = delivery.IsRestricted
         });
     }
 
@@ -119,16 +148,38 @@ public class DeliveriesController : Controller
 
         if (ModelState.IsValid)
         {
-            var delivery = await _context.Deliveries.FindAsync(id);
+            var delivery = await _context.Deliveries
+                .Include(record => record.Episode)
+                .FirstOrDefaultAsync(record => record.Id == id);
             if (delivery == null) return NotFound();
 
+            var access = await _restrictedAccess.GetScopeAsync(User);
+            var canAccess = access.CanAccess(delivery.Episode.IsRestricted, delivery.Episode.CreatedBy) &&
+                access.CanAccess(delivery.IsRestricted, delivery.CreatedBy);
+            if (!canAccess)
+            {
+                await _restrictedAccess.AuditAsync(
+                    access, "EditDenied", nameof(Delivery), delivery.Id, true, false);
+                return NotFound();
+            }
+
+            var wasRestricted = delivery.IsRestricted;
             delivery.DeliveryDate = model.DeliveryDate;
             delivery.Notes = model.Notes;
             delivery.DeviceId = model.DeviceId;
+            delivery.IsRestricted = model.IsRestricted;
             delivery.UpdatedBy = User.Identity?.Name;
             delivery.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+            await _restrictedAccess.AuditAsync(
+                access,
+                "Update",
+                nameof(Delivery),
+                delivery.Id,
+                wasRestricted || delivery.IsRestricted || delivery.Episode.IsRestricted,
+                true,
+                new { delivery.IsRestricted });
 
             TempData["Success"] = "Delivery updated.";
             return RedirectToAction("Details", "Episodes", new { id = delivery.EpisodeId });
@@ -151,6 +202,10 @@ public class DeliveriesController : Controller
             .Where(e => e.PatientId == patientId)
             .OrderByDescending(e => e.RecordDate)
             .ToListAsync();
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        episodes = episodes
+            .Where(episode => access.CanAccess(episode.IsRestricted, episode.CreatedBy))
+            .ToList();
 
         var active = episodes.Where(e => e.Status == RecordStatus.Active).ToList();
 

@@ -16,12 +16,18 @@ public class ReportsController : Controller
     private readonly IReportQueryService _reportQueryService;
     private readonly IPrintFormService _printFormService;
     private readonly PomsDbContext _context;
+    private readonly IRestrictedAccessService _restrictedAccess;
 
-    public ReportsController(IReportQueryService reportQueryService, IPrintFormService printFormService, PomsDbContext context)
+    public ReportsController(
+        IReportQueryService reportQueryService,
+        IPrintFormService printFormService,
+        PomsDbContext context,
+        IRestrictedAccessService restrictedAccess)
     {
         _reportQueryService = reportQueryService;
         _printFormService = printFormService;
         _context = context;
+        _restrictedAccess = restrictedAccess;
     }
 
     public IActionResult Index() => View();
@@ -42,7 +48,8 @@ public class ReportsController : Controller
     public async Task<IActionResult> ActiveRecords(ReportFilter filter, bool export = false)
     {
         filter.RecordStatus = RecordStatus.Active;
-        var rows = await _reportQueryService.FilterEpisodes(filter)
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        var rows = await access.Filter(_reportQueryService.FilterEpisodes(filter))
             .OrderByDescending(e => e.RecordDate)
             .Select(e => new[] { e.Patient.PatientNumber, e.Patient.FullName, e.Center.Name, e.RecordDate.ToString("dd-MMM-yyyy"), e.Status.ToString() })
             .ToListAsync();
@@ -54,7 +61,8 @@ public class ReportsController : Controller
     // 3. Assessment Report
     public async Task<IActionResult> Assessment(ReportFilter filter, bool export = false)
     {
-        var rows = await _reportQueryService.FilterAssessments(filter)
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        var rows = await access.Filter(_reportQueryService.FilterAssessments(filter))
             .OrderByDescending(a => a.AssessedOn)
             .Select(a => new[] { a.Episode.Patient.PatientNumber, a.Episode.Patient.FullName, a.AssessmentType.ToString(), a.LimbCategory.ToString(), a.MainProblemType.Name, a.AssessedOn.ToString("dd-MMM-yyyy") })
             .ToListAsync();
@@ -67,7 +75,8 @@ public class ReportsController : Controller
     public async Task<IActionResult> ProstheticAssessment(ReportFilter filter, bool export = false)
     {
         filter.AssessmentType = AssessmentType.Prosthetic;
-        var rows = await _reportQueryService.FilterAssessments(filter)
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        var rows = await access.Filter(_reportQueryService.FilterAssessments(filter))
             .OrderByDescending(a => a.AssessedOn)
             .Select(a => new[] { a.Episode.Patient.PatientNumber, a.Episode.Patient.FullName, a.LimbCategory.ToString(), a.Side.ToString(), a.AssessedOn.ToString("dd-MMM-yyyy") })
             .ToListAsync();
@@ -80,7 +89,8 @@ public class ReportsController : Controller
     public async Task<IActionResult> OrthoticAssessment(ReportFilter filter, bool export = false)
     {
         filter.AssessmentType = AssessmentType.Orthotic;
-        var rows = await _reportQueryService.FilterAssessments(filter)
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        var rows = await access.Filter(_reportQueryService.FilterAssessments(filter))
             .OrderByDescending(a => a.AssessedOn)
             .Select(a => new[] { a.Episode.Patient.PatientNumber, a.Episode.Patient.FullName, a.LimbCategory.ToString(), a.Side.ToString(), a.AssessedOn.ToString("dd-MMM-yyyy") })
             .ToListAsync();
@@ -92,7 +102,8 @@ public class ReportsController : Controller
     // 6. Fitting Report
     public async Task<IActionResult> Fitting(ReportFilter filter, bool export = false)
     {
-        var rows = await _reportQueryService.FilterFittings(filter)
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        var rows = await access.Filter(_reportQueryService.FilterFittings(filter))
             .OrderByDescending(f => f.FittingDate)
             .Select(f => new[] { f.Episode.Patient.PatientNumber, f.Episode.Patient.FullName, f.Episode.Center.Name, f.FittingDate.ToString("dd-MMM-yyyy"), f.Notes ?? "" })
             .ToListAsync();
@@ -104,7 +115,8 @@ public class ReportsController : Controller
     // 7. Delivery Report
     public async Task<IActionResult> Delivery(ReportFilter filter, bool export = false)
     {
-        var rows = await _reportQueryService.FilterDeliveries(filter)
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        var rows = await access.Filter(_reportQueryService.FilterDeliveries(filter))
             .OrderByDescending(d => d.DeliveryDate)
             .Select(d => new[] { d.Episode.Patient.PatientNumber, d.Episode.Patient.FullName, d.Episode.Center.Name, d.DeliveryDate.ToString("dd-MMM-yyyy"), d.Notes ?? "" })
             .ToListAsync();
@@ -116,7 +128,8 @@ public class ReportsController : Controller
     // 8. Follow-up Report
     public async Task<IActionResult> FollowUp(ReportFilter filter, bool export = false)
     {
-        var rows = await _reportQueryService.FilterFollowUps(filter)
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        var rows = await access.Filter(_reportQueryService.FilterFollowUps(filter))
             .OrderByDescending(f => f.FollowUpDate)
             .Select(f => new[] { f.Episode.Patient.PatientNumber, f.Episode.Patient.FullName, f.Episode.Center.Name, f.FollowUpDate.ToString("dd-MMM-yyyy"), f.Notes ?? "" })
             .ToListAsync();
@@ -196,6 +209,7 @@ public class ReportsController : Controller
 
     private async Task<IActionResult> Render(string title, string actionName, string[] headers, List<string[]> rows, ReportFilter filter, bool export)
     {
+        Response.Headers.CacheControl = "no-store, private";
         if (export)
         {
             var pdf = _printFormService.GenerateReportPdf(title, headers, rows);

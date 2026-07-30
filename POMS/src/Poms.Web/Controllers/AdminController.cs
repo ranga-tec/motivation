@@ -293,6 +293,12 @@ public class AdminController : Controller
             ModelState.AddModelError("NewUser.Email", "An account with this email address already exists.");
         }
 
+        var employeeNumber = model.EmployeeNumber.Trim().ToUpperInvariant();
+        if (await _context.EmployeeProfiles.AnyAsync(profile => profile.EmployeeNumber == employeeNumber))
+        {
+            ModelState.AddModelError("NewUser.EmployeeNumber", "This employee number is already in use.");
+        }
+
         if (!ModelState.IsValid)
         {
             return View(nameof(Users), await BuildUserManagementViewModel(model));
@@ -322,12 +328,90 @@ public class AdminController : Controller
             return View(nameof(Users), await BuildUserManagementViewModel(model));
         }
 
+        try
+        {
+            _context.EmployeeProfiles.Add(new EmployeeProfile
+            {
+                UserId = user.Id,
+                EmployeeNumber = employeeNumber,
+                FullName = model.FullName.Trim(),
+                Designation = model.Designation.Trim(),
+                Department = NullIfWhiteSpace(model.Department),
+                MobileNumber = model.MobileNumber.Trim(),
+                WorkPhoneNumber = NullIfWhiteSpace(model.WorkPhoneNumber),
+                CanAccessRestrictedClinicalData = model.CanAccessRestrictedClinicalData,
+                CreatedBy = User.Identity?.Name
+            });
+            await _context.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unable to create employee profile for {UserEmail}.", email);
+            await _userManager.DeleteAsync(user);
+            ModelState.AddModelError(string.Empty, "The staff account could not be created. Please try again.");
+            return View(nameof(Users), await BuildUserManagementViewModel(model));
+        }
+
         _logger.LogInformation(
             "Administrator {Administrator} created user {UserEmail} with roles {Roles}.",
             User.Identity?.Name,
             email,
             string.Join(", ", model.Roles));
         TempData["Success"] = $"Account created for {email}.";
+        return RedirectToAction(nameof(Users));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UserUpdateProfile(UpdateEmployeeProfileViewModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            TempData["Error"] = FirstModelStateError();
+            return RedirectToAction(nameof(Users));
+        }
+
+        var user = await _userManager.FindByIdAsync(model.UserId);
+        if (user is null) return NotFound();
+
+        var employeeNumber = model.EmployeeNumber.Trim().ToUpperInvariant();
+        if (await _context.EmployeeProfiles.AnyAsync(profile =>
+                profile.UserId != model.UserId &&
+                profile.EmployeeNumber == employeeNumber))
+        {
+            TempData["Error"] = "This employee number is already in use.";
+            return RedirectToAction(nameof(Users));
+        }
+
+        var profile = await _context.EmployeeProfiles
+            .FirstOrDefaultAsync(item => item.UserId == model.UserId);
+
+        if (profile is null)
+        {
+            profile = new EmployeeProfile
+            {
+                UserId = model.UserId,
+                CreatedBy = User.Identity?.Name
+            };
+            _context.EmployeeProfiles.Add(profile);
+        }
+
+        profile.EmployeeNumber = employeeNumber;
+        profile.FullName = model.FullName.Trim();
+        profile.Designation = model.Designation.Trim();
+        profile.Department = NullIfWhiteSpace(model.Department);
+        profile.MobileNumber = model.MobileNumber.Trim();
+        profile.WorkPhoneNumber = NullIfWhiteSpace(model.WorkPhoneNumber);
+        profile.CanAccessRestrictedClinicalData = model.CanAccessRestrictedClinicalData;
+        profile.UpdatedAt = DateTime.UtcNow;
+        profile.UpdatedBy = User.Identity?.Name;
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Administrator {Administrator} updated employee profile and restricted-data access for {UserEmail}.",
+            User.Identity?.Name,
+            user.Email);
+        TempData["Success"] = $"Staff profile updated for {user.Email}.";
         return RedirectToAction(nameof(Users));
     }
 
@@ -480,14 +564,26 @@ public class AdminController : Controller
     {
         var currentUserId = _userManager.GetUserId(User);
         var users = await _userManager.Users.OrderBy(user => user.Email).ToListAsync();
+        var userIds = users.Select(user => user.Id).ToList();
+        var profiles = await _context.EmployeeProfiles
+            .Where(profile => userIds.Contains(profile.UserId))
+            .ToDictionaryAsync(profile => profile.UserId);
         var rows = new List<UserAccessRowViewModel>(users.Count);
 
         foreach (var user in users)
         {
+            profiles.TryGetValue(user.Id, out var profile);
             rows.Add(new UserAccessRowViewModel
             {
                 Id = user.Id,
                 Email = user.Email ?? user.UserName ?? "Unknown account",
+                FullName = profile?.FullName ?? user.Email ?? user.UserName ?? "Staff member",
+                EmployeeNumber = profile?.EmployeeNumber ?? "Profile incomplete",
+                Designation = profile?.Designation ?? "Not provided",
+                Department = profile?.Department,
+                MobileNumber = profile?.MobileNumber ?? "Not provided",
+                WorkPhoneNumber = profile?.WorkPhoneNumber,
+                CanAccessRestrictedClinicalData = profile?.CanAccessRestrictedClinicalData ?? false,
                 Roles = (await _userManager.GetRolesAsync(user)).ToList(),
                 IsLocked = IsUserLocked(user),
                 IsCurrentUser = user.Id == currentUserId
@@ -561,6 +657,11 @@ public class AdminController : Controller
     private static string IdentityErrorMessage(IdentityResult result)
     {
         return string.Join("; ", result.Errors.Select(error => error.Description));
+    }
+
+    private static string? NullIfWhiteSpace(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 
     private static string LookupTitle(string type) => type switch

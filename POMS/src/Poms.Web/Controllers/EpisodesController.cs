@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Poms.Domain.Entities;
 using Poms.Domain.Enums;
 using Poms.Infrastructure.Data;
+using Poms.Infrastructure.Services;
 using Poms.Web.ViewModels;
 
 namespace Poms.Web.Controllers;
@@ -16,11 +17,16 @@ namespace Poms.Web.Controllers;
 public class EpisodesController : Controller
 {
     private readonly PomsDbContext _context;
+    private readonly IRestrictedAccessService _restrictedAccess;
     private readonly ILogger<EpisodesController> _logger;
 
-    public EpisodesController(PomsDbContext context, ILogger<EpisodesController> logger)
+    public EpisodesController(
+        PomsDbContext context,
+        IRestrictedAccessService restrictedAccess,
+        ILogger<EpisodesController> logger)
     {
         _context = context;
+        _restrictedAccess = restrictedAccess;
         _logger = logger;
     }
 
@@ -31,6 +37,8 @@ public class EpisodesController : Controller
             .Include(e => e.Patient)
             .Include(e => e.Center)
             .AsQueryable();
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        query = access.Filter(query);
 
         if (!string.IsNullOrEmpty(searchString))
         {
@@ -82,6 +90,49 @@ public class EpisodesController : Controller
 
         if (episode == null) return NotFound();
 
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        var episodeAllowed = access.CanAccess(episode.IsRestricted, episode.CreatedBy);
+        if (!episodeAllowed)
+        {
+            await _restrictedAccess.AuditAsync(
+                access, "ViewDenied", nameof(Episode), episode.Id, true, false);
+            return NotFound();
+        }
+
+        episode.Assessments = episode.Assessments
+            .Where(record => access.CanAccess(record.IsRestricted, record.CreatedBy))
+            .ToList();
+        episode.Fittings = episode.Fittings
+            .Where(record => access.CanAccess(record.IsRestricted, record.CreatedBy))
+            .ToList();
+        episode.Deliveries = episode.Deliveries
+            .Where(record => access.CanAccess(record.IsRestricted, record.CreatedBy))
+            .ToList();
+        episode.FollowUps = episode.FollowUps
+            .Where(record => access.CanAccess(record.IsRestricted, record.CreatedBy))
+            .ToList();
+        episode.Documents = episode.Documents
+            .Where(record => access.CanAccess(record.IsRestricted, record.CreatedBy))
+            .ToList();
+
+        var restrictedItemsShown =
+            (episode.IsRestricted ? 1 : 0) +
+            episode.Assessments.Count(record => record.IsRestricted) +
+            episode.Fittings.Count(record => record.IsRestricted) +
+            episode.Deliveries.Count(record => record.IsRestricted) +
+            episode.FollowUps.Count(record => record.IsRestricted) +
+            episode.Documents.Count(record => record.IsRestricted);
+        await _restrictedAccess.AuditAsync(
+            access,
+            "View",
+            nameof(Episode),
+            episode.Id,
+            restrictedItemsShown > 0,
+            true,
+            new { RestrictedItemsShown = restrictedItemsShown });
+        if (restrictedItemsShown > 0)
+            Response.Headers.CacheControl = "no-store, private";
+
         return View(episode);
     }
 
@@ -122,6 +173,7 @@ public class EpisodesController : Controller
                     Status = model.Status,
                     RecordDate = model.RecordDate,
                     Remarks = model.Remarks,
+                    IsRestricted = model.IsRestricted,
                     CreatedBy = User.Identity?.Name
                 };
 
@@ -153,6 +205,19 @@ public class EpisodesController : Controller
         var episode = await _context.Episodes.Include(e => e.Patient).FirstOrDefaultAsync(e => e.Id == id);
         if (episode == null) return NotFound();
 
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        if (!access.CanAccess(episode.IsRestricted, episode.CreatedBy))
+        {
+            await _restrictedAccess.AuditAsync(
+                access, "EditDenied", nameof(Episode), episode.Id, true, false);
+            return NotFound();
+        }
+        await _restrictedAccess.AuditAsync(
+            access, "EditView", nameof(Episode), episode.Id,
+            episode.IsRestricted, true);
+        if (episode.IsRestricted)
+            Response.Headers.CacheControl = "no-store, private";
+
         var model = new EpisodeViewModel
         {
             Id = episode.Id,
@@ -161,6 +226,7 @@ public class EpisodesController : Controller
             Status = episode.Status,
             RecordDate = episode.RecordDate,
             Remarks = episode.Remarks,
+            IsRestricted = episode.IsRestricted,
             PatientNumber = episode.Patient.PatientNumber,
             PatientName = episode.Patient.FullName
         };
@@ -183,15 +249,33 @@ public class EpisodesController : Controller
                 var episode = await _context.Episodes.FirstOrDefaultAsync(e => e.Id == id);
                 if (episode == null) return NotFound();
 
+                var access = await _restrictedAccess.GetScopeAsync(User);
+                if (!access.CanAccess(episode.IsRestricted, episode.CreatedBy))
+                {
+                    await _restrictedAccess.AuditAsync(
+                        access, "EditDenied", nameof(Episode), episode.Id, true, false);
+                    return NotFound();
+                }
+
+                var wasRestricted = episode.IsRestricted;
                 episode.CenterId = model.CenterId;
                 episode.Status = model.Status;
                 episode.RecordDate = model.RecordDate;
                 episode.Remarks = model.Remarks;
+                episode.IsRestricted = model.IsRestricted;
                 episode.UpdatedBy = User.Identity?.Name;
                 episode.UpdatedAt = DateTime.UtcNow;
 
                 _context.Update(episode);
                 await _context.SaveChangesAsync();
+                await _restrictedAccess.AuditAsync(
+                    access,
+                    "Update",
+                    nameof(Episode),
+                    episode.Id,
+                    wasRestricted || episode.IsRestricted,
+                    true,
+                    new { episode.IsRestricted });
 
                 TempData["Success"] = "Record updated successfully!";
                 return RedirectToAction(nameof(Details), new { id = episode.Id });

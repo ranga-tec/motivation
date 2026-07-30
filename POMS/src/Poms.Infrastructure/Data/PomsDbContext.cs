@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Poms.Domain.Entities;
@@ -32,6 +33,7 @@ public class PomsDbContext : IdentityDbContext
     public DbSet<ComponentCatalog> ComponentCatalogs => Set<ComponentCatalog>();
     public DbSet<NumberSeries> NumberSeries => Set<NumberSeries>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<EmployeeProfile> EmployeeProfiles => Set<EmployeeProfile>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -71,6 +73,7 @@ public class PomsDbContext : IdentityDbContext
             entity.Property(e => e.Status).HasConversion<string>();
             entity.HasIndex(e => e.Status);
             entity.HasIndex(e => e.CenterId);
+            entity.HasIndex(e => e.IsRestricted);
             entity.HasOne(e => e.Patient).WithMany(p => p.Episodes).HasForeignKey(e => e.PatientId);
             entity.HasOne(e => e.Center).WithMany().HasForeignKey(e => e.CenterId).OnDelete(DeleteBehavior.Restrict);
             entity.HasQueryFilter(e => !e.IsDeleted);
@@ -83,6 +86,7 @@ public class PomsDbContext : IdentityDbContext
             entity.Property(e => e.LimbCategory).HasConversion<string>();
             entity.Property(e => e.Side).HasConversion<string>();
             entity.HasIndex(e => e.AssessedOn);
+            entity.HasIndex(e => e.IsRestricted);
             entity.HasOne(e => e.Episode).WithMany(ep => ep.Assessments).HasForeignKey(e => e.EpisodeId);
             entity.HasOne(e => e.MainProblemType).WithMany().HasForeignKey(e => e.MainProblemTypeId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(e => e.CauseReasonType).WithMany().HasForeignKey(e => e.CauseReasonTypeId).OnDelete(DeleteBehavior.Restrict);
@@ -102,6 +106,7 @@ public class PomsDbContext : IdentityDbContext
         builder.Entity<Fitting>(entity =>
         {
             entity.HasIndex(e => e.FittingDate);
+            entity.HasIndex(e => e.IsRestricted);
             entity.HasOne(e => e.Episode).WithMany(ep => ep.Fittings).HasForeignKey(e => e.EpisodeId);
             entity.HasQueryFilter(e => !e.IsDeleted);
         });
@@ -110,6 +115,7 @@ public class PomsDbContext : IdentityDbContext
         builder.Entity<Delivery>(entity =>
         {
             entity.HasIndex(e => e.DeliveryDate);
+            entity.HasIndex(e => e.IsRestricted);
             entity.HasOne(e => e.Episode).WithMany(ep => ep.Deliveries).HasForeignKey(e => e.EpisodeId);
             entity.HasOne(e => e.Device).WithMany().HasForeignKey(e => e.DeviceId).OnDelete(DeleteBehavior.Restrict);
             entity.HasQueryFilter(e => !e.IsDeleted);
@@ -119,6 +125,7 @@ public class PomsDbContext : IdentityDbContext
         builder.Entity<FollowUp>(entity =>
         {
             entity.HasIndex(e => e.FollowUpDate);
+            entity.HasIndex(e => e.IsRestricted);
             entity.HasOne(e => e.Episode).WithMany(ep => ep.FollowUps).HasForeignKey(e => e.EpisodeId);
             entity.HasQueryFilter(e => !e.IsDeleted);
         });
@@ -138,6 +145,7 @@ public class PomsDbContext : IdentityDbContext
         builder.Entity<PatientDocument>(entity =>
         {
             entity.Property(e => e.DocumentType).HasConversion<string>();
+            entity.HasIndex(e => e.IsRestricted);
             entity.HasOne(e => e.Patient).WithMany(p => p.Documents).HasForeignKey(e => e.PatientId);
             entity.HasQueryFilter(e => !e.IsDeleted);
         });
@@ -145,8 +153,26 @@ public class PomsDbContext : IdentityDbContext
         builder.Entity<EpisodeDocument>(entity =>
         {
             entity.Property(e => e.DocumentType).HasConversion<string>();
+            entity.HasIndex(e => e.IsRestricted);
             entity.HasOne(e => e.Episode).WithMany(ep => ep.Documents).HasForeignKey(e => e.EpisodeId);
             entity.HasQueryFilter(e => !e.IsDeleted);
+        });
+
+        builder.Entity<EmployeeProfile>(entity =>
+        {
+            entity.HasIndex(e => e.UserId).IsUnique();
+            entity.HasIndex(e => e.EmployeeNumber).IsUnique();
+            entity.Property(e => e.UserId).HasMaxLength(450).IsRequired();
+            entity.Property(e => e.EmployeeNumber).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.FullName).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Designation).HasMaxLength(150).IsRequired();
+            entity.Property(e => e.Department).HasMaxLength(150);
+            entity.Property(e => e.MobileNumber).HasMaxLength(30).IsRequired();
+            entity.Property(e => e.WorkPhoneNumber).HasMaxLength(30);
+            entity.HasOne<IdentityUser>()
+                .WithOne()
+                .HasForeignKey<EmployeeProfile>(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Location entities

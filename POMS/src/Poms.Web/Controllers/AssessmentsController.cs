@@ -6,6 +6,7 @@ using Poms.Domain.Constants;
 using Poms.Domain.Entities;
 using Poms.Domain.Enums;
 using Poms.Infrastructure.Data;
+using Poms.Infrastructure.Services;
 using Poms.Web.ViewModels;
 
 namespace Poms.Web.Controllers;
@@ -14,11 +15,16 @@ namespace Poms.Web.Controllers;
 public class AssessmentsController : Controller
 {
     private readonly PomsDbContext _context;
+    private readonly IRestrictedAccessService _restrictedAccess;
     private readonly ILogger<AssessmentsController> _logger;
 
-    public AssessmentsController(PomsDbContext context, ILogger<AssessmentsController> logger)
+    public AssessmentsController(
+        PomsDbContext context,
+        IRestrictedAccessService restrictedAccess,
+        ILogger<AssessmentsController> logger)
     {
         _context = context;
+        _restrictedAccess = restrictedAccess;
         _logger = logger;
     }
 
@@ -27,6 +33,9 @@ public class AssessmentsController : Controller
     {
         var episode = await _context.Episodes.Include(e => e.Patient).FirstOrDefaultAsync(e => e.Id == episodeId);
         if (episode == null) return NotFound();
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        if (!access.CanAccess(episode.IsRestricted, episode.CreatedBy))
+            return NotFound();
 
         var vm = new AssessmentViewModel
         {
@@ -53,6 +62,14 @@ public class AssessmentsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(AssessmentViewModel model)
     {
+        var parentEpisode = await _context.Episodes
+            .AsNoTracking()
+            .FirstOrDefaultAsync(episode => episode.Id == model.EpisodeId);
+        if (parentEpisode is null) return NotFound();
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        if (!access.CanAccess(parentEpisode.IsRestricted, parentEpisode.CreatedBy))
+            return NotFound();
+
         if (ModelState.IsValid)
         {
             try
@@ -68,6 +85,7 @@ public class AssessmentsController : Controller
                     CauseReasonTypeId = model.CauseReasonTypeId,
                     CauseReasonOther = model.CauseReasonOther,
                     AdditionalInformation = model.AdditionalInformation,
+                    IsRestricted = model.IsRestricted,
                     CreatedBy = User.Identity?.Name
                 };
                 _context.Assessments.Add(assessment);
@@ -126,8 +144,24 @@ public class AssessmentsController : Controller
             Side = assessment.Side,
             CauseReasonTypeId = assessment.CauseReasonTypeId,
             CauseReasonOther = assessment.CauseReasonOther,
-            AdditionalInformation = assessment.AdditionalInformation
+            AdditionalInformation = assessment.AdditionalInformation,
+            IsRestricted = assessment.IsRestricted
         };
+
+        var access = await _restrictedAccess.GetScopeAsync(User);
+        var canAccess = access.CanAccess(assessment.Episode.IsRestricted, assessment.Episode.CreatedBy) &&
+            access.CanAccess(assessment.IsRestricted, assessment.CreatedBy);
+        if (!canAccess)
+        {
+            await _restrictedAccess.AuditAsync(
+                access, "EditDenied", nameof(Assessment), assessment.Id, true, false);
+            return NotFound();
+        }
+        await _restrictedAccess.AuditAsync(
+            access, "EditView", nameof(Assessment), assessment.Id,
+            assessment.IsRestricted || assessment.Episode.IsRestricted, true);
+        if (assessment.IsRestricted || assessment.Episode.IsRestricted)
+            Response.Headers.CacheControl = "no-store, private";
 
         if (assessment.Side == Side.Bilateral)
         {
@@ -163,9 +197,23 @@ public class AssessmentsController : Controller
         {
             try
             {
-                var assessment = await _context.Assessments.Include(a => a.Prescriptions).FirstOrDefaultAsync(a => a.Id == id);
+                var assessment = await _context.Assessments
+                    .Include(a => a.Episode)
+                    .Include(a => a.Prescriptions)
+                    .FirstOrDefaultAsync(a => a.Id == id);
                 if (assessment == null) return NotFound();
 
+                var access = await _restrictedAccess.GetScopeAsync(User);
+                var canAccess = access.CanAccess(assessment.Episode.IsRestricted, assessment.Episode.CreatedBy) &&
+                    access.CanAccess(assessment.IsRestricted, assessment.CreatedBy);
+                if (!canAccess)
+                {
+                    await _restrictedAccess.AuditAsync(
+                        access, "EditDenied", nameof(Assessment), assessment.Id, true, false);
+                    return NotFound();
+                }
+
+                var wasRestricted = assessment.IsRestricted;
                 assessment.AssessmentType = model.AssessmentType;
                 assessment.LimbCategory = model.LimbCategory;
                 assessment.AssessedOn = model.AssessedOn;
@@ -174,6 +222,7 @@ public class AssessmentsController : Controller
                 assessment.CauseReasonTypeId = model.CauseReasonTypeId;
                 assessment.CauseReasonOther = model.CauseReasonOther;
                 assessment.AdditionalInformation = model.AdditionalInformation;
+                assessment.IsRestricted = model.IsRestricted;
                 assessment.UpdatedBy = User.Identity?.Name;
                 assessment.UpdatedAt = DateTime.UtcNow;
 
@@ -197,6 +246,14 @@ public class AssessmentsController : Controller
                 }
 
                 await _context.SaveChangesAsync();
+                await _restrictedAccess.AuditAsync(
+                    access,
+                    "Update",
+                    nameof(Assessment),
+                    assessment.Id,
+                    wasRestricted || assessment.IsRestricted || assessment.Episode.IsRestricted,
+                    true,
+                    new { assessment.IsRestricted });
 
                 TempData["Success"] = "Assessment updated successfully!";
                 return RedirectToAction("Details", "Episodes", new { id = assessment.EpisodeId });

@@ -13,6 +13,7 @@ public class Episode : BaseEntity
     public RecordStatus Status { get; set; } = RecordStatus.Active;
     public DateOnly RecordDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
     public string? Remarks { get; set; }
+    public bool IsRestricted { get; set; }
 
     // Navigation
     public Patient Patient { get; set; } = default!;
