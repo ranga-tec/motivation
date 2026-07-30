@@ -3,7 +3,7 @@
 @{
     ViewData["Title"] = "Appointments";
     var typeOptions = Html.GetEnumSelectList<Poms.Domain.Enums.AppointmentType>().ToList();
-    var typeLabels = typeOptions.ToDictionary(option => option.Value, option => option.Text);
+    var typeLabels = typeOptions.ToDictionary(option => int.Parse(option.Value), option => option.Text);
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -51,7 +51,7 @@
             <tr>
                 <td>@a.AppointmentDate.ToString("dd-MMM-yyyy") @a.AppointmentTime</td>
                 <td>@a.Patient.PatientNumber - @a.Patient.FullName</td>
-                <td>@typeLabels[a.Type.ToString()]</td>
+                <td>@typeLabels[(int)a.Type]</td>
                 <td>@(a.AssignedClinicianName ?? "Not assigned")</td>
                 <td>
                     <span class="badge @(a.Status == Poms.Domain.Enums.AppointmentStatus.Scheduled ? "bg-warning" : a.Status == Poms.Domain.Enums.AppointmentStatus.Completed ? "bg-success" : "bg-secondary")">
