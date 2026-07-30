@@ -36,6 +36,8 @@ public class AssessmentPrintModel
     public string PatientNumber { get; set; } = "";
     public string PatientName { get; set; } = "";
     public DateOnly AssessedOn { get; set; }
+    public TimeOnly? StartTime { get; set; }
+    public TimeOnly? EndTime { get; set; }
     public string AssessmentType { get; set; } = "";
     public string LimbCategory { get; set; } = "";
     public string MainProblemType { get; set; } = "";
@@ -51,6 +53,7 @@ public class DeliveryPrintModel
     public string PatientNumber { get; set; } = "";
     public string PatientName { get; set; } = "";
     public DateOnly DeliveryDate { get; set; }
+    public TimeOnly? DeliveryTime { get; set; }
     public string? Notes { get; set; }
     public string? DeviceName { get; set; }
     public string? CreatedBy { get; set; }
@@ -62,6 +65,8 @@ public class FollowUpPrintModel
     public string PatientNumber { get; set; } = "";
     public string PatientName { get; set; } = "";
     public DateOnly FollowUpDate { get; set; }
+    public TimeOnly? StartTime { get; set; }
+    public TimeOnly? EndTime { get; set; }
     public string? Notes { get; set; }
     public string? CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }

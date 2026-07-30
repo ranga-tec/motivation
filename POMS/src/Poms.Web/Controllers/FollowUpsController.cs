@@ -65,6 +65,8 @@ public class FollowUpsController : Controller
             {
                 EpisodeId = model.EpisodeId,
                 FollowUpDate = model.FollowUpDate,
+                StartTime = model.StartTime,
+                EndTime = model.EndTime,
                 Notes = model.Notes,
                 IsRestricted = model.IsRestricted,
                 CreatedBy = User.Identity?.Name
@@ -106,6 +108,8 @@ public class FollowUpsController : Controller
             PatientNumber = followUp.Episode.Patient.PatientNumber,
             PatientName = followUp.Episode.Patient.FullName,
             FollowUpDate = followUp.FollowUpDate,
+            StartTime = followUp.StartTime,
+            EndTime = followUp.EndTime,
             Notes = followUp.Notes,
             IsRestricted = followUp.IsRestricted
         });
@@ -137,6 +141,8 @@ public class FollowUpsController : Controller
 
             var wasRestricted = followUp.IsRestricted;
             followUp.FollowUpDate = model.FollowUpDate;
+            followUp.StartTime = model.StartTime;
+            followUp.EndTime = model.EndTime;
             followUp.Notes = model.Notes;
             followUp.IsRestricted = model.IsRestricted;
             followUp.UpdatedBy = User.Identity?.Name;

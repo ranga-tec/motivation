@@ -78,7 +78,13 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label asp-for="NewUser.Designation" class="form-label"></label>
-                                    <input asp-for="NewUser.Designation" class="form-control" />
+                                    <input asp-for="NewUser.Designation"
+                                           class="form-control"
+                                           type="search"
+                                           list="staffDesignationOptions"
+                                           autocomplete="off"
+                                           placeholder="Select or type a designation" />
+                                    <div class="form-text">Choose a clinical designation or enter another staff role.</div>
                                     <span asp-validation-for="NewUser.Designation" class="text-danger"></span>
                                 </div>
                                 <div class="col-md-6">
@@ -328,7 +334,15 @@
                         </div>
                         <div class="col-md-6">
                             <label for="profileDesignation" class="form-label">Designation</label>
-                            <input id="profileDesignation" name="Designation" class="form-control" required maxlength="150" data-profile-designation-input />
+                            <input id="profileDesignation"
+                                   name="Designation"
+                                   class="form-control"
+                                   type="search"
+                                   list="staffDesignationOptions"
+                                   autocomplete="off"
+                                   required
+                                   maxlength="150"
+                                   data-profile-designation-input />
                         </div>
                         <div class="col-md-6">
                             <label for="profileDepartment" class="form-label">Department</label>
@@ -363,6 +377,12 @@
         </div>
     </div>
 </div>
+
+<datalist id="staffDesignationOptions">
+    <option value="Prosthetist"></option>
+    <option value="Orthotist"></option>
+    <option value="Prosthetist / Orthotist"></option>
+</datalist>
 
 <div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">

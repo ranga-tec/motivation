@@ -20,6 +20,11 @@ public class EpisodeViewModel
     [Display(Name = "Record Date")]
     public DateOnly RecordDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
 
+    [Required]
+    [Display(Name = "Record Time")]
+    public TimeOnly? RecordTime { get; set; } =
+        new(TimeOnly.FromDateTime(DateTime.Now).Hour, TimeOnly.FromDateTime(DateTime.Now).Minute);
+
     public string? Remarks { get; set; }
 
     [Display(Name = "Restricted clinical record")]

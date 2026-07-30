@@ -78,10 +78,20 @@
                     </select>
                     <span asp-validation-for="LimbCategory" class="text-danger"></span>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label asp-for="AssessedOn" class="form-label required-label"></label>
                     <input asp-for="AssessedOn" class="form-control" type="date" required data-review-label="Assessment date" />
                     <span asp-validation-for="AssessedOn" class="text-danger"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="StartTime" class="form-label required-label"></label>
+                    <input asp-for="StartTime" class="form-control" type="time" required data-review-label="Assessment start" />
+                    <span asp-validation-for="StartTime" class="text-danger"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="EndTime" class="form-label required-label"></label>
+                    <input asp-for="EndTime" class="form-control" type="time" required data-review-label="Assessment end" />
+                    <span asp-validation-for="EndTime" class="text-danger"></span>
                 </div>
                 <div class="col-md-6">
                     <label asp-for="Side" class="form-label required-label"></label>

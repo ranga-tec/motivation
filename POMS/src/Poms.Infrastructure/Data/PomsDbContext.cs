@@ -137,6 +137,8 @@ public class PomsDbContext : IdentityDbContext
             entity.Property(e => e.Status).HasConversion<string>();
             entity.Property(e => e.AssignedClinicianUserId).HasMaxLength(450);
             entity.Property(e => e.AssignedClinicianName).HasMaxLength(200);
+            entity.Property(e => e.CancellationReason)
+                .HasMaxLength(Appointment.CancellationReasonMaxLength);
             entity.HasIndex(e => e.AppointmentDate);
             entity.HasIndex(e => e.AssignedClinicianUserId);
             entity.HasOne(e => e.Patient).WithMany(p => p.Appointments).HasForeignKey(e => e.PatientId).OnDelete(DeleteBehavior.Restrict);

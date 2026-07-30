@@ -12,6 +12,8 @@ public class Assessment : BaseEntity
     public AssessmentType AssessmentType { get; set; }
     public LimbCategory LimbCategory { get; set; }
     public DateOnly AssessedOn { get; set; }
+    public TimeOnly? StartTime { get; set; }
+    public TimeOnly? EndTime { get; set; }
     public int MainProblemTypeId { get; set; }
     public Side Side { get; set; }
     public int CauseReasonTypeId { get; set; }

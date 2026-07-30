@@ -81,9 +81,16 @@ public class AppointmentsController : Controller
         var access = await _restrictedAccess.GetScopeAsync(User);
         var episodes = await access.Filter(_context.Episodes)
             .Where(episode => episode.PatientId == patientId)
-            .Select(e => new { e.Id, DisplayName = e.RecordDate.ToString() + " - " + e.Status })
+            .Select(e => new { e.Id, e.RecordDate, e.RecordTime, e.Status })
             .ToListAsync();
-        return Json(episodes);
+        return Json(episodes.Select(episode => new
+        {
+            episode.Id,
+            DisplayName =
+                $"{episode.RecordDate:dd-MMM-yyyy}" +
+                (episode.RecordTime.HasValue ? $" {episode.RecordTime.Value:HH:mm}" : "") +
+                $" - {episode.Status}"
+        }));
     }
 
     // POST: Appointments/Create
@@ -170,7 +177,7 @@ public class AppointmentsController : Controller
     // POST: Appointments/Cancel/5
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Cancel(Guid id)
+    public async Task<IActionResult> Cancel(Guid id, string cancellationReason)
     {
         var appointment = await _context.Appointments
             .Include(item => item.Episode)
@@ -180,10 +187,18 @@ public class AppointmentsController : Controller
             if (!await CanAccessAppointmentAsync(appointment, "CancelAppointment"))
                 return NotFound();
 
-            appointment.Status = AppointmentStatus.Cancelled;
-            appointment.UpdatedBy = User.Identity?.Name;
-            appointment.UpdatedAt = DateTime.UtcNow;
+            try
+            {
+                appointment.Cancel(cancellationReason, User.Identity?.Name);
+            }
+            catch (ArgumentException exception)
+            {
+                TempData["Error"] = exception.Message;
+                return RedirectToAction(nameof(Index));
+            }
+
             await _context.SaveChangesAsync();
+            TempData["Success"] = "Appointment cancelled. The record was retained for audit history.";
         }
         return RedirectToAction(nameof(Index));
     }
@@ -193,7 +208,6 @@ public class AppointmentsController : Controller
         ViewBag.Patients = new SelectList(
             await _context.Patients.Select(p => new { p.Id, DisplayName = p.PatientNumber + " - " + p.FullName }).ToListAsync(),
             "Id", "DisplayName");
-        ViewBag.TypeOptions = new SelectList(Enum.GetValues(typeof(AppointmentType)).Cast<AppointmentType>());
         model.AssigneeOptions = await _appointmentAssignees.GetOptionsAsync();
     }
 

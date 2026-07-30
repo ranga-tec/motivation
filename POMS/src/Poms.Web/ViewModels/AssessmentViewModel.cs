@@ -26,6 +26,14 @@ public class AssessmentViewModel : IValidatableObject
     public DateOnly AssessedOn { get; set; } = DateOnly.FromDateTime(DateTime.Today);
 
     [Required]
+    [Display(Name = "From")]
+    public TimeOnly? StartTime { get; set; } = new(9, 0);
+
+    [Required]
+    [Display(Name = "To")]
+    public TimeOnly? EndTime { get; set; } = new(10, 0);
+
+    [Required]
     [Display(Name = "Main Problem Type")]
     public int MainProblemTypeId { get; set; }
 
@@ -80,6 +88,13 @@ public class AssessmentViewModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        if (StartTime.HasValue && EndTime.HasValue && EndTime <= StartTime)
+        {
+            yield return new ValidationResult(
+                "The assessment end time must be later than the start time.",
+                new[] { nameof(EndTime) });
+        }
+
         if (AssessmentType == AssessmentType.Prosthetic && LimbCategory == LimbCategory.Spinal)
         {
             yield return new ValidationResult("Spinal is only valid for Orthotic assessments.", new[] { nameof(LimbCategory) });

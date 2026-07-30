@@ -35,7 +35,7 @@
     <div class="row">
         <div class="col-md-4 mb-3">
             <label asp-for="Type" class="form-label"></label>
-            <select asp-for="Type" class="form-select" asp-items="ViewBag.TypeOptions"></select>
+            <select asp-for="Type" class="form-select" asp-items="Html.GetEnumSelectList<Poms.Domain.Enums.AppointmentType>()"></select>
         </div>
         <div class="col-md-4 mb-3">
             <label asp-for="AppointmentDate" class="form-label"></label>

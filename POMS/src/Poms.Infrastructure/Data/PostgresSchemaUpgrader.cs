@@ -20,6 +20,14 @@ public static class PostgresSchemaUpgrader
             ALTER TABLE "EpisodeDocuments" ADD COLUMN IF NOT EXISTS "IsRestricted" boolean NOT NULL DEFAULT FALSE;
             ALTER TABLE "Appointments" ADD COLUMN IF NOT EXISTS "AssignedClinicianUserId" text;
             ALTER TABLE "Appointments" ADD COLUMN IF NOT EXISTS "AssignedClinicianName" character varying(200);
+            ALTER TABLE "Appointments" ADD COLUMN IF NOT EXISTS "CancellationReason" character varying(500);
+            ALTER TABLE "Appointments" ADD COLUMN IF NOT EXISTS "CancelledAt" timestamp with time zone;
+            ALTER TABLE "Assessments" ADD COLUMN IF NOT EXISTS "StartTime" time without time zone;
+            ALTER TABLE "Assessments" ADD COLUMN IF NOT EXISTS "EndTime" time without time zone;
+            ALTER TABLE "Deliveries" ADD COLUMN IF NOT EXISTS "DeliveryTime" time without time zone;
+            ALTER TABLE "FollowUps" ADD COLUMN IF NOT EXISTS "StartTime" time without time zone;
+            ALTER TABLE "FollowUps" ADD COLUMN IF NOT EXISTS "EndTime" time without time zone;
+            ALTER TABLE "Episodes" ADD COLUMN IF NOT EXISTS "RecordTime" time without time zone;
 
             CREATE TABLE IF NOT EXISTS "EmployeeProfiles" (
                 "Id" uuid NOT NULL,

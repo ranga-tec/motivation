@@ -128,6 +128,10 @@ public class PrintFormService : IPrintFormService
                 {
                     col.Spacing(6);
                     col.Item().Element(c => Box(c, "Date of Assessment:", model.AssessedOn.ToString("dd-MMM-yyyy")));
+                    col.Item().Element(c => Box(c, "Assessment Time:",
+                        model.StartTime.HasValue && model.EndTime.HasValue
+                            ? $"{model.StartTime.Value:HH:mm} - {model.EndTime.Value:HH:mm}"
+                            : "Not recorded"));
                     col.Item().Element(c => Box(c, "Assessment Type:", model.AssessmentType));
                     col.Item().Element(c => Box(c, "Limb Category:", model.LimbCategory));
                     col.Item().Element(c => Box(c, "Main Problem Type:", model.MainProblemType));
@@ -206,6 +210,8 @@ public class PrintFormService : IPrintFormService
                 {
                     col.Spacing(6);
                     col.Item().Element(c => Box(c, "Date of Delivery:", model.DeliveryDate.ToString("dd-MMM-yyyy")));
+                    col.Item().Element(c => Box(c, "Delivery Time:",
+                        model.DeliveryTime?.ToString("HH:mm") ?? "Not recorded"));
                     col.Item().Element(c => Box(c, "Device:", model.DeviceName));
                     col.Item().Element(c => Box(c, "Notes / Remarks:", model.Notes));
                     col.Item().Element(c => Box(c, "Created By:", $"{model.CreatedBy} on {model.CreatedAt:dd-MMM-yyyy}"));
@@ -232,6 +238,10 @@ public class PrintFormService : IPrintFormService
                 {
                     col.Spacing(6);
                     col.Item().Element(c => Box(c, "Follow-up Date:", model.FollowUpDate.ToString("dd-MMM-yyyy")));
+                    col.Item().Element(c => Box(c, "Follow-up Time:",
+                        model.StartTime.HasValue && model.EndTime.HasValue
+                            ? $"{model.StartTime.Value:HH:mm} - {model.EndTime.Value:HH:mm}"
+                            : "Not recorded"));
                     col.Item().Element(c => Box(c, "Remarks / Notes:", model.Notes));
                     col.Item().Element(c => Box(c, "Created By:", $"{model.CreatedBy} on {model.CreatedAt:dd-MMM-yyyy}"));
                 });

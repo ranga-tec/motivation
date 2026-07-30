@@ -27,6 +27,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Poms.Application\Poms.Application.csproj" />
     <ProjectReference Include="..\..\src\Poms.Infrastructure\Poms.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Poms.Web\Poms.Web.csproj" />
   </ItemGroup>
 
 </Project>

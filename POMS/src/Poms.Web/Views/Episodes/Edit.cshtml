@@ -13,17 +13,22 @@
     <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
     <div class="row">
-        <div class="col-md-4 mb-3">
+        <div class="col-md-3 mb-3">
             <label asp-for="CenterId" class="form-label"></label>
             <select asp-for="CenterId" class="form-select" asp-items="ViewBag.Centers"></select>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-3 mb-3">
             <label asp-for="Status" class="form-label"></label>
             <select asp-for="Status" class="form-select" asp-items="ViewBag.StatusOptions"></select>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-3 mb-3">
             <label asp-for="RecordDate" class="form-label"></label>
             <input asp-for="RecordDate" class="form-control" type="date" />
+        </div>
+        <div class="col-md-3 mb-3">
+            <label asp-for="RecordTime" class="form-label"></label>
+            <input asp-for="RecordTime" class="form-control" type="time" required />
+            <span asp-validation-for="RecordTime" class="text-danger"></span>
         </div>
     </div>
 

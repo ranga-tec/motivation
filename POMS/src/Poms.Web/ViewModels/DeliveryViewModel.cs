@@ -16,6 +16,10 @@ public class DeliveryViewModel
     [Display(Name = "Date of Delivery")]
     public DateOnly DeliveryDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
 
+    [Required]
+    [Display(Name = "Delivery Time")]
+    public TimeOnly? DeliveryTime { get; set; } = new(9, 0);
+
     [Display(Name = "Notes / Remarks")]
     [DataType(DataType.MultilineText)]
     public string? Notes { get; set; }

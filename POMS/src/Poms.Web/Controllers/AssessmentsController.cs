@@ -80,6 +80,8 @@ public class AssessmentsController : Controller
                     AssessmentType = model.AssessmentType,
                     LimbCategory = model.LimbCategory,
                     AssessedOn = model.AssessedOn,
+                    StartTime = model.StartTime,
+                    EndTime = model.EndTime,
                     MainProblemTypeId = model.MainProblemTypeId,
                     Side = model.Side,
                     CauseReasonTypeId = model.CauseReasonTypeId,
@@ -140,6 +142,8 @@ public class AssessmentsController : Controller
             AssessmentType = assessment.AssessmentType,
             LimbCategory = assessment.LimbCategory,
             AssessedOn = assessment.AssessedOn,
+            StartTime = assessment.StartTime,
+            EndTime = assessment.EndTime,
             MainProblemTypeId = assessment.MainProblemTypeId,
             Side = assessment.Side,
             CauseReasonTypeId = assessment.CauseReasonTypeId,
@@ -217,6 +221,8 @@ public class AssessmentsController : Controller
                 assessment.AssessmentType = model.AssessmentType;
                 assessment.LimbCategory = model.LimbCategory;
                 assessment.AssessedOn = model.AssessedOn;
+                assessment.StartTime = model.StartTime;
+                assessment.EndTime = model.EndTime;
                 assessment.MainProblemTypeId = model.MainProblemTypeId;
                 assessment.Side = model.Side;
                 assessment.CauseReasonTypeId = model.CauseReasonTypeId;

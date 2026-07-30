@@ -9,6 +9,7 @@ public class Delivery : BaseEntity
 {
     public Guid EpisodeId { get; set; }
     public DateOnly DeliveryDate { get; set; }
+    public TimeOnly? DeliveryTime { get; set; }
     public string? Notes { get; set; }
     public int? DeviceId { get; set; }
     public string? Remarks { get; set; }

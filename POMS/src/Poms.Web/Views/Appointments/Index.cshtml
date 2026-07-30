@@ -2,6 +2,8 @@
 
 @{
     ViewData["Title"] = "Appointments";
+    var typeOptions = Html.GetEnumSelectList<Poms.Domain.Enums.AppointmentType>().ToList();
+    var typeLabels = typeOptions.ToDictionary(option => option.Value, option => option.Text);
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -21,9 +23,9 @@
     <div class="col-md-3">
         <select name="type" class="form-select">
             <option value="">All Types</option>
-            @foreach (var t in Enum.GetValues(typeof(Poms.Domain.Enums.AppointmentType)))
+            @foreach (var option in typeOptions)
             {
-                <option value="@t" selected="@(ViewBag.Type?.ToString() == t.ToString())">@t</option>
+                <option value="@option.Value" selected="@(ViewBag.Type?.ToString() == option.Value)">@option.Text</option>
             }
         </select>
     </div>
@@ -49,7 +51,7 @@
             <tr>
                 <td>@a.AppointmentDate.ToString("dd-MMM-yyyy") @a.AppointmentTime</td>
                 <td>@a.Patient.PatientNumber - @a.Patient.FullName</td>
-                <td>@a.Type</td>
+                <td>@typeLabels[a.Type.ToString()]</td>
                 <td>@(a.AssignedClinicianName ?? "Not assigned")</td>
                 <td>
                     <span class="badge @(a.Status == Poms.Domain.Enums.AppointmentStatus.Scheduled ? "bg-warning" : a.Status == Poms.Domain.Enums.AppointmentStatus.Completed ? "bg-success" : "bg-secondary")">
@@ -63,9 +65,54 @@
                         <form asp-action="Complete" asp-route-id="@a.Id" method="post" class="d-inline">
                             <button type="submit" class="btn btn-sm btn-success">Done</button>
                         </form>
-                        <form asp-action="Cancel" asp-route-id="@a.Id" method="post" class="d-inline">
-                            <button type="submit" class="btn btn-sm btn-outline-danger">Cancel</button>
-                        </form>
+                        <button type="button"
+                                class="btn btn-sm btn-outline-danger"
+                                data-bs-toggle="modal"
+                                data-bs-target="#cancelAppointment-@a.Id">
+                            Cancel
+                        </button>
+                        <div class="modal fade"
+                             id="cancelAppointment-@a.Id"
+                             tabindex="-1"
+                             aria-labelledby="cancelAppointmentLabel-@a.Id"
+                             aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content text-start">
+                                    <form asp-action="Cancel" asp-route-id="@a.Id" method="post">
+                                        <div class="modal-header">
+                                            <h2 class="modal-title fs-5" id="cancelAppointmentLabel-@a.Id">
+                                                Cancel appointment
+                                            </h2>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p class="text-secondary">
+                                                This keeps the appointment in the patient history and marks it as cancelled.
+                                            </p>
+                                            <label for="cancellationReason-@a.Id" class="form-label">
+                                                Cancellation reason <span aria-hidden="true">*</span>
+                                            </label>
+                                            <textarea id="cancellationReason-@a.Id"
+                                                      name="cancellationReason"
+                                                      class="form-control"
+                                                      rows="3"
+                                                      maxlength="@Poms.Domain.Entities.Appointment.CancellationReasonMaxLength"
+                                                      required></textarea>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Keep appointment</button>
+                                            <button type="submit" class="btn btn-danger">Cancel appointment</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else if (a.Status == Poms.Domain.Enums.AppointmentStatus.Cancelled)
+                    {
+                        <span class="small text-secondary">
+                            @a.CancellationReason
+                        </span>
                     }
                 </td>
             </tr>

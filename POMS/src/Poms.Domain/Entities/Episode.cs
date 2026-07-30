@@ -12,6 +12,7 @@ public class Episode : BaseEntity
     public int CenterId { get; set; }
     public RecordStatus Status { get; set; } = RecordStatus.Active;
     public DateOnly RecordDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+    public TimeOnly? RecordTime { get; set; }
     public string? Remarks { get; set; }
     public bool IsRestricted { get; set; }
 

@@ -69,7 +69,13 @@
                         <tr>
                             <td>@a.AppointmentTime</td>
                             <td>@a.Patient.PatientNumber - @a.Patient.FullName</td>
-                            <td>@a.Type</td>
+                            <td>
+                                @(a.Type == Poms.Domain.Enums.AppointmentType.FollowUp
+                                    ? "Follow-up"
+                                    : a.Type == Poms.Domain.Enums.AppointmentType.GaitTraining
+                                        ? "Gait training"
+                                        : a.Type.ToString())
+                            </td>
                             <td>@(a.AssignedClinicianName ?? "Not assigned")</td>
                         </tr>
                     }
@@ -95,25 +101,46 @@
                 @{
                     var quickActionPatients = ViewBag.Patients as SelectList;
                 }
-                <form asp-controller="Fittings" asp-action="QuickAdd" method="get" class="input-group mb-2">
-                    <select name="patientId" class="form-select" required>
-                        <option value="">Add Fitting for…</option>
-                        @foreach (var p in quickActionPatients!) { <option value="@p.Value">@p.Text</option> }
-                    </select>
+                <datalist id="quickActionPatients">
+                    @foreach (var patient in quickActionPatients!)
+                    {
+                        <option value="@patient.Text" data-patient-id="@patient.Value"></option>
+                    }
+                </datalist>
+                <form asp-controller="Fittings" asp-action="QuickAdd" method="get" class="input-group mb-2" data-patient-quick-action>
+                    <input type="search"
+                           class="form-control"
+                           list="quickActionPatients"
+                           placeholder="Add Fitting for…"
+                           aria-label="Search patient for fitting"
+                           autocomplete="off"
+                           data-patient-search
+                           required />
+                    <input type="hidden" name="patientId" data-patient-id />
                     <button type="submit" class="btn btn-outline-success">Go</button>
                 </form>
-                <form asp-controller="Deliveries" asp-action="QuickAdd" method="get" class="input-group mb-2">
-                    <select name="patientId" class="form-select" required>
-                        <option value="">Add Delivery for…</option>
-                        @foreach (var p in quickActionPatients!) { <option value="@p.Value">@p.Text</option> }
-                    </select>
+                <form asp-controller="Deliveries" asp-action="QuickAdd" method="get" class="input-group mb-2" data-patient-quick-action>
+                    <input type="search"
+                           class="form-control"
+                           list="quickActionPatients"
+                           placeholder="Add Delivery for…"
+                           aria-label="Search patient for delivery"
+                           autocomplete="off"
+                           data-patient-search
+                           required />
+                    <input type="hidden" name="patientId" data-patient-id />
                     <button type="submit" class="btn btn-outline-info">Go</button>
                 </form>
-                <form asp-controller="FollowUps" asp-action="QuickAdd" method="get" class="input-group mb-2">
-                    <select name="patientId" class="form-select" required>
-                        <option value="">Add Follow-up for…</option>
-                        @foreach (var p in quickActionPatients!) { <option value="@p.Value">@p.Text</option> }
-                    </select>
+                <form asp-controller="FollowUps" asp-action="QuickAdd" method="get" class="input-group mb-2" data-patient-quick-action>
+                    <input type="search"
+                           class="form-control"
+                           list="quickActionPatients"
+                           placeholder="Add Follow-up for…"
+                           aria-label="Search patient for follow-up"
+                           autocomplete="off"
+                           data-patient-search
+                           required />
+                    <input type="hidden" name="patientId" data-patient-id />
                     <button type="submit" class="btn btn-outline-warning">Go</button>
                 </form>
             </div>
@@ -152,3 +179,36 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const options = [...document.querySelectorAll("#quickActionPatients option")];
+
+            document.querySelectorAll("[data-patient-quick-action]").forEach(form => {
+                const search = form.querySelector("[data-patient-search]");
+                const patientId = form.querySelector("[data-patient-id]");
+
+                const syncPatient = () => {
+                    const entered = search.value.trim();
+                    const match = options.find(option =>
+                        option.value.localeCompare(entered, undefined, { sensitivity: "accent" }) === 0);
+                    patientId.value = match?.dataset.patientId || "";
+                    search.setCustomValidity(
+                        entered && !match ? "Select a patient from the search results." : "");
+                };
+
+                search.addEventListener("input", syncPatient);
+                search.addEventListener("change", syncPatient);
+                form.addEventListener("submit", event => {
+                    syncPatient();
+                    if (!patientId.value) {
+                        event.preventDefault();
+                        search.setCustomValidity("Search for and select a patient.");
+                        search.reportValidity();
+                    }
+                });
+            });
+        })();
+    </script>
+}

@@ -33,6 +33,7 @@ builder.Host.UseSerilog();
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 string connectionString;
 bool usePostgreSQL;
+bool useSqlite;
 
 if (!string.IsNullOrWhiteSpace(databaseUrl))
 {
@@ -49,12 +50,14 @@ if (!string.IsNullOrWhiteSpace(databaseUrl))
         $"Username={Uri.UnescapeDataString(userInfo[0])};Password={Uri.UnescapeDataString(userInfo[1])};" +
         "SSL Mode=Prefer;Trust Server Certificate=true";
     usePostgreSQL = true;
+    useSqlite = false;
 }
 else
 {
     connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
         ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
     usePostgreSQL = builder.Configuration.GetValue<bool>("UsePostgreSQL", false);
+    useSqlite = builder.Configuration.GetValue<bool>("UseSQLite", false);
 }
 
 builder.Services.AddDbContext<PomsDbContext>(options =>
@@ -62,6 +65,10 @@ builder.Services.AddDbContext<PomsDbContext>(options =>
     if (usePostgreSQL)
     {
         options.UseNpgsql(connectionString);
+    }
+    else if (useSqlite)
+    {
+        options.UseSqlite(connectionString);
     }
     else
     {
@@ -150,7 +157,13 @@ using (var scope = app.Services.CreateScope())
         var context = services.GetRequiredService<PomsDbContext>();
         var providerName = context.Database.ProviderName ?? string.Empty;
 
-        if (providerName.Contains("Npgsql", StringComparison.OrdinalIgnoreCase))
+        if (providerName.Contains("Sqlite", StringComparison.OrdinalIgnoreCase))
+        {
+            // Development uses a self-contained local database so the application can run
+            // without requiring a separately managed SQL Server instance.
+            await context.Database.EnsureCreatedAsync();
+        }
+        else if (providerName.Contains("Npgsql", StringComparison.OrdinalIgnoreCase))
         {
             // PostgreSQL deployments on Contabo start from a fresh database, so build the schema
             // directly from the current model instead of applying the existing SQL Server migration.

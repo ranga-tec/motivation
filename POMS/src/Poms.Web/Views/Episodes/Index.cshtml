@@ -65,7 +65,10 @@
                                             <small class="text-muted">@item.Patient.FullName</small>
                                         </td>
                                         <td>@item.Center.Name</td>
-                                        <td>@item.RecordDate.ToString("dd/MM/yyyy")</td>
+                                        <td>
+                                            @item.RecordDate.ToString("dd/MM/yyyy")
+                                            @(item.RecordTime?.ToString("HH:mm") ?? "")
+                                        </td>
                                         <td>
                                             <span class="badge @(item.Status == Poms.Domain.Enums.RecordStatus.Active ? "bg-success" : item.Status == Poms.Domain.Enums.RecordStatus.Completed ? "bg-secondary" : "bg-danger")">
                                                 @item.Status

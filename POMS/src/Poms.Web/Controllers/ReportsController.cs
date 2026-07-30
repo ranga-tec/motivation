@@ -49,26 +49,60 @@ public class ReportsController : Controller
     {
         filter.RecordStatus = RecordStatus.Active;
         var access = await _restrictedAccess.GetScopeAsync(User);
-        var rows = await access.Filter(_reportQueryService.FilterEpisodes(filter))
+        var data = await access.Filter(_reportQueryService.FilterEpisodes(filter))
             .OrderByDescending(e => e.RecordDate)
-            .Select(e => new[] { e.Patient.PatientNumber, e.Patient.FullName, e.Center.Name, e.RecordDate.ToString("dd-MMM-yyyy"), e.Status.ToString() })
+            .ThenByDescending(e => e.RecordTime)
+            .Select(e => new
+            {
+                e.Patient.PatientNumber,
+                e.Patient.FullName,
+                Location = e.Center.Name,
+                e.RecordDate,
+                e.RecordTime,
+                e.Status
+            })
             .ToListAsync();
+        var rows = data.Select(e => new[]
+        {
+            e.PatientNumber,
+            e.FullName,
+            e.Location,
+            e.RecordDate.ToString("dd-MMM-yyyy"),
+            e.RecordTime?.ToString("HH:mm") ?? "",
+            e.Status.ToString()
+        }).ToList();
 
         return await Render("Active Records Report", nameof(ActiveRecords),
-            new[] { "PNO", "Name", "Location", "Record Date", "Status" }, rows, filter, export);
+            new[] { "PNO", "Name", "Location", "Record Date", "Time", "Status" }, rows, filter, export);
     }
 
     // 3. Assessment Report
     public async Task<IActionResult> Assessment(ReportFilter filter, bool export = false)
     {
         var access = await _restrictedAccess.GetScopeAsync(User);
-        var rows = await access.Filter(_reportQueryService.FilterAssessments(filter))
+        var data = await access.Filter(_reportQueryService.FilterAssessments(filter))
             .OrderByDescending(a => a.AssessedOn)
-            .Select(a => new[] { a.Episode.Patient.PatientNumber, a.Episode.Patient.FullName, a.AssessmentType.ToString(), a.LimbCategory.ToString(), a.MainProblemType.Name, a.AssessedOn.ToString("dd-MMM-yyyy") })
+            .ThenByDescending(a => a.StartTime)
+            .Select(a => new
+            {
+                a.Episode.Patient.PatientNumber,
+                a.Episode.Patient.FullName,
+                a.AssessmentType,
+                a.LimbCategory,
+                MainProblem = a.MainProblemType.Name,
+                a.AssessedOn,
+                a.StartTime,
+                a.EndTime
+            })
             .ToListAsync();
+        var rows = data.Select(a => new[]
+        {
+            a.PatientNumber, a.FullName, a.AssessmentType.ToString(), a.LimbCategory.ToString(),
+            a.MainProblem, a.AssessedOn.ToString("dd-MMM-yyyy"), FormatTimeRange(a.StartTime, a.EndTime)
+        }).ToList();
 
         return await Render("Assessment Report", nameof(Assessment),
-            new[] { "PNO", "Name", "Type", "Limb", "Main Problem", "Date" }, rows, filter, export);
+            new[] { "PNO", "Name", "Type", "Limb", "Main Problem", "Date", "Time" }, rows, filter, export);
     }
 
     // 4. Prosthetic Assessment Report
@@ -76,13 +110,28 @@ public class ReportsController : Controller
     {
         filter.AssessmentType = AssessmentType.Prosthetic;
         var access = await _restrictedAccess.GetScopeAsync(User);
-        var rows = await access.Filter(_reportQueryService.FilterAssessments(filter))
+        var data = await access.Filter(_reportQueryService.FilterAssessments(filter))
             .OrderByDescending(a => a.AssessedOn)
-            .Select(a => new[] { a.Episode.Patient.PatientNumber, a.Episode.Patient.FullName, a.LimbCategory.ToString(), a.Side.ToString(), a.AssessedOn.ToString("dd-MMM-yyyy") })
+            .ThenByDescending(a => a.StartTime)
+            .Select(a => new
+            {
+                a.Episode.Patient.PatientNumber,
+                a.Episode.Patient.FullName,
+                a.LimbCategory,
+                a.Side,
+                a.AssessedOn,
+                a.StartTime,
+                a.EndTime
+            })
             .ToListAsync();
+        var rows = data.Select(a => new[]
+        {
+            a.PatientNumber, a.FullName, a.LimbCategory.ToString(), a.Side.ToString(),
+            a.AssessedOn.ToString("dd-MMM-yyyy"), FormatTimeRange(a.StartTime, a.EndTime)
+        }).ToList();
 
         return await Render("Prosthetic Assessment Report", nameof(ProstheticAssessment),
-            new[] { "PNO", "Name", "Limb", "Side", "Date" }, rows, filter, export);
+            new[] { "PNO", "Name", "Limb", "Side", "Date", "Time" }, rows, filter, export);
     }
 
     // 5. Orthotic Assessment Report
@@ -90,13 +139,28 @@ public class ReportsController : Controller
     {
         filter.AssessmentType = AssessmentType.Orthotic;
         var access = await _restrictedAccess.GetScopeAsync(User);
-        var rows = await access.Filter(_reportQueryService.FilterAssessments(filter))
+        var data = await access.Filter(_reportQueryService.FilterAssessments(filter))
             .OrderByDescending(a => a.AssessedOn)
-            .Select(a => new[] { a.Episode.Patient.PatientNumber, a.Episode.Patient.FullName, a.LimbCategory.ToString(), a.Side.ToString(), a.AssessedOn.ToString("dd-MMM-yyyy") })
+            .ThenByDescending(a => a.StartTime)
+            .Select(a => new
+            {
+                a.Episode.Patient.PatientNumber,
+                a.Episode.Patient.FullName,
+                a.LimbCategory,
+                a.Side,
+                a.AssessedOn,
+                a.StartTime,
+                a.EndTime
+            })
             .ToListAsync();
+        var rows = data.Select(a => new[]
+        {
+            a.PatientNumber, a.FullName, a.LimbCategory.ToString(), a.Side.ToString(),
+            a.AssessedOn.ToString("dd-MMM-yyyy"), FormatTimeRange(a.StartTime, a.EndTime)
+        }).ToList();
 
         return await Render("Orthotic Assessment Report", nameof(OrthoticAssessment),
-            new[] { "PNO", "Name", "Limb", "Side", "Date" }, rows, filter, export);
+            new[] { "PNO", "Name", "Limb", "Side", "Date", "Time" }, rows, filter, export);
     }
 
     // 6. Fitting Report
@@ -116,26 +180,55 @@ public class ReportsController : Controller
     public async Task<IActionResult> Delivery(ReportFilter filter, bool export = false)
     {
         var access = await _restrictedAccess.GetScopeAsync(User);
-        var rows = await access.Filter(_reportQueryService.FilterDeliveries(filter))
+        var data = await access.Filter(_reportQueryService.FilterDeliveries(filter))
             .OrderByDescending(d => d.DeliveryDate)
-            .Select(d => new[] { d.Episode.Patient.PatientNumber, d.Episode.Patient.FullName, d.Episode.Center.Name, d.DeliveryDate.ToString("dd-MMM-yyyy"), d.Notes ?? "" })
+            .ThenByDescending(d => d.DeliveryTime)
+            .Select(d => new
+            {
+                d.Episode.Patient.PatientNumber,
+                d.Episode.Patient.FullName,
+                Location = d.Episode.Center.Name,
+                d.DeliveryDate,
+                d.DeliveryTime,
+                d.Notes
+            })
             .ToListAsync();
+        var rows = data.Select(d => new[]
+        {
+            d.PatientNumber, d.FullName, d.Location, d.DeliveryDate.ToString("dd-MMM-yyyy"),
+            d.DeliveryTime?.ToString("HH:mm") ?? "", d.Notes ?? ""
+        }).ToList();
 
         return await Render("Delivery Report", nameof(Delivery),
-            new[] { "PNO", "Name", "Location", "Delivery Date", "Notes" }, rows, filter, export);
+            new[] { "PNO", "Name", "Location", "Delivery Date", "Time", "Notes" }, rows, filter, export);
     }
 
     // 8. Follow-up Report
     public async Task<IActionResult> FollowUp(ReportFilter filter, bool export = false)
     {
         var access = await _restrictedAccess.GetScopeAsync(User);
-        var rows = await access.Filter(_reportQueryService.FilterFollowUps(filter))
+        var data = await access.Filter(_reportQueryService.FilterFollowUps(filter))
             .OrderByDescending(f => f.FollowUpDate)
-            .Select(f => new[] { f.Episode.Patient.PatientNumber, f.Episode.Patient.FullName, f.Episode.Center.Name, f.FollowUpDate.ToString("dd-MMM-yyyy"), f.Notes ?? "" })
+            .ThenByDescending(f => f.StartTime)
+            .Select(f => new
+            {
+                f.Episode.Patient.PatientNumber,
+                f.Episode.Patient.FullName,
+                Location = f.Episode.Center.Name,
+                f.FollowUpDate,
+                f.StartTime,
+                f.EndTime,
+                f.Notes
+            })
             .ToListAsync();
+        var rows = data.Select(f => new[]
+        {
+            f.PatientNumber, f.FullName, f.Location, f.FollowUpDate.ToString("dd-MMM-yyyy"),
+            FormatTimeRange(f.StartTime, f.EndTime), f.Notes ?? ""
+        }).ToList();
 
         return await Render("Follow-up Report", nameof(FollowUp),
-            new[] { "PNO", "Name", "Location", "Follow-up Date", "Notes" }, rows, filter, export);
+            new[] { "PNO", "Name", "Location", "Follow-up Date", "Time", "Notes" }, rows, filter, export);
     }
 
     // 9. Location-wise Report
@@ -236,4 +329,9 @@ public class ReportsController : Controller
         ViewBag.LimbCategories = new SelectList(Enum.GetValues(typeof(LimbCategory)).Cast<LimbCategory>());
         ViewBag.RecordStatuses = new SelectList(Enum.GetValues(typeof(RecordStatus)).Cast<RecordStatus>());
     }
+
+    private static string FormatTimeRange(TimeOnly? startTime, TimeOnly? endTime) =>
+        startTime.HasValue && endTime.HasValue
+            ? $"{startTime.Value:HH:mm} - {endTime.Value:HH:mm}"
+            : "";
 }

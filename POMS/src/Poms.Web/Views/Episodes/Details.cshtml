@@ -38,7 +38,13 @@
             <div class="card-header"><h5>Record Information</h5></div>
             <div class="card-body">
                 <table class="table table-sm table-borderless">
-                    <tr><th width="20%">Record Date:</th><td>@Model.RecordDate.ToString("dd-MMM-yyyy")</td></tr>
+                    <tr>
+                        <th width="20%">Record Date &amp; Time:</th>
+                        <td>
+                            @Model.RecordDate.ToString("dd-MMM-yyyy")
+                            @(Model.RecordTime?.ToString("HH:mm") ?? "Time not recorded")
+                        </td>
+                    </tr>
                     <tr><th>Status:</th>
                         <td>
                             <span class="badge @(Model.Status == Poms.Domain.Enums.RecordStatus.Active ? "bg-success" : Model.Status == Poms.Domain.Enums.RecordStatus.Completed ? "bg-secondary" : "bg-danger")">
@@ -67,7 +73,13 @@
                             @foreach (var a in Model.Assessments.OrderByDescending(a => a.AssessedOn))
                             {
                                 <div class="border-bottom pb-2 mb-2">
-                                    <small class="text-muted">@a.AssessedOn.ToString("dd-MMM-yyyy")</small>
+                                    <small class="text-muted">
+                                        @a.AssessedOn.ToString("dd-MMM-yyyy")
+                                        @if (a.StartTime.HasValue && a.EndTime.HasValue)
+                                        {
+                                            <span> · @a.StartTime.Value.ToString("HH:mm")–@a.EndTime.Value.ToString("HH:mm")</span>
+                                        }
+                                    </small>
                                     @if (a.IsRestricted)
                                     {
                                         <span class="badge text-bg-warning text-dark ms-2"><i class="fa-solid fa-lock me-1"></i>Restricted</span>
@@ -135,7 +147,13 @@
                             @foreach (var d in Model.Deliveries.OrderByDescending(d => d.DeliveryDate))
                             {
                                 <div class="border-bottom pb-2 mb-2">
-                                    <small class="text-muted">@d.DeliveryDate.ToString("dd-MMM-yyyy")</small>
+                                    <small class="text-muted">
+                                        @d.DeliveryDate.ToString("dd-MMM-yyyy")
+                                        @if (d.DeliveryTime.HasValue)
+                                        {
+                                            <span> · @d.DeliveryTime.Value.ToString("HH:mm")</span>
+                                        }
+                                    </small>
                                     @if (d.IsRestricted)
                                     {
                                         <span class="badge text-bg-warning text-dark ms-2"><i class="fa-solid fa-lock me-1"></i>Restricted</span>
@@ -166,7 +184,13 @@
                             @foreach (var f in Model.FollowUps.OrderByDescending(f => f.FollowUpDate))
                             {
                                 <div class="border-bottom pb-2 mb-2">
-                                    <small class="text-muted">@f.FollowUpDate.ToString("dd-MMM-yyyy")</small>
+                                    <small class="text-muted">
+                                        @f.FollowUpDate.ToString("dd-MMM-yyyy")
+                                        @if (f.StartTime.HasValue && f.EndTime.HasValue)
+                                        {
+                                            <span> · @f.StartTime.Value.ToString("HH:mm")–@f.EndTime.Value.ToString("HH:mm")</span>
+                                        }
+                                    </small>
                                     @if (f.IsRestricted)
                                     {
                                         <span class="badge text-bg-warning text-dark ms-2"><i class="fa-solid fa-lock me-1"></i>Restricted</span>

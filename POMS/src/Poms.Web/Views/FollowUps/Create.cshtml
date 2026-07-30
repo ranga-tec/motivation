@@ -11,10 +11,22 @@
     <input type="hidden" asp-for="EpisodeId" />
     <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
-    <div class="mb-3">
-        <label asp-for="FollowUpDate" class="form-label"></label>
-        <input asp-for="FollowUpDate" class="form-control" type="date" />
-        <span asp-validation-for="FollowUpDate" class="text-danger"></span>
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <label asp-for="FollowUpDate" class="form-label"></label>
+            <input asp-for="FollowUpDate" class="form-control" type="date" />
+            <span asp-validation-for="FollowUpDate" class="text-danger"></span>
+        </div>
+        <div class="col-md-4">
+            <label asp-for="StartTime" class="form-label"></label>
+            <input asp-for="StartTime" class="form-control" type="time" required />
+            <span asp-validation-for="StartTime" class="text-danger"></span>
+        </div>
+        <div class="col-md-4">
+            <label asp-for="EndTime" class="form-label"></label>
+            <input asp-for="EndTime" class="form-control" type="time" required />
+            <span asp-validation-for="EndTime" class="text-danger"></span>
+        </div>
     </div>
     <div class="mb-3">
         <label asp-for="Notes" class="form-label"></label>
@@ -29,3 +41,7 @@
     <button type="submit" class="btn btn-warning">Save Follow-up</button>
     <a asp-controller="Episodes" asp-action="Details" asp-route-id="@Model.EpisodeId" class="btn btn-secondary">Cancel</a>
 </form>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

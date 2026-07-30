@@ -240,6 +240,13 @@ namespace Poms.Infrastructure.Migrations
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -325,6 +332,9 @@ namespace Poms.Infrastructure.Migrations
                     b.Property<string>("DeletedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<TimeOnly?>("EndTime")
+                        .HasColumnType("time");
+
                     b.Property<Guid>("EpisodeId")
                         .HasColumnType("uniqueidentifier");
 
@@ -344,6 +354,9 @@ namespace Poms.Infrastructure.Migrations
                     b.Property<string>("Side")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<TimeOnly?>("StartTime")
+                        .HasColumnType("time");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -549,6 +562,9 @@ namespace Poms.Infrastructure.Migrations
 
                     b.Property<DateOnly>("DeliveryDate")
                         .HasColumnType("date");
+
+                    b.Property<TimeOnly?>("DeliveryTime")
+                        .HasColumnType("time");
 
                     b.Property<int?>("DeviceId")
                         .HasColumnType("int");
@@ -792,6 +808,9 @@ namespace Poms.Infrastructure.Migrations
                     b.Property<DateOnly>("RecordDate")
                         .HasColumnType("date");
 
+                    b.Property<TimeOnly?>("RecordTime")
+                        .HasColumnType("time");
+
                     b.Property<string>("Remarks")
                         .HasColumnType("nvarchar(max)");
 
@@ -960,6 +979,9 @@ namespace Poms.Infrastructure.Migrations
                     b.Property<string>("DeletedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<TimeOnly?>("EndTime")
+                        .HasColumnType("time");
+
                     b.Property<Guid>("EpisodeId")
                         .HasColumnType("uniqueidentifier");
 
@@ -974,6 +996,9 @@ namespace Poms.Infrastructure.Migrations
 
                     b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<TimeOnly?>("StartTime")
+                        .HasColumnType("time");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");

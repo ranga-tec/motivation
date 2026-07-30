@@ -57,6 +57,7 @@ public class EpisodesController : Controller
         var totalCount = await query.CountAsync();
         var episodes = await query
             .OrderByDescending(e => e.RecordDate)
+            .ThenByDescending(e => e.RecordTime)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
@@ -172,6 +173,7 @@ public class EpisodesController : Controller
                     CenterId = model.CenterId,
                     Status = model.Status,
                     RecordDate = model.RecordDate,
+                    RecordTime = model.RecordTime,
                     Remarks = model.Remarks,
                     IsRestricted = model.IsRestricted,
                     CreatedBy = User.Identity?.Name
@@ -225,6 +227,7 @@ public class EpisodesController : Controller
             CenterId = episode.CenterId,
             Status = episode.Status,
             RecordDate = episode.RecordDate,
+            RecordTime = episode.RecordTime,
             Remarks = episode.Remarks,
             IsRestricted = episode.IsRestricted,
             PatientNumber = episode.Patient.PatientNumber,
@@ -261,6 +264,7 @@ public class EpisodesController : Controller
                 episode.CenterId = model.CenterId;
                 episode.Status = model.Status;
                 episode.RecordDate = model.RecordDate;
+                episode.RecordTime = model.RecordTime;
                 episode.Remarks = model.Remarks;
                 episode.IsRestricted = model.IsRestricted;
                 episode.UpdatedBy = User.Identity?.Name;

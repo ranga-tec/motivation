@@ -237,6 +237,9 @@ ClientBin/
 *~
 *.dbmdl
 *.dbproj.schemaview
+
+# Local POMS development database
+/POMS/src/Poms.Web/poms-local.db*
 *.jfm
 *.pfx
 *.publishsettings

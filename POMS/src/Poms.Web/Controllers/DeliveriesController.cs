@@ -70,6 +70,7 @@ public class DeliveriesController : Controller
             {
                 EpisodeId = model.EpisodeId,
                 DeliveryDate = model.DeliveryDate,
+                DeliveryTime = model.DeliveryTime,
                 Notes = model.Notes,
                 DeviceId = model.DeviceId,
                 IsRestricted = model.IsRestricted,
@@ -133,6 +134,7 @@ public class DeliveriesController : Controller
             PatientNumber = delivery.Episode.Patient.PatientNumber,
             PatientName = delivery.Episode.Patient.FullName,
             DeliveryDate = delivery.DeliveryDate,
+            DeliveryTime = delivery.DeliveryTime,
             Notes = delivery.Notes,
             DeviceId = delivery.DeviceId,
             IsRestricted = delivery.IsRestricted
@@ -165,6 +167,7 @@ public class DeliveriesController : Controller
 
             var wasRestricted = delivery.IsRestricted;
             delivery.DeliveryDate = model.DeliveryDate;
+            delivery.DeliveryTime = model.DeliveryTime;
             delivery.Notes = model.Notes;
             delivery.DeviceId = model.DeviceId;
             delivery.IsRestricted = model.IsRestricted;
