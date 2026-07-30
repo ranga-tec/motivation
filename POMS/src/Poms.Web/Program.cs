@@ -120,6 +120,7 @@ builder.Services.AddScoped<IPrintFormService, PrintFormService>();
 builder.Services.AddScoped<IReportQueryService, ReportQueryService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IRestrictedAccessService, RestrictedAccessService>();
+builder.Services.AddScoped<IAppointmentAssigneeService, AppointmentAssigneeService>();
 
 // Add AutoMapper
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());

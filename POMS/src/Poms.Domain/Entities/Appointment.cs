@@ -14,6 +14,8 @@ public class Appointment : BaseEntity
     public DateOnly AppointmentDate { get; set; }
     public TimeOnly? AppointmentTime { get; set; }
     public AppointmentStatus Status { get; set; } = AppointmentStatus.Scheduled;
+    public string? AssignedClinicianUserId { get; set; }
+    public string? AssignedClinicianName { get; set; }
     public string? Notes { get; set; }
 
     public Patient Patient { get; set; } = default!;

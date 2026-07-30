@@ -199,13 +199,14 @@
                 @if (Model.Appointments.Any())
                 {
                     <table class="table table-striped">
-                        <thead><tr><th>Date</th><th>Type</th><th>Status</th><th>Notes</th></tr></thead>
+                        <thead><tr><th>Date</th><th>Type</th><th>Prosthetist / Orthotist</th><th>Status</th><th>Notes</th></tr></thead>
                         <tbody>
                             @foreach (var a in Model.Appointments.OrderByDescending(a => a.AppointmentDate))
                             {
                                 <tr>
                                     <td>@a.AppointmentDate.ToString("dd-MMM-yyyy") @a.AppointmentTime</td>
                                     <td>@a.Type</td>
+                                    <td>@(a.AssignedClinicianName ?? "Not assigned")</td>
                                     <td>@a.Status</td>
                                     <td>@a.Notes</td>
                                 </tr>

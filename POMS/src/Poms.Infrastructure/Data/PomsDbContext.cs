@@ -135,9 +135,16 @@ public class PomsDbContext : IdentityDbContext
         {
             entity.Property(e => e.Type).HasConversion<string>();
             entity.Property(e => e.Status).HasConversion<string>();
+            entity.Property(e => e.AssignedClinicianUserId).HasMaxLength(450);
+            entity.Property(e => e.AssignedClinicianName).HasMaxLength(200);
             entity.HasIndex(e => e.AppointmentDate);
+            entity.HasIndex(e => e.AssignedClinicianUserId);
             entity.HasOne(e => e.Patient).WithMany(p => p.Appointments).HasForeignKey(e => e.PatientId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(e => e.Episode).WithMany(ep => ep.Appointments).HasForeignKey(e => e.EpisodeId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<IdentityUser>()
+                .WithMany()
+                .HasForeignKey(e => e.AssignedClinicianUserId)
+                .OnDelete(DeleteBehavior.SetNull);
             entity.HasQueryFilter(e => !e.IsDeleted);
         });
 

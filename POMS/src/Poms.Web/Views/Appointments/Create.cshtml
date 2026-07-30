@@ -48,6 +48,31 @@
     </div>
 
     <div class="mb-3">
+        <label asp-for="AssignedClinicianEntry" class="form-label"></label>
+        <input asp-for="AssignedClinicianEntry"
+               class="form-control"
+               type="search"
+               list="appointmentAssigneeOptions"
+               autocomplete="off"
+               placeholder="Search staff or type a custom name"
+               aria-describedby="assigneeHelp" />
+        <input asp-for="AssignedClinicianUserId" type="hidden" />
+        <datalist id="appointmentAssigneeOptions">
+            @foreach (var option in Model.AssigneeOptions)
+            {
+                <option value="@option.DisplayText"
+                        data-user-id="@option.UserId">
+                    @(option.IsPreferred ? "Prosthetist / Orthotist" : "Staff")
+                </option>
+            }
+        </datalist>
+        <div id="assigneeHelp" class="form-text">
+            Search existing staff by name, designation or employee number. If the person has no account, type their name and continue.
+        </div>
+        <span asp-validation-for="AssignedClinicianEntry" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
         <label asp-for="Notes" class="form-label"></label>
         <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
     </div>
@@ -60,6 +85,21 @@
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
     <script>
         $(document).ready(function () {
+            const assigneeInput = document.getElementById('AssignedClinicianEntry');
+            const assigneeUserId = document.getElementById('AssignedClinicianUserId');
+            const assigneeOptions = [...document.querySelectorAll('#appointmentAssigneeOptions option')];
+
+            function syncAssignee() {
+                const entered = assigneeInput.value.trim();
+                const match = assigneeOptions.find(option =>
+                    option.value.localeCompare(entered, undefined, { sensitivity: 'accent' }) === 0);
+                assigneeUserId.value = match?.dataset.userId || '';
+            }
+
+            assigneeInput.addEventListener('input', syncAssignee);
+            assigneeInput.addEventListener('change', syncAssignee);
+            assigneeInput.form.addEventListener('submit', syncAssignee);
+
             function loadEpisodes(patientId) {
                 $('#episodeSelect').empty().append('<option value="">-- None / Not yet created --</option>');
                 if (patientId) {

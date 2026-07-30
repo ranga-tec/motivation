@@ -62,11 +62,16 @@
         @if (todaysAppointments != null && todaysAppointments.Any())
         {
             <table class="table table-sm">
-                <thead><tr><th>Time</th><th>Patient</th><th>Type</th></tr></thead>
+                <thead><tr><th>Time</th><th>Patient</th><th>Type</th><th>Prosthetist / Orthotist</th></tr></thead>
                 <tbody>
                     @foreach (var a in todaysAppointments)
                     {
-                        <tr><td>@a.AppointmentTime</td><td>@a.Patient.PatientNumber - @a.Patient.FullName</td><td>@a.Type</td></tr>
+                        <tr>
+                            <td>@a.AppointmentTime</td>
+                            <td>@a.Patient.PatientNumber - @a.Patient.FullName</td>
+                            <td>@a.Type</td>
+                            <td>@(a.AssignedClinicianName ?? "Not assigned")</td>
+                        </tr>
                     }
                 </tbody>
             </table>

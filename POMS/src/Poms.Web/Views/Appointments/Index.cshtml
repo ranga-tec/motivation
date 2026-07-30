@@ -42,7 +42,7 @@
 </form>
 
 <table class="table table-striped">
-    <thead><tr><th>Date</th><th>Patient</th><th>Type</th><th>Status</th><th>Notes</th><th>Actions</th></tr></thead>
+    <thead><tr><th>Date</th><th>Patient</th><th>Type</th><th>Prosthetist / Orthotist</th><th>Status</th><th>Notes</th><th>Actions</th></tr></thead>
     <tbody>
         @foreach (var a in Model)
         {
@@ -50,6 +50,7 @@
                 <td>@a.AppointmentDate.ToString("dd-MMM-yyyy") @a.AppointmentTime</td>
                 <td>@a.Patient.PatientNumber - @a.Patient.FullName</td>
                 <td>@a.Type</td>
+                <td>@(a.AssignedClinicianName ?? "Not assigned")</td>
                 <td>
                     <span class="badge @(a.Status == Poms.Domain.Enums.AppointmentStatus.Scheduled ? "bg-warning" : a.Status == Poms.Domain.Enums.AppointmentStatus.Completed ? "bg-success" : "bg-secondary")">
                         @a.Status

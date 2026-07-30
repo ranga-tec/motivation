@@ -18,6 +18,8 @@ public static class PostgresSchemaUpgrader
             ALTER TABLE "FollowUps" ADD COLUMN IF NOT EXISTS "IsRestricted" boolean NOT NULL DEFAULT FALSE;
             ALTER TABLE "PatientDocuments" ADD COLUMN IF NOT EXISTS "IsRestricted" boolean NOT NULL DEFAULT FALSE;
             ALTER TABLE "EpisodeDocuments" ADD COLUMN IF NOT EXISTS "IsRestricted" boolean NOT NULL DEFAULT FALSE;
+            ALTER TABLE "Appointments" ADD COLUMN IF NOT EXISTS "AssignedClinicianUserId" text;
+            ALTER TABLE "Appointments" ADD COLUMN IF NOT EXISTS "AssignedClinicianName" character varying(200);
 
             CREATE TABLE IF NOT EXISTS "EmployeeProfiles" (
                 "Id" uuid NOT NULL,
@@ -49,6 +51,24 @@ public static class PostgresSchemaUpgrader
             CREATE INDEX IF NOT EXISTS "IX_FollowUps_IsRestricted" ON "FollowUps" ("IsRestricted");
             CREATE INDEX IF NOT EXISTS "IX_PatientDocuments_IsRestricted" ON "PatientDocuments" ("IsRestricted");
             CREATE INDEX IF NOT EXISTS "IX_EpisodeDocuments_IsRestricted" ON "EpisodeDocuments" ("IsRestricted");
+            CREATE INDEX IF NOT EXISTS "IX_Appointments_AssignedClinicianUserId"
+                ON "Appointments" ("AssignedClinicianUserId");
+
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1
+                    FROM pg_constraint
+                    WHERE conname = 'FK_Appointments_AspNetUsers_AssignedClinicianUserId'
+                ) THEN
+                    ALTER TABLE "Appointments"
+                        ADD CONSTRAINT "FK_Appointments_AspNetUsers_AssignedClinicianUserId"
+                        FOREIGN KEY ("AssignedClinicianUserId")
+                        REFERENCES "AspNetUsers" ("Id")
+                        ON DELETE SET NULL;
+                END IF;
+            END
+            $$;
             """);
     }
 }

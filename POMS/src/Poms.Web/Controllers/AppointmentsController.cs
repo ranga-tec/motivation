@@ -15,13 +15,16 @@ public class AppointmentsController : Controller
 {
     private readonly PomsDbContext _context;
     private readonly IRestrictedAccessService _restrictedAccess;
+    private readonly IAppointmentAssigneeService _appointmentAssignees;
 
     public AppointmentsController(
         PomsDbContext context,
-        IRestrictedAccessService restrictedAccess)
+        IRestrictedAccessService restrictedAccess,
+        IAppointmentAssigneeService appointmentAssignees)
     {
         _context = context;
         _restrictedAccess = restrictedAccess;
+        _appointmentAssignees = appointmentAssignees;
     }
 
     // GET: Appointments / Date-Based Actions tab (PRD 5.3)
@@ -67,7 +70,7 @@ public class AppointmentsController : Controller
             }
         }
 
-        await PopulateDropdowns();
+        await PopulateDropdowns(vm);
         return View(vm);
     }
 
@@ -107,6 +110,16 @@ public class AppointmentsController : Controller
             if (!allowed) return NotFound();
         }
 
+        var assignee = await _appointmentAssignees.ResolveAsync(
+            model.AssignedClinicianEntry,
+            model.AssignedClinicianUserId);
+        if (!assignee.IsValid)
+        {
+            ModelState.AddModelError(
+                nameof(model.AssignedClinicianEntry),
+                assignee.Error!);
+        }
+
         if (ModelState.IsValid)
         {
             var appointment = new Appointment
@@ -117,6 +130,8 @@ public class AppointmentsController : Controller
                 AppointmentDate = model.AppointmentDate,
                 AppointmentTime = model.AppointmentTime,
                 Status = AppointmentStatus.Scheduled,
+                AssignedClinicianUserId = assignee.UserId,
+                AssignedClinicianName = assignee.FullName,
                 Notes = model.Notes,
                 CreatedBy = User.Identity?.Name
             };
@@ -127,7 +142,7 @@ public class AppointmentsController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        await PopulateDropdowns();
+        await PopulateDropdowns(model);
         return View(model);
     }
 
@@ -173,12 +188,13 @@ public class AppointmentsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private async Task PopulateDropdowns()
+    private async Task PopulateDropdowns(AppointmentViewModel model)
     {
         ViewBag.Patients = new SelectList(
             await _context.Patients.Select(p => new { p.Id, DisplayName = p.PatientNumber + " - " + p.FullName }).ToListAsync(),
             "Id", "DisplayName");
         ViewBag.TypeOptions = new SelectList(Enum.GetValues(typeof(AppointmentType)).Cast<AppointmentType>());
+        model.AssigneeOptions = await _appointmentAssignees.GetOptionsAsync();
     }
 
     private async Task<bool> CanAccessAppointmentAsync(Appointment appointment, string action)
