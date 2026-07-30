@@ -2,12 +2,29 @@
 
 @{
     ViewData["Title"] = "Patient Details";
+    var profilePhoto = Model.Documents
+        .Where(d => d.DocumentType == Poms.Domain.Enums.DocumentType.PatientPhoto)
+        .OrderByDescending(d => d.UploadedAt)
+        .FirstOrDefault();
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1>Patient Details</h1>
-        <p class="text-muted mb-0">Patient Number: <strong class="text-primary">@Model.PatientNumber</strong></p>
+    <div class="d-flex align-items-center gap-3">
+        <div class="patient-folder-photo">
+            @if (profilePhoto is not null)
+            {
+                <img src="@Url.Action("PatientPhoto", "Files", new { patientId = Model.Id })"
+                     alt="Photo of @Model.FullName" />
+            }
+            else
+            {
+                <span class="patient-photo-placeholder" aria-hidden="true"><i class="fa-solid fa-user"></i></span>
+            }
+        </div>
+        <div>
+            <h1>Patient Details</h1>
+            <p class="text-muted mb-0">Patient Number: <strong class="text-primary">@Model.PatientNumber</strong></p>
+        </div>
     </div>
     <div>
         <a asp-action="Folder" asp-route-id="@Model.Id" class="btn btn-primary">Open Patient Folder</a>

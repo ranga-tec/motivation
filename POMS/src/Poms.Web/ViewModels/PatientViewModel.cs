@@ -1,4 +1,6 @@
 using Poms.Domain.Enums;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Poms.Infrastructure.Services;
 using System.ComponentModel.DataAnnotations;
 
 namespace Poms.Web.ViewModels;
@@ -30,6 +32,15 @@ public class PatientViewModel : IValidatableObject
 
     [Display(Name = "Employment")]
     public string? Employment { get; set; }
+
+    [Display(Name = "Patient Photo")]
+    public IFormFile? ProfilePhoto { get; set; }
+
+    [Display(Name = "Remove current photo")]
+    public bool RemoveProfilePhoto { get; set; }
+
+    [BindNever]
+    public string? ExistingProfilePhotoUrl { get; set; }
 
     [Required]
     [Display(Name = "Patient Category")]
@@ -125,6 +136,13 @@ public class PatientViewModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        if (ProfilePhoto?.Length > PatientPhotoValidator.MaxFileSizeBytes)
+        {
+            yield return new ValidationResult(
+                "The patient photo must be 5 MB or smaller.",
+                new[] { nameof(ProfilePhoto) });
+        }
+
         if (Category == PatientCategory.Foreign && string.IsNullOrWhiteSpace(Nationality))
         {
             yield return new ValidationResult(

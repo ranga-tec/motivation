@@ -7,55 +7,93 @@ public static class SampleDataSeeder
 {
     public static async Task SeedLocationsAsync(PomsDbContext context)
     {
-        if (await context.Provinces.AnyAsync()) return; // Already seeded
+        var provincesByCode = await context.Provinces
+            .ToDictionaryAsync(p => p.Code, StringComparer.OrdinalIgnoreCase);
 
-        var western = new Province { Code = "WP", Name = "Western Province" };
-        var central = new Province { Code = "CP", Name = "Central Province" };
-        var southern = new Province { Code = "SP", Name = "Southern Province" };
-        var northern = new Province { Code = "NP", Name = "Northern Province" };
-        var eastern = new Province { Code = "EP", Name = "Eastern Province" };
-        context.Provinces.AddRange(western, central, southern, northern, eastern);
+        foreach (var provinceSeed in SriLankaLocationData.Provinces)
+        {
+            if (provincesByCode.ContainsKey(provinceSeed.Code)) continue;
+
+            var province = new Province { Code = provinceSeed.Code, Name = provinceSeed.Name };
+            context.Provinces.Add(province);
+            provincesByCode[provinceSeed.Code] = province;
+        }
+
         await context.SaveChangesAsync();
 
-        var gampaha = new District { ProvinceId = western.Id, Code = "GM", Name = "Gampaha" };
-        var colombo = new District { ProvinceId = western.Id, Code = "CO", Name = "Colombo" };
-        var kandy = new District { ProvinceId = central.Id, Code = "KA", Name = "Kandy" };
-        var galle = new District { ProvinceId = southern.Id, Code = "GL", Name = "Galle" };
-        var jaffna = new District { ProvinceId = northern.Id, Code = "JA", Name = "Jaffna" };
-        var batticaloa = new District { ProvinceId = eastern.Id, Code = "BT", Name = "Batticaloa" };
-        context.Districts.AddRange(gampaha, colombo, kandy, galle, jaffna, batticaloa);
+        var districtsByCode = await context.Districts
+            .ToDictionaryAsync(d => d.Code, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var provinceSeed in SriLankaLocationData.Provinces)
+        {
+            var province = provincesByCode[provinceSeed.Code];
+            foreach (var districtSeed in provinceSeed.Districts)
+            {
+                if (districtsByCode.ContainsKey(districtSeed.Code)) continue;
+
+                var district = new District
+                {
+                    ProvinceId = province.Id,
+                    Code = districtSeed.Code,
+                    Name = districtSeed.Name
+                };
+                context.Districts.Add(district);
+                districtsByCode[districtSeed.Code] = district;
+            }
+        }
+
         await context.SaveChangesAsync();
 
         // Current treatment locations (PRD 3.1): Ragama (unflagged) + Colombo (flagged "C")
-        context.Centers.AddRange(
-            new Center
+        var gampaha = districtsByCode["GM"];
+        var colombo = districtsByCode["CO"];
+        if (!await context.Centers.AnyAsync(c => c.Code == "RAG"))
+        {
+            context.Centers.Add(new Center
             {
                 DistrictId = gampaha.Id, Code = "RAG", Name = "Ragama", Address = "Ragama",
                 IsActive = true, RequiresPatientNumberFlag = false
-            },
-            new Center
+            });
+        }
+
+        if (!await context.Centers.AnyAsync(c => c.Code == "COL"))
+        {
+            context.Centers.Add(new Center
             {
                 DistrictId = colombo.Id, Code = "COL", Name = "Colombo", Address = "Colombo",
                 IsActive = true, RequiresPatientNumberFlag = true, PatientNumberFlagCode = "C"
-            }
-        );
+            });
+        }
+
         await context.SaveChangesAsync();
 
-        // Cities for the patient-address dropdowns (separate from the 2 treatment Centers above)
-        context.Cities.AddRange(
-            new City { DistrictId = gampaha.Id, Name = "Ragama" },
-            new City { DistrictId = gampaha.Id, Name = "Gampaha" },
-            new City { DistrictId = gampaha.Id, Name = "Negombo" },
-            new City { DistrictId = gampaha.Id, Name = "Wattala" },
-            new City { DistrictId = colombo.Id, Name = "Colombo" },
-            new City { DistrictId = colombo.Id, Name = "Dehiwala" },
-            new City { DistrictId = colombo.Id, Name = "Moratuwa" },
-            new City { DistrictId = colombo.Id, Name = "Maharagama" },
-            new City { DistrictId = kandy.Id, Name = "Kandy" },
-            new City { DistrictId = galle.Id, Name = "Galle" },
-            new City { DistrictId = jaffna.Id, Name = "Jaffna" },
-            new City { DistrictId = batticaloa.Id, Name = "Batticaloa" }
-        );
+        var existingCities = await context.Cities
+            .Select(c => new { c.DistrictId, c.Name })
+            .ToListAsync();
+        var cityKeys = existingCities
+            .Select(c => $"{c.DistrictId}|{c.Name.Trim().ToUpperInvariant()}")
+            .ToHashSet(StringComparer.Ordinal);
+
+        foreach (var provinceSeed in SriLankaLocationData.Provinces)
+        {
+            foreach (var districtSeed in provinceSeed.Districts)
+            {
+                var district = districtsByCode[districtSeed.Code];
+                foreach (var cityName in districtSeed.Cities.Distinct(StringComparer.OrdinalIgnoreCase))
+                {
+                    var key = $"{district.Id}|{cityName.Trim().ToUpperInvariant()}";
+                    if (!cityKeys.Add(key)) continue;
+
+                    context.Cities.Add(new City
+                    {
+                        DistrictId = district.Id,
+                        Name = cityName,
+                        IsActive = true
+                    });
+                }
+            }
+        }
+
         await context.SaveChangesAsync();
     }
 

@@ -17,12 +17,18 @@ public class AdminController : Controller
     private readonly PomsDbContext _context;
     private readonly UserManager<IdentityUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
+    private readonly ILogger<AdminController> _logger;
 
-    public AdminController(PomsDbContext context, UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager)
+    public AdminController(
+        PomsDbContext context,
+        UserManager<IdentityUser> userManager,
+        RoleManager<IdentityRole> roleManager,
+        ILogger<AdminController> logger)
     {
         _context = context;
         _userManager = userManager;
         _roleManager = roleManager;
+        _logger = logger;
     }
 
     public IActionResult Index() => View();
@@ -272,47 +278,193 @@ public class AdminController : Controller
 
     public async Task<IActionResult> Users()
     {
-        var users = await _userManager.Users.ToListAsync();
-        var rows = new List<(IdentityUser User, IList<string> Roles)>();
-        foreach (var user in users)
-        {
-            rows.Add((user, await _userManager.GetRolesAsync(user)));
-        }
-
-        ViewBag.AllRoles = await _roleManager.Roles.Select(r => r.Name).ToListAsync();
-        return View(rows);
+        return View(await BuildUserManagementViewModel());
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> UserCreate(string email, string password, string role)
+    public async Task<IActionResult> UserCreate([Bind(Prefix = "NewUser")] CreateUserViewModel model)
     {
-        var user = new IdentityUser { UserName = email, Email = email, EmailConfirmed = true };
-        var result = await _userManager.CreateAsync(user, password);
-        if (result.Succeeded)
+        var roles = await GetAvailableRoles();
+        ValidateSelectedRoles(model.Roles, roles, "NewUser.Roles");
+
+        if (await _userManager.FindByEmailAsync(model.Email) is not null)
         {
-            await _userManager.AddToRoleAsync(user, role);
-            TempData["Success"] = "User created.";
+            ModelState.AddModelError("NewUser.Email", "An account with this email address already exists.");
         }
-        else
+
+        if (!ModelState.IsValid)
         {
-            TempData["Error"] = string.Join("; ", result.Errors.Select(e => e.Description));
+            return View(nameof(Users), await BuildUserManagementViewModel(model));
         }
+
+        var email = model.Email.Trim();
+        var user = new IdentityUser
+        {
+            UserName = email,
+            Email = email,
+            EmailConfirmed = true,
+            LockoutEnabled = true
+        };
+
+        var createResult = await _userManager.CreateAsync(user, model.Password);
+        if (!createResult.Succeeded)
+        {
+            AddIdentityErrors(createResult, "NewUser.Password");
+            return View(nameof(Users), await BuildUserManagementViewModel(model));
+        }
+
+        var roleResult = await _userManager.AddToRolesAsync(user, model.Roles.Distinct(StringComparer.OrdinalIgnoreCase));
+        if (!roleResult.Succeeded)
+        {
+            await _userManager.DeleteAsync(user);
+            AddIdentityErrors(roleResult, "NewUser.Roles");
+            return View(nameof(Users), await BuildUserManagementViewModel(model));
+        }
+
+        _logger.LogInformation(
+            "Administrator {Administrator} created user {UserEmail} with roles {Roles}.",
+            User.Identity?.Name,
+            email,
+            string.Join(", ", model.Roles));
+        TempData["Success"] = $"Account created for {email}.";
         return RedirectToAction(nameof(Users));
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> UserChangeRole(string userId, string role)
+    public async Task<IActionResult> UserChangeRole(UserRoleUpdateViewModel model)
+    {
+        var availableRoles = await GetAvailableRoles();
+        ValidateSelectedRoles(model.Roles, availableRoles, nameof(model.Roles));
+        if (!ModelState.IsValid)
+        {
+            TempData["Error"] = FirstModelStateError();
+            return RedirectToAction(nameof(Users));
+        }
+
+        var user = await _userManager.FindByIdAsync(model.UserId);
+        if (user is null) return NotFound();
+
+        var currentRoles = await _userManager.GetRolesAsync(user);
+        var requestedRoles = model.Roles.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var removesAdmin = currentRoles.Contains("ADMIN") &&
+            !requestedRoles.Contains("ADMIN", StringComparer.OrdinalIgnoreCase);
+
+        if (removesAdmin && await IsLastActiveAdministrator(user))
+        {
+            TempData["Error"] = "The last active administrator must keep Administrator access.";
+            return RedirectToAction(nameof(Users));
+        }
+
+        if (_userManager.GetUserId(User) == user.Id && removesAdmin)
+        {
+            TempData["Error"] = "You cannot remove your own Administrator access.";
+            return RedirectToAction(nameof(Users));
+        }
+
+        var rolesToAdd = requestedRoles.Except(currentRoles, StringComparer.OrdinalIgnoreCase).ToArray();
+        var rolesToRemove = currentRoles.Except(requestedRoles, StringComparer.OrdinalIgnoreCase).ToArray();
+
+        if (rolesToAdd.Length > 0)
+        {
+            var addResult = await _userManager.AddToRolesAsync(user, rolesToAdd);
+            if (!addResult.Succeeded)
+            {
+                TempData["Error"] = IdentityErrorMessage(addResult);
+                return RedirectToAction(nameof(Users));
+            }
+        }
+
+        if (rolesToRemove.Length > 0)
+        {
+            var removeResult = await _userManager.RemoveFromRolesAsync(user, rolesToRemove);
+            if (!removeResult.Succeeded)
+            {
+                TempData["Error"] = IdentityErrorMessage(removeResult);
+                return RedirectToAction(nameof(Users));
+            }
+        }
+
+        _logger.LogInformation(
+            "Administrator {Administrator} changed roles for {UserEmail} to {Roles}.",
+            User.Identity?.Name,
+            user.Email,
+            string.Join(", ", requestedRoles));
+        TempData["Success"] = $"Access updated for {user.Email}.";
+        return RedirectToAction(nameof(Users));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UserSetLock(string userId, bool lockAccount)
     {
         var user = await _userManager.FindByIdAsync(userId);
-        if (user != null)
+        if (user is null) return NotFound();
+
+        if (lockAccount && _userManager.GetUserId(User) == user.Id)
         {
-            var currentRoles = await _userManager.GetRolesAsync(user);
-            await _userManager.RemoveFromRolesAsync(user, currentRoles);
-            await _userManager.AddToRoleAsync(user, role);
-            TempData["Success"] = "Role updated.";
+            TempData["Error"] = "You cannot lock your own account.";
+            return RedirectToAction(nameof(Users));
         }
+
+        if (lockAccount && await _userManager.IsInRoleAsync(user, "ADMIN") &&
+            await IsLastActiveAdministrator(user))
+        {
+            TempData["Error"] = "The last active administrator cannot be locked.";
+            return RedirectToAction(nameof(Users));
+        }
+
+        var enabledResult = await _userManager.SetLockoutEnabledAsync(user, true);
+        var lockResult = enabledResult.Succeeded
+            ? await _userManager.SetLockoutEndDateAsync(
+                user,
+                lockAccount ? DateTimeOffset.MaxValue : null)
+            : enabledResult;
+
+        if (!lockResult.Succeeded)
+        {
+            TempData["Error"] = IdentityErrorMessage(lockResult);
+            return RedirectToAction(nameof(Users));
+        }
+
+        _logger.LogInformation(
+            "Administrator {Administrator} {Action} user {UserEmail}.",
+            User.Identity?.Name,
+            lockAccount ? "locked" : "unlocked",
+            user.Email);
+        TempData["Success"] = lockAccount
+            ? $"{user.Email} can no longer sign in."
+            : $"{user.Email} can sign in again.";
+        return RedirectToAction(nameof(Users));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UserResetPassword(ResetUserPasswordViewModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            TempData["Error"] = FirstModelStateError();
+            return RedirectToAction(nameof(Users));
+        }
+
+        var user = await _userManager.FindByIdAsync(model.UserId);
+        if (user is null) return NotFound();
+
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var result = await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
+        if (!result.Succeeded)
+        {
+            TempData["Error"] = IdentityErrorMessage(result);
+            return RedirectToAction(nameof(Users));
+        }
+
+        _logger.LogInformation(
+            "Administrator {Administrator} reset the password for {UserEmail}.",
+            User.Identity?.Name,
+            user.Email);
+        TempData["Success"] = $"A new temporary password was set for {user.Email}.";
         return RedirectToAction(nameof(Users));
     }
 
@@ -321,6 +473,94 @@ public class AdminController : Controller
     private async Task PopulateDistricts()
     {
         ViewBag.Districts = new SelectList(await _context.Districts.ToListAsync(), "Id", "Name");
+    }
+
+    private async Task<UserManagementViewModel> BuildUserManagementViewModel(
+        CreateUserViewModel? newUser = null)
+    {
+        var currentUserId = _userManager.GetUserId(User);
+        var users = await _userManager.Users.OrderBy(user => user.Email).ToListAsync();
+        var rows = new List<UserAccessRowViewModel>(users.Count);
+
+        foreach (var user in users)
+        {
+            rows.Add(new UserAccessRowViewModel
+            {
+                Id = user.Id,
+                Email = user.Email ?? user.UserName ?? "Unknown account",
+                Roles = (await _userManager.GetRolesAsync(user)).ToList(),
+                IsLocked = IsUserLocked(user),
+                IsCurrentUser = user.Id == currentUserId
+            });
+        }
+
+        return new UserManagementViewModel
+        {
+            NewUser = newUser ?? new CreateUserViewModel(),
+            Users = rows,
+            AvailableRoles = await GetAvailableRoles()
+        };
+    }
+
+    private async Task<List<string>> GetAvailableRoles()
+    {
+        return await _roleManager.Roles
+            .Where(role => role.Name != null)
+            .Select(role => role.Name!)
+            .OrderBy(role => role)
+            .ToListAsync();
+    }
+
+    private void ValidateSelectedRoles(
+        IEnumerable<string>? selectedRoles,
+        IReadOnlyCollection<string> availableRoles,
+        string modelStateKey)
+    {
+        var selected = selectedRoles?.Distinct(StringComparer.OrdinalIgnoreCase).ToArray() ?? [];
+        if (selected.Length == 0)
+        {
+            ModelState.AddModelError(modelStateKey, "Select at least one access role.");
+            return;
+        }
+
+        if (selected.Any(role => !availableRoles.Contains(role, StringComparer.OrdinalIgnoreCase)))
+        {
+            ModelState.AddModelError(modelStateKey, "One or more selected access roles are invalid.");
+        }
+    }
+
+    private async Task<bool> IsLastActiveAdministrator(IdentityUser target)
+    {
+        var administrators = await _userManager.GetUsersInRoleAsync("ADMIN");
+        return administrators.Count(user => !IsUserLocked(user)) <= 1 &&
+            administrators.Any(user => user.Id == target.Id && !IsUserLocked(user));
+    }
+
+    private static bool IsUserLocked(IdentityUser user)
+    {
+        return user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow;
+    }
+
+    private void AddIdentityErrors(IdentityResult result, string key)
+    {
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(key, error.Description);
+        }
+    }
+
+    private string FirstModelStateError()
+    {
+        return ModelState.Values
+            .SelectMany(entry => entry.Errors)
+            .Select(error => error.ErrorMessage)
+            .FirstOrDefault(message => !string.IsNullOrWhiteSpace(message))
+            ?? "The requested change could not be completed.";
+    }
+
+    private static string IdentityErrorMessage(IdentityResult result)
+    {
+        return string.Join("; ", result.Errors.Select(error => error.Description));
     }
 
     private static string LookupTitle(string type) => type switch

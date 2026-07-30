@@ -1,0 +1,56 @@
+@page
+@model Poms.Web.Areas.Identity.Pages.Account.LoginModel
+
+@{
+    ViewData["Title"] = "Sign in";
+}
+
+<div class="login-shell">
+    <section class="login-card" aria-labelledby="loginHeading">
+        <div class="login-intro">
+            <span class="login-brand-mark" aria-hidden="true"><i class="fa-solid fa-notes-medical"></i></span>
+            <span class="page-eyebrow">Secure staff portal</span>
+            <h1 id="loginHeading" class="h2">Welcome to POMS</h1>
+            <p>Sign in with your staff account to manage prosthetic, orthotic, and spinal patient care.</p>
+            <div class="login-security-note">
+                <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                <span>Accounts and access are managed by your POMS administrator.</span>
+            </div>
+        </div>
+
+        <div class="login-form-panel">
+            <h2 class="h4 mb-1">Sign in</h2>
+            <p class="text-body-secondary mb-4">Enter your work email and password.</p>
+            <form method="post">
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                <input type="hidden" asp-for="ReturnUrl" />
+                <div class="mb-3">
+                    <label asp-for="Input.Email" class="form-label"></label>
+                    <input asp-for="Input.Email" class="form-control form-control-lg"
+                           autocomplete="username" autofocus />
+                    <span asp-validation-for="Input.Email" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between gap-3">
+                        <label asp-for="Input.Password" class="form-label"></label>
+                        <a asp-page="./ForgotPassword" class="small">Forgot password?</a>
+                    </div>
+                    <input asp-for="Input.Password" class="form-control form-control-lg"
+                           autocomplete="current-password" />
+                    <span asp-validation-for="Input.Password" class="text-danger"></span>
+                </div>
+                <div class="form-check mb-4">
+                    <input asp-for="Input.RememberMe" class="form-check-input" />
+                    <label asp-for="Input.RememberMe" class="form-check-label"></label>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg w-100">
+                    Sign in <i class="fa-solid fa-arrow-right ms-2" aria-hidden="true"></i>
+                </button>
+            </form>
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

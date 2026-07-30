@@ -17,6 +17,7 @@
 <form asp-action="@action"
       asp-route-id="@(isEdit ? Model.Id : null)"
       method="post"
+      enctype="multipart/form-data"
       class="modal-content workflow-wizard patient-wizard"
       id="patientForm"
       data-workflow-wizard
@@ -83,6 +84,45 @@
                     <span class="workflow-eyebrow">Step 1</span>
                     <h2 id="patientStepIdentity" class="h4">Patient identity</h2>
                     <p>Start with the details used to identify the patient and prevent duplicate records.</p>
+                </div>
+            </div>
+
+            <div class="patient-photo-card mb-4" data-patient-photo>
+                <div class="patient-photo-preview" data-photo-preview>
+                    <img src="@(Model.ExistingProfilePhotoUrl ?? "data:image/gif;base64,R0lGODlhAQABAAAAACw=")"
+                         class="patient-photo-image @(Model.ExistingProfilePhotoUrl is null ? "d-none" : "")"
+                         data-photo-image
+                         alt="Current photo of @Model.FullName" />
+                    <span class="patient-photo-placeholder @(Model.ExistingProfilePhotoUrl is null ? "" : "d-none")"
+                          data-photo-placeholder
+                          aria-hidden="true">
+                        <i class="fa-solid fa-user"></i>
+                    </span>
+                </div>
+                <div class="patient-photo-controls">
+                    <label asp-for="ProfilePhoto" class="form-label mb-1"></label>
+                    <p class="small text-secondary mb-2">Optional. Use a clear, recent head-and-shoulders photo.</p>
+                    <input asp-for="ProfilePhoto"
+                           type="file"
+                           class="visually-hidden"
+                           accept="image/jpeg,image/png"
+                           data-photo-input
+                           data-review-label="Patient photo" />
+                    <input asp-for="RemoveProfilePhoto" type="hidden" data-remove-photo-value />
+                    <div class="d-flex flex-wrap gap-2">
+                        <label for="ProfilePhoto" class="btn btn-outline-primary mb-0" data-photo-choose>
+                            <i class="fa-solid fa-camera me-1" aria-hidden="true"></i>
+                            <span data-photo-choose-text>@(Model.ExistingProfilePhotoUrl is null ? "Choose photo" : "Replace photo")</span>
+                        </label>
+                        <button type="button"
+                                class="btn btn-outline-danger @(Model.ExistingProfilePhotoUrl is null ? "d-none" : "")"
+                                data-photo-remove>
+                            Remove
+                        </button>
+                    </div>
+                    <div class="form-text">JPG or PNG, up to 5 MB.</div>
+                    <span asp-validation-for="ProfilePhoto" class="text-danger d-block"></span>
+                    <p class="small text-success mt-2 mb-0 d-none" data-photo-status role="status"></p>
                 </div>
             </div>
 
@@ -177,16 +217,22 @@
                     </select>
                     <span asp-validation-for="DistrictId" class="text-danger"></span>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-4" data-city-field>
                     <label asp-for="CityId" class="form-label"></label>
-                    <select asp-for="CityId" class="form-select" data-selected="@Model.CityId" data-review-label="City">
+                    <select asp-for="CityId"
+                            class="form-select"
+                            data-selected="@Model.CityId"
+                            data-searchable-city
+                            data-review-label="City">
                         <option value="">Select city</option>
                     </select>
-                </div>
-                <div class="col-md-6">
-                    <label asp-for="CityOther" class="form-label"></label>
-                    <input asp-for="CityOther" class="form-control" />
-                    <div class="form-text">Only use this when the city is not in the list.</div>
+                    <div class="form-text">Search the selected district, or type a town not listed.</div>
+                    <div class="city-other-fallback mt-2" data-city-other-fallback>
+                        <label asp-for="CityOther" class="form-label"></label>
+                        <input asp-for="CityOther" class="form-control" data-review-label="City" />
+                        <div class="form-text">Only use this when the city is not in the list.</div>
+                    </div>
+                    <span asp-validation-for="CityId" class="text-danger"></span>
                     <span asp-validation-for="CityOther" class="text-danger"></span>
                 </div>
                 <div class="col-md-6">

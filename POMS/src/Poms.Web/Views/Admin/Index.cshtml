@@ -1,50 +1,77 @@
 @{
-    ViewData["Title"] = "Admin";
+    ViewData["Title"] = "Administration";
 }
 
-<h1 class="mb-4">Admin - Master Data</h1>
+<div class="admin-page">
+    <header class="page-header mb-4">
+        <div>
+            <span class="page-eyebrow">System administration</span>
+            <h1 class="h2 mb-2">Administration</h1>
+            <p class="text-body-secondary mb-0">Manage staff access and the reference data used across POMS.</p>
+        </div>
+    </header>
 
-<div class="row">
-    <div class="col-md-4 mb-3">
-        <div class="card"><div class="card-body">
-            <h6>Locations</h6>
-            <a asp-action="Locations" class="btn btn-sm btn-primary">Manage</a>
-        </div></div>
-    </div>
-    <div class="col-md-4 mb-3">
-        <div class="card"><div class="card-body">
-            <h6>Referral Sources</h6>
-            <a asp-action="Lookup" asp-route-type="referral-sources" class="btn btn-sm btn-primary">Manage</a>
-        </div></div>
-    </div>
-    <div class="col-md-4 mb-3">
-        <div class="card"><div class="card-body">
-            <h6>Nationalities</h6>
-            <a asp-action="Lookup" asp-route-type="nationalities" class="btn btn-sm btn-primary">Manage</a>
-        </div></div>
-    </div>
-    <div class="col-md-4 mb-3">
-        <div class="card"><div class="card-body">
-            <h6>Main Problem Types</h6>
-            <a asp-action="Lookup" asp-route-type="main-problem-types" class="btn btn-sm btn-primary">Manage</a>
-        </div></div>
-    </div>
-    <div class="col-md-4 mb-3">
-        <div class="card"><div class="card-body">
-            <h6>Cause / Reason / Pathology Types</h6>
-            <a asp-action="Lookup" asp-route-type="cause-reason-types" class="btn btn-sm btn-primary">Manage</a>
-        </div></div>
-    </div>
-    <div class="col-md-4 mb-3">
-        <div class="card"><div class="card-body">
-            <h6>Provinces / Districts / Cities</h6>
-            <a asp-action="Provinces" class="btn btn-sm btn-primary">Manage</a>
-        </div></div>
-    </div>
-    <div class="col-md-4 mb-3">
-        <div class="card"><div class="card-body">
-            <h6>Users &amp; Roles</h6>
-            <a asp-action="Users" class="btn btn-sm btn-primary">Manage</a>
-        </div></div>
-    </div>
+    <section aria-labelledby="accessHeading" class="mb-5">
+        <h2 id="accessHeading" class="h5 mb-3">Security &amp; access</h2>
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <a asp-action="Users" class="admin-module-card is-featured">
+                    <span class="admin-module-icon"><i class="fa-solid fa-users-cog" aria-hidden="true"></i></span>
+                    <span>
+                        <strong>User access management</strong>
+                        <small>Create staff accounts, assign roles, lock access, and reset passwords.</small>
+                    </span>
+                    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section aria-labelledby="referenceHeading">
+        <h2 id="referenceHeading" class="h5 mb-3">Reference data</h2>
+        <div class="row g-3">
+            <div class="col-md-6 col-xl-4">
+                <a asp-action="Locations" class="admin-module-card">
+                    <span class="admin-module-icon"><i class="fa-solid fa-hospital" aria-hidden="true"></i></span>
+                    <span><strong>Service locations</strong><small>Manage POMS centres and contact details.</small></span>
+                    <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                </a>
+            </div>
+            <div class="col-md-6 col-xl-4">
+                <a asp-action="Provinces" class="admin-module-card">
+                    <span class="admin-module-icon"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i></span>
+                    <span><strong>Geographic locations</strong><small>Manage provinces, districts, and cities.</small></span>
+                    <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                </a>
+            </div>
+            <div class="col-md-6 col-xl-4">
+                <a asp-action="Lookup" asp-route-type="referral-sources" class="admin-module-card">
+                    <span class="admin-module-icon"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i></span>
+                    <span><strong>Referral sources</strong><small>Maintain the patient referral options.</small></span>
+                    <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                </a>
+            </div>
+            <div class="col-md-6 col-xl-4">
+                <a asp-action="Lookup" asp-route-type="nationalities" class="admin-module-card">
+                    <span class="admin-module-icon"><i class="fa-solid fa-earth-asia" aria-hidden="true"></i></span>
+                    <span><strong>Nationalities</strong><small>Maintain selectable nationality values.</small></span>
+                    <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                </a>
+            </div>
+            <div class="col-md-6 col-xl-4">
+                <a asp-action="Lookup" asp-route-type="main-problem-types" class="admin-module-card">
+                    <span class="admin-module-icon"><i class="fa-solid fa-clipboard-list" aria-hidden="true"></i></span>
+                    <span><strong>Main problem types</strong><small>Configure clinical problem categories.</small></span>
+                    <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                </a>
+            </div>
+            <div class="col-md-6 col-xl-4">
+                <a asp-action="Lookup" asp-route-type="cause-reason-types" class="admin-module-card">
+                    <span class="admin-module-icon"><i class="fa-solid fa-stethoscope" aria-hidden="true"></i></span>
+                    <span><strong>Cause &amp; pathology</strong><small>Configure cause, reason, and pathology values.</small></span>
+                    <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                </a>
+            </div>
+        </div>
+    </section>
 </div>

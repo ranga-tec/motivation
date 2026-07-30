@@ -2,12 +2,32 @@
 
 @{
     ViewData["Title"] = "Patient Folder";
+    var profilePhoto = Model.Documents
+        .Where(d => d.DocumentType == Poms.Domain.Enums.DocumentType.PatientPhoto)
+        .OrderByDescending(d => d.UploadedAt)
+        .FirstOrDefault();
+    var uploadedDocuments = Model.Documents
+        .Where(d => d.DocumentType != Poms.Domain.Enums.DocumentType.PatientPhoto)
+        .ToList();
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1>Patient Folder</h1>
-        <p class="text-muted mb-0">Patient Number: <strong class="text-primary">@Model.PatientNumber</strong> &mdash; @Model.FullName</p>
+    <div class="d-flex align-items-center gap-3">
+        <div class="patient-folder-photo">
+            @if (profilePhoto is not null)
+            {
+                <img src="@Url.Action("PatientPhoto", "Files", new { patientId = Model.Id })"
+                     alt="Photo of @Model.FullName" />
+            }
+            else
+            {
+                <span class="patient-photo-placeholder" aria-hidden="true"><i class="fa-solid fa-user"></i></span>
+            }
+        </div>
+        <div>
+            <h1>Patient Folder</h1>
+            <p class="text-muted mb-0">Patient Number: <strong class="text-primary">@Model.PatientNumber</strong> &mdash; @Model.FullName</p>
+        </div>
     </div>
     <div>
         <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">Edit</a>
@@ -130,12 +150,12 @@
                 <a asp-controller="Files" asp-action="UploadForPatient" asp-route-patientId="@Model.Id" class="btn btn-sm btn-primary">+ Upload Document</a>
             </div>
             <div class="card-body">
-                @if (Model.Documents.Any())
+                @if (uploadedDocuments.Count > 0)
                 {
                     <table class="table table-striped">
                         <thead><tr><th>Type</th><th>File Name</th><th>Uploaded</th><th>Actions</th></tr></thead>
                         <tbody>
-                            @foreach (var doc in Model.Documents)
+                            @foreach (var doc in uploadedDocuments)
                             {
                                 <tr>
                                     <td>@doc.DocumentType</td>

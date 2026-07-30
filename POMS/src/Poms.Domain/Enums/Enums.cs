@@ -15,6 +15,7 @@ public enum AppointmentStatus { Scheduled, Completed, Cancelled }
 
 public enum DocumentType
 {
+    PatientPhoto,
     ScannedRegistrationForm,
     NicCopy,
     PassportCopy,

@@ -122,6 +122,28 @@ public class FilesController : Controller
     }
 
     // GET: Files/Download/5?scope=patient|episode
+    [HttpGet]
+    [ResponseCache(Duration = 300, Location = ResponseCacheLocation.Client)]
+    public async Task<IActionResult> PatientPhoto(Guid patientId)
+    {
+        var photo = await _context.PatientDocuments
+            .Where(d => d.PatientId == patientId && d.DocumentType == DocumentType.PatientPhoto)
+            .OrderByDescending(d => d.UploadedAt)
+            .FirstOrDefaultAsync();
+        if (photo == null) return NotFound();
+
+        try
+        {
+            var bytes = await _fileStorageService.GetFileAsync(photo.StoragePath);
+            return File(bytes, photo.ContentType);
+        }
+        catch (FileNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    // GET: Files/Download/5?scope=patient|episode
     public async Task<IActionResult> Download(Guid id, string scope)
     {
         string storagePath, fileName, contentType;
@@ -176,6 +198,9 @@ public class FilesController : Controller
 
     private void PopulateDocumentTypes()
     {
-        ViewBag.DocumentTypes = new SelectList(Enum.GetValues(typeof(DocumentType)).Cast<DocumentType>());
+        ViewBag.DocumentTypes = new SelectList(
+            Enum.GetValues(typeof(DocumentType))
+                .Cast<DocumentType>()
+                .Where(type => type != DocumentType.PatientPhoto));
     }
 }

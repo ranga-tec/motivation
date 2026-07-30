@@ -16,17 +16,20 @@ public class PatientsController : Controller
     private readonly PomsDbContext _context;
     private readonly IPatientNumberService _patientNumberService;
     private readonly IDuplicateCheckService _duplicateCheckService;
+    private readonly IFileStorageService _fileStorageService;
     private readonly ILogger<PatientsController> _logger;
 
     public PatientsController(
         PomsDbContext context,
         IPatientNumberService patientNumberService,
         IDuplicateCheckService duplicateCheckService,
+        IFileStorageService fileStorageService,
         ILogger<PatientsController> logger)
     {
         _context = context;
         _patientNumberService = patientNumberService;
         _duplicateCheckService = duplicateCheckService;
+        _fileStorageService = fileStorageService;
         _logger = logger;
     }
 
@@ -148,6 +151,11 @@ public class PatientsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(PatientViewModel model)
     {
+        await ValidateLocationAsync(model);
+        var photoValidation = await PatientPhotoValidator.ValidateAsync(model.ProfilePhoto);
+        if (!photoValidation.IsValid)
+            ModelState.AddModelError(nameof(model.ProfilePhoto), photoValidation.Error!);
+
         if (ModelState.IsValid)
         {
             var duplicate = await _duplicateCheckService.CheckAsync(
@@ -168,6 +176,7 @@ public class PatientsController : Controller
             {
                 try
                 {
+                    string? savedPhotoPath = null;
                     var registrationDate = model.RegistrationDate ?? DateOnly.FromDateTime(DateTime.Today);
                     var patientNumber = await _patientNumberService.GeneratePatientNumberAsync(
                         model.CenterId, registrationDate);
@@ -219,8 +228,34 @@ public class PatientsController : Controller
                         });
                     }
 
+                    if (model.ProfilePhoto is not null)
+                    {
+                        var savedPhoto = await _fileStorageService.SaveFileAsync(model.ProfilePhoto, patientNumber);
+                        savedPhotoPath = savedPhoto.StoragePath;
+                        patient.Documents.Add(new PatientDocument
+                        {
+                            DocumentType = DocumentType.PatientPhoto,
+                            FileName = Path.GetFileName(model.ProfilePhoto.FileName),
+                            StoragePath = savedPhoto.StoragePath,
+                            ContentType = photoValidation.ContentType!,
+                            Notes = "Patient profile photo",
+                            UploadedBy = User.Identity?.Name ?? "",
+                            UploadedAt = DateTime.UtcNow,
+                            CreatedBy = User.Identity?.Name
+                        });
+                    }
+
                     _context.Add(patient);
-                    await _context.SaveChangesAsync();
+                    try
+                    {
+                        await _context.SaveChangesAsync();
+                    }
+                    catch
+                    {
+                        if (savedPhotoPath is not null)
+                            await _fileStorageService.DeleteFileAsync(savedPhotoPath);
+                        throw;
+                    }
 
                     _logger.LogInformation("Patient {PatientNumber} created by {User}",
                         patientNumber, User.Identity?.Name);
@@ -245,7 +280,10 @@ public class PatientsController : Controller
     {
         if (id == null) return NotFound();
 
-        var patient = await _context.Patients.Include(p => p.Contacts).FirstOrDefaultAsync(p => p.Id == id);
+        var patient = await _context.Patients
+            .Include(p => p.Contacts)
+            .Include(p => p.Documents)
+            .FirstOrDefaultAsync(p => p.Id == id);
         if (patient == null) return NotFound();
 
         var model = new PatientViewModel
@@ -280,6 +318,9 @@ public class PatientsController : Controller
             GuardianAddress = patient.GuardianAddress,
             GuardianPhone = patient.GuardianPhone,
             GuardianMobile = patient.GuardianMobile,
+            ExistingProfilePhotoUrl = patient.Documents.Any(d => d.DocumentType == DocumentType.PatientPhoto)
+                ? Url.Action("PatientPhoto", "Files", new { patientId = patient.Id })
+                : null,
             Contacts = patient.Contacts.Select(c => new PatientContactViewModel
             {
                 Id = c.Id,
@@ -303,6 +344,11 @@ public class PatientsController : Controller
     {
         if (id != model.Id) return NotFound();
 
+        await ValidateLocationAsync(model);
+        var photoValidation = await PatientPhotoValidator.ValidateAsync(model.ProfilePhoto);
+        if (!photoValidation.IsValid)
+            ModelState.AddModelError(nameof(model.ProfilePhoto), photoValidation.Error!);
+
         if (ModelState.IsValid)
         {
             var duplicate = await _duplicateCheckService.CheckAsync(
@@ -323,8 +369,13 @@ public class PatientsController : Controller
             {
                 try
                 {
-                    var patient = await _context.Patients.Include(p => p.Contacts).FirstOrDefaultAsync(p => p.Id == id);
+                    var patient = await _context.Patients
+                        .Include(p => p.Contacts)
+                        .Include(p => p.Documents)
+                        .FirstOrDefaultAsync(p => p.Id == id);
                     if (patient == null) return NotFound();
+                    string? savedPhotoPath = null;
+                    var retiredPhotoPaths = new List<string>();
 
                     patient.FullName = model.FullName;
                     patient.NameWithInitials = model.NameWithInitials;
@@ -367,8 +418,68 @@ public class PatientsController : Controller
                         });
                     }
 
+                    var currentPhotos = patient.Documents
+                        .Where(d => d.DocumentType == DocumentType.PatientPhoto)
+                        .ToList();
+                    if (model.ProfilePhoto is not null)
+                    {
+                        var savedPhoto = await _fileStorageService.SaveFileAsync(model.ProfilePhoto, patient.PatientNumber);
+                        savedPhotoPath = savedPhoto.StoragePath;
+
+                        foreach (var currentPhoto in currentPhotos)
+                        {
+                            currentPhoto.IsDeleted = true;
+                            currentPhoto.DeletedAt = DateTime.UtcNow;
+                            currentPhoto.DeletedBy = User.Identity?.Name;
+                            retiredPhotoPaths.Add(currentPhoto.StoragePath);
+                        }
+
+                        patient.Documents.Add(new PatientDocument
+                        {
+                            DocumentType = DocumentType.PatientPhoto,
+                            FileName = Path.GetFileName(model.ProfilePhoto.FileName),
+                            StoragePath = savedPhoto.StoragePath,
+                            ContentType = photoValidation.ContentType!,
+                            Notes = "Patient profile photo",
+                            UploadedBy = User.Identity?.Name ?? "",
+                            UploadedAt = DateTime.UtcNow,
+                            CreatedBy = User.Identity?.Name
+                        });
+                    }
+                    else if (model.RemoveProfilePhoto)
+                    {
+                        foreach (var currentPhoto in currentPhotos)
+                        {
+                            currentPhoto.IsDeleted = true;
+                            currentPhoto.DeletedAt = DateTime.UtcNow;
+                            currentPhoto.DeletedBy = User.Identity?.Name;
+                            retiredPhotoPaths.Add(currentPhoto.StoragePath);
+                        }
+                    }
+
                     _context.Update(patient);
-                    await _context.SaveChangesAsync();
+                    try
+                    {
+                        await _context.SaveChangesAsync();
+                    }
+                    catch
+                    {
+                        if (savedPhotoPath is not null)
+                            await _fileStorageService.DeleteFileAsync(savedPhotoPath);
+                        throw;
+                    }
+
+                    foreach (var retiredPhotoPath in retiredPhotoPaths)
+                    {
+                        try
+                        {
+                            await _fileStorageService.DeleteFileAsync(retiredPhotoPath);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Could not remove retired photo {StoragePath}", retiredPhotoPath);
+                        }
+                    }
 
                     TempData["Success"] = "Patient updated successfully!";
                     return RedirectToAction(nameof(Folder), new { id = patient.Id });
@@ -388,6 +499,7 @@ public class PatientsController : Controller
         }
 
         await PopulateDropdowns();
+        await PopulateExistingPhotoStateAsync(model);
         return PatientFormResult(model, "edit");
     }
 
@@ -436,6 +548,7 @@ public class PatientsController : Controller
     {
         var districts = await _context.Districts
             .Where(d => d.ProvinceId == provinceId)
+            .OrderBy(d => d.Name)
             .Select(d => new { d.Id, d.Name })
             .ToListAsync();
         return Json(districts);
@@ -447,6 +560,7 @@ public class PatientsController : Controller
     {
         var cities = await _context.Cities
             .Where(c => c.DistrictId == districtId && c.IsActive)
+            .OrderBy(c => c.Name)
             .Select(c => new { c.Id, c.Name })
             .ToListAsync();
         return Json(cities);
@@ -474,6 +588,44 @@ public class PatientsController : Controller
         return _context.Patients.Any(e => e.Id == id);
     }
 
+    private async Task PopulateExistingPhotoStateAsync(PatientViewModel model)
+    {
+        if (model.Id == Guid.Empty) return;
+
+        var hasPhoto = await _context.PatientDocuments
+            .AnyAsync(d => d.PatientId == model.Id && d.DocumentType == DocumentType.PatientPhoto);
+        model.ExistingProfilePhotoUrl = hasPhoto
+            ? Url.Action("PatientPhoto", "Files", new { patientId = model.Id })
+            : null;
+    }
+
+    private async Task ValidateLocationAsync(PatientViewModel model)
+    {
+        if (model.ProvinceId > 0 && model.DistrictId > 0)
+        {
+            var districtMatchesProvince = await _context.Districts
+                .AnyAsync(d => d.Id == model.DistrictId && d.ProvinceId == model.ProvinceId);
+            if (!districtMatchesProvince)
+                ModelState.AddModelError(nameof(model.DistrictId), "Select a district in the chosen province.");
+        }
+
+        if (model.CityId.HasValue)
+        {
+            var cityMatchesDistrict = await _context.Cities.AnyAsync(c =>
+                c.Id == model.CityId.Value &&
+                c.DistrictId == model.DistrictId &&
+                c.IsActive);
+            if (!cityMatchesDistrict)
+                ModelState.AddModelError(nameof(model.CityId), "Select a city in the chosen district.");
+            else
+                model.CityOther = null;
+        }
+        else
+        {
+            model.CityOther = model.CityOther?.Trim();
+        }
+    }
+
     private IActionResult PatientFormResult(PatientViewModel model, string mode)
     {
         var isModalRequest =
@@ -490,9 +642,9 @@ public class PatientsController : Controller
 
     private async Task PopulateDropdowns()
     {
-        ViewBag.Provinces = new SelectList(await _context.Provinces.ToListAsync(), "Id", "Name");
-        ViewBag.Districts = new SelectList(await _context.Districts.ToListAsync(), "Id", "Name");
-        ViewBag.Cities = new SelectList(await _context.Cities.ToListAsync(), "Id", "Name");
+        ViewBag.Provinces = new SelectList(await _context.Provinces.OrderBy(p => p.Name).ToListAsync(), "Id", "Name");
+        ViewBag.Districts = new SelectList(await _context.Districts.OrderBy(d => d.Name).ToListAsync(), "Id", "Name");
+        ViewBag.Cities = new SelectList(await _context.Cities.OrderBy(c => c.Name).ToListAsync(), "Id", "Name");
         ViewBag.Centers = new SelectList(await _context.Centers.Where(c => c.IsActive).ToListAsync(), "Id", "Name");
         ViewBag.SexOptions = new SelectList(Enum.GetValues(typeof(Sex)).Cast<Sex>());
         ViewBag.PatientCategories = new SelectList(Enum.GetValues(typeof(PatientCategory)).Cast<PatientCategory>());

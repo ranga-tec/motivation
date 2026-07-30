@@ -1,0 +1,125 @@
+namespace Poms.Infrastructure.Data;
+
+/// <summary>
+/// Sri Lankan provinces, administrative districts, and commonly used postal towns.
+/// Kept in code so existing installations can be brought up to date idempotently.
+/// </summary>
+internal static class SriLankaLocationData
+{
+    internal sealed record DistrictSeed(string Code, string Name, params string[] Cities);
+    internal sealed record ProvinceSeed(string Code, string Name, params DistrictSeed[] Districts);
+
+    internal static readonly ProvinceSeed[] Provinces =
+    [
+        new("WP", "Western Province",
+            new("CO", "Colombo",
+                "Angoda", "Athurugiriya", "Avissawella", "Battaramulla", "Boralesgamuwa",
+                "Colombo", "Dehiwala", "Hanwella", "Homagama", "Kaduwela", "Kesbewa",
+                "Kolonnawa", "Kosgama", "Kottawa", "Maharagama", "Malabe", "Moratuwa",
+                "Mount Lavinia", "Mulleriyawa", "Nugegoda", "Padukka", "Pannipitiya",
+                "Piliyandala", "Rajagiriya", "Ratmalana", "Sri Jayawardenepura Kotte"),
+            new("GM", "Gampaha",
+                "Attanagalla", "Biyagama", "Delgoda", "Divulapitiya", "Dompe", "Ekala",
+                "Gampaha", "Ganemulla", "Ja-Ela", "Kadawatha", "Katana", "Katunayake",
+                "Kelaniya", "Kiribathgoda", "Mahara", "Minuwangoda", "Mirigama", "Negombo",
+                "Nittambuwa", "Peliyagoda", "Ragama", "Seeduwa", "Veyangoda", "Wattala"),
+            new("KL", "Kalutara",
+                "Agalawatta", "Aluthgama", "Bandaragama", "Beruwala", "Bulathsinhala",
+                "Dodangoda", "Horana", "Ingiriya", "Kalutara", "Matugama", "Millaniya",
+                "Panadura", "Payagala", "Wadduwa")),
+
+        new("CP", "Central Province",
+            new("KA", "Kandy",
+                "Akurana", "Ampitiya", "Daulagala", "Digana", "Galagedara", "Gampola",
+                "Gelioya", "Kadugannawa", "Kandy", "Katugastota", "Kundasale", "Madawala",
+                "Nawalapitiya", "Peradeniya", "Pilimathalawa", "Pujapitiya", "Teldeniya",
+                "Wattegama"),
+            new("MT", "Matale",
+                "Dambulla", "Galewela", "Laggala", "Matale", "Naula", "Palapathwela",
+                "Rattota", "Sigiriya", "Ukuwela", "Yatawatta"),
+            new("NE", "Nuwara Eliya",
+                "Agarapathana", "Ambewela", "Bogawantalawa", "Dayagama", "Ginigathhena",
+                "Hanguranketha", "Hatton", "Kotagala", "Lindula", "Maskeliya", "Nanu Oya",
+                "Nuwara Eliya", "Pundaluoya", "Ragala", "Talawakele",
+                "Walapane")),
+
+        new("SP", "Southern Province",
+            new("GL", "Galle",
+                "Ahangama", "Akmeemana", "Ambalangoda", "Baddegama", "Balapitiya",
+                "Batapola", "Bentota", "Elpitiya", "Galle", "Habaraduwa", "Hikkaduwa",
+                "Imaduwa", "Karapitiya", "Karandeniya", "Neluwa", "Poddala", "Unawatuna",
+                "Uragasmanhandiya", "Yakkalamulla"),
+            new("MR", "Matara",
+                "Akuressa", "Deniyaya", "Devinuwara", "Dickwella", "Hakmana", "Kamburupitiya",
+                "Matara", "Mirissa", "Morawaka", "Mulatiyana", "Weligama"),
+            new("HB", "Hambantota",
+                "Ambalantota", "Angunakolapelessa", "Beliatta", "Hambantota", "Katuwana",
+                "Lunugamvehera", "Sooriyawewa", "Tangalle", "Tissamaharama", "Walasmulla",
+                "Weeraketiya")),
+
+        new("NP", "Northern Province",
+            new("JA", "Jaffna",
+                "Chavakachcheri", "Chunnakam", "Jaffna", "Kankesanthurai", "Karainagar",
+                "Kayts", "Kodikamam", "Kopay", "Nallur", "Palaly", "Point Pedro",
+                "Tellippalai", "Velanai"),
+            new("KN", "Kilinochchi",
+                "Akkarayankulam", "Elephant Pass", "Iranamadu", "Kilinochchi", "Pallai",
+                "Paranthan", "Poonakary"),
+            new("MN", "Mannar",
+                "Adampan", "Madhu", "Mannar", "Murunkan", "Nanattan", "Pesalai",
+                "Silavathurai", "Talaimannar"),
+            new("ML", "Mullaitivu",
+                "Mallavi", "Mankulam", "Mullaitivu", "Oddusuddan", "Puthukkudiyiruppu",
+                "Thunukkai"),
+            new("VA", "Vavuniya",
+                "Cheddikulam", "Nedunkeni", "Omanthai", "Poovarasankulam", "Vavuniya")),
+
+        new("EP", "Eastern Province",
+            new("TC", "Trincomalee",
+                "China Bay", "Kantalai", "Kinniya", "Kuchchaveli", "Morawewa", "Muttur",
+                "Nilaveli", "Seruwila", "Trincomalee"),
+            new("BT", "Batticaloa",
+                "Batticaloa", "Chenkalady", "Eravur", "Kalkudah", "Kaluwanchikudy",
+                "Kattankudy", "Oddamavadi", "Pasikudah", "Vakarai", "Valaichchenai"),
+            new("AM", "Ampara",
+                "Akkaraipattu", "Ampara", "Dehiattakandiya", "Kalmunai", "Karaitivu",
+                "Lahugala", "Maha Oya", "Nintavur", "Padiyathalawa", "Pottuvil",
+                "Sainthamaruthu", "Sammanthurai", "Thirukkovil", "Uhana")),
+
+        new("NWP", "North Western Province",
+            new("KU", "Kurunegala",
+                "Alawwa", "Bingiriya", "Dambadeniya", "Galgamuwa", "Giriulla", "Hettipola",
+                "Ibbagamuwa", "Kuliyapitiya", "Kurunegala", "Maho", "Mawathagama",
+                "Narammala", "Nikaweratiya", "Panduwasnuwara", "Pannala", "Polgahawela",
+                "Wariyapola"),
+            new("PU", "Puttalam",
+                "Anamaduwa", "Chilaw", "Dankotuwa", "Kalpitiya", "Madampe", "Marawila",
+                "Nattandiya", "Nawagattegama", "Norochcholai", "Puttalam", "Wennappuwa")),
+
+        new("NCP", "North Central Province",
+            new("AN", "Anuradhapura",
+                "Anuradhapura", "Eppawala", "Galenbindunuwewa", "Galnewa", "Habarana",
+                "Kahatagasdigiliya", "Kekirawa", "Medawachchiya", "Mihintale", "Nochchiyagama",
+                "Padaviya", "Rajanganaya", "Talawa", "Tambuttegama"),
+            new("PO", "Polonnaruwa",
+                "Aralaganwila", "Bakamuna", "Dimbulagala", "Hingurakgoda", "Kaduruwela",
+                "Manampitiya", "Medirigiriya", "Minneriya", "Polonnaruwa", "Welikanda")),
+
+        new("UP", "Uva Province",
+            new("BA", "Badulla",
+                "Badulla", "Bandarawela", "Diyatalawa", "Ella", "Haldummulla", "Hali-Ela",
+                "Haputale", "Mahiyanganaya", "Passara", "Welimada"),
+            new("MO", "Monaragala",
+                "Badalkumbura", "Bibile", "Buttala", "Kataragama", "Medagama", "Monaragala",
+                "Siyambalanduwa", "Thanamalwila", "Wellawaya")),
+
+        new("SGP", "Sabaragamuwa Province",
+            new("RT", "Ratnapura",
+                "Balangoda", "Eheliyagoda", "Embilipitiya", "Godakawela", "Kalawana",
+                "Kahawatta", "Kuruwita", "Nivithigala", "Pelmadulla", "Rakwana", "Ratnapura"),
+            new("KE", "Kegalle",
+                "Aranayake", "Dehiowita", "Deraniyagala", "Galigamuwa", "Kegalle",
+                "Kitulgala", "Mawanella", "Rambukkana", "Ruwanwella", "Warakapola",
+                "Yatiyanthota"))
+    ];
+}

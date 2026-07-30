@@ -12,6 +12,10 @@
             return control.selectedOptions[0]?.text?.trim() || "";
         }
 
+        if (control instanceof HTMLInputElement && control.type === "file") {
+            return control.files?.[0]?.name || "";
+        }
+
         if (control.type === "checkbox" || control.type === "radio") {
             return control.checked ? "Yes" : "";
         }
@@ -166,6 +170,7 @@
     async function populateSelect(select, url, placeholder, selectedValue) {
         select.disabled = true;
         select.replaceChildren(new Option(placeholder, ""));
+        select.dispatchEvent(new CustomEvent("optionsloading"));
 
         try {
             const response = await fetch(url, {
@@ -176,10 +181,237 @@
             options.forEach((item) => select.add(new Option(item.name, item.id)));
             select.disabled = false;
             if (selectedValue && selectedValue !== "0") select.value = selectedValue;
+            select.dispatchEvent(new CustomEvent("optionsloaded"));
         } catch {
             select.replaceChildren(new Option("Could not load options — try again", ""));
             select.disabled = false;
+            select.dispatchEvent(new CustomEvent("optionsloaded"));
         }
+    }
+
+    function initializePatientPhoto(form) {
+        const field = form.querySelector("[data-patient-photo]");
+        if (!field) return;
+
+        const input = field.querySelector("[data-photo-input]");
+        const image = field.querySelector("[data-photo-image]");
+        const placeholder = field.querySelector("[data-photo-placeholder]");
+        const remove = field.querySelector("[data-photo-remove]");
+        const removeValue = field.querySelector("[data-remove-photo-value]");
+        const chooseText = field.querySelector("[data-photo-choose-text]");
+        const status = field.querySelector("[data-photo-status]");
+        let previewUrl = null;
+
+        const showPlaceholder = () => {
+            image?.classList.add("d-none");
+            placeholder?.classList.remove("d-none");
+        };
+
+        if (removeValue?.value === "true") {
+            remove?.classList.add("d-none");
+            if (chooseText) chooseText.textContent = "Choose photo";
+            showPlaceholder();
+        }
+
+        input?.addEventListener("change", () => {
+            const file = input.files?.[0];
+            input.setCustomValidity("");
+            if (!file) return;
+
+            if (!["image/jpeg", "image/png"].includes(file.type)) {
+                input.setCustomValidity("Use a JPG or PNG image.");
+                input.reportValidity();
+                input.value = "";
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) {
+                input.setCustomValidity("The patient photo must be 5 MB or smaller.");
+                input.reportValidity();
+                input.value = "";
+                return;
+            }
+
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+            previewUrl = URL.createObjectURL(file);
+            if (image) {
+                image.src = previewUrl;
+                image.alt = `Selected patient photo: ${file.name}`;
+                image.classList.remove("d-none");
+            }
+            placeholder?.classList.add("d-none");
+            remove?.classList.remove("d-none");
+            if (removeValue) removeValue.value = "false";
+            if (chooseText) chooseText.textContent = "Replace photo";
+            if (status) {
+                status.textContent = `${file.name} selected`;
+                status.classList.remove("d-none", "text-secondary");
+                status.classList.add("text-success");
+            }
+            form.dataset.dirty = "true";
+        });
+
+        remove?.addEventListener("click", () => {
+            if (previewUrl) {
+                URL.revokeObjectURL(previewUrl);
+                previewUrl = null;
+            }
+            if (input) input.value = "";
+            if (removeValue) removeValue.value = "true";
+            if (chooseText) chooseText.textContent = "Choose photo";
+            if (status) {
+                status.textContent = "Patient photo will be removed when you save.";
+                status.classList.remove("d-none", "text-success");
+                status.classList.add("text-secondary");
+            }
+            remove.classList.add("d-none");
+            showPlaceholder();
+            form.dataset.dirty = "true";
+        });
+    }
+
+    function initializeSearchableCity(form, select) {
+        const field = select.closest("[data-city-field]");
+        const cityOther = field?.querySelector("#CityOther");
+        if (!field || !cityOther || field.classList.contains("city-field-enhanced")) return;
+
+        field.classList.add("city-field-enhanced");
+
+        const combobox = document.createElement("div");
+        combobox.className = "city-combobox";
+
+        const input = document.createElement("input");
+        input.type = "search";
+        input.className = "form-control city-combobox-input";
+        input.placeholder = "Search or enter city";
+        input.autocomplete = "off";
+        input.required = true;
+        input.setAttribute("role", "combobox");
+        input.setAttribute("aria-autocomplete", "list");
+        input.setAttribute("aria-expanded", "false");
+        input.setAttribute("aria-controls", `${select.id}SearchResults`);
+        input.setAttribute("aria-label", "City");
+
+        const list = document.createElement("div");
+        list.id = `${select.id}SearchResults`;
+        list.className = "city-combobox-list";
+        list.setAttribute("role", "listbox");
+        list.hidden = true;
+
+        combobox.append(input, list);
+        select.insertAdjacentElement("afterend", combobox);
+
+        let options = [];
+        let activeIndex = -1;
+
+        const close = () => {
+            list.hidden = true;
+            input.setAttribute("aria-expanded", "false");
+            input.removeAttribute("aria-activedescendant");
+            activeIndex = -1;
+        };
+
+        const chooseOption = (option) => {
+            select.value = option.value;
+            cityOther.value = "";
+            input.value = option.text;
+            input.setCustomValidity("");
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+            close();
+            form.dataset.dirty = "true";
+        };
+
+        const render = () => {
+            const query = input.value.trim().toLocaleLowerCase();
+            const matches = options
+                .filter((option) => !query || option.text.toLocaleLowerCase().includes(query))
+                .slice(0, 10);
+            list.replaceChildren();
+            activeIndex = -1;
+
+            if (!matches.length) {
+                const empty = document.createElement("div");
+                empty.className = "city-combobox-empty";
+                empty.textContent = query
+                    ? `Use “${input.value.trim()}” as a city not listed`
+                    : "No cities available for this district";
+                list.append(empty);
+            } else {
+                matches.forEach((option, index) => {
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.id = `${list.id}Option${index}`;
+                    button.className = "city-combobox-option";
+                    button.setAttribute("role", "option");
+                    button.textContent = option.text;
+                    button.addEventListener("mousedown", (event) => event.preventDefault());
+                    button.addEventListener("click", () => chooseOption(option));
+                    list.append(button);
+                });
+            }
+
+            list.hidden = false;
+            input.setAttribute("aria-expanded", "true");
+        };
+
+        const setActive = (index) => {
+            const items = [...list.querySelectorAll(".city-combobox-option")];
+            if (!items.length) return;
+            activeIndex = (index + items.length) % items.length;
+            items.forEach((item, itemIndex) => item.classList.toggle("is-active", itemIndex === activeIndex));
+            const active = items[activeIndex];
+            input.setAttribute("aria-activedescendant", active.id);
+            active.scrollIntoView({ block: "nearest" });
+        };
+
+        const syncOptions = () => {
+            options = [...select.options]
+                .filter((option) => option.value)
+                .map((option) => ({ value: option.value, text: option.text.trim() }));
+            const selected = options.find((option) => option.value === select.value);
+            input.disabled = select.disabled;
+            input.value = selected?.text || cityOther.value || "";
+            input.setCustomValidity(input.value.trim() ? "" : "Select or enter a city.");
+            close();
+        };
+
+        input.addEventListener("focus", render);
+        input.addEventListener("input", () => {
+            const value = input.value.trim();
+            const exact = options.find((option) =>
+                option.text.localeCompare(value, undefined, { sensitivity: "accent" }) === 0);
+            select.value = exact?.value || "";
+            cityOther.value = exact ? "" : value;
+            input.setCustomValidity(value ? "" : "Select or enter a city.");
+            render();
+            form.dataset.dirty = "true";
+        });
+        input.addEventListener("blur", () => window.setTimeout(close, 120));
+        input.addEventListener("keydown", (event) => {
+            if (event.key === "ArrowDown") {
+                event.preventDefault();
+                if (list.hidden) render();
+                setActive(activeIndex + 1);
+            } else if (event.key === "ArrowUp") {
+                event.preventDefault();
+                if (list.hidden) render();
+                setActive(activeIndex - 1);
+            } else if (event.key === "Enter" && !list.hidden && activeIndex >= 0) {
+                event.preventDefault();
+                const item = list.querySelectorAll(".city-combobox-option")[activeIndex];
+                item?.click();
+            } else if (event.key === "Escape") {
+                close();
+            }
+        });
+
+        select.addEventListener("optionsloading", () => {
+            input.disabled = true;
+            input.value = "";
+            close();
+        });
+        select.addEventListener("optionsloaded", syncOptions);
+        syncOptions();
     }
 
     function initializePatientForm(form) {
@@ -195,6 +427,8 @@
         const district = form.querySelector("#DistrictId");
         const city = form.querySelector("#CityId");
         const contacts = form.querySelector("#contactsContainer");
+        initializePatientPhoto(form);
+        if (city) initializeSearchableCity(form, city);
 
         const toggleNationality = () => {
             const isForeign = category?.value === "Foreign";
@@ -219,6 +453,9 @@
             province.addEventListener("change", async () => {
                 city.disabled = true;
                 city.replaceChildren(new Option("Select city", ""));
+                city.dispatchEvent(new CustomEvent("optionsloaded"));
+                const cityOther = form.querySelector("#CityOther");
+                if (cityOther) cityOther.value = "";
                 if (!province.value) {
                     district.disabled = true;
                     district.replaceChildren(new Option("Select district", ""));
@@ -237,6 +474,7 @@
                 if (!district.value) {
                     city.disabled = true;
                     city.replaceChildren(new Option("Select city", ""));
+                    city.dispatchEvent(new CustomEvent("optionsloaded"));
                     return;
                 }
 
@@ -266,6 +504,7 @@
             } else {
                 district.disabled = true;
                 city.disabled = true;
+                city.dispatchEvent(new CustomEvent("optionsloaded"));
             }
         }
 
