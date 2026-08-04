@@ -162,6 +162,7 @@ using (var scope = app.Services.CreateScope())
             // Development uses a self-contained local database so the application can run
             // without requiring a separately managed SQL Server instance.
             await context.Database.EnsureCreatedAsync();
+            await SqliteSchemaUpgrader.ApplyAsync(context);
         }
         else if (providerName.Contains("Npgsql", StringComparison.OrdinalIgnoreCase))
         {

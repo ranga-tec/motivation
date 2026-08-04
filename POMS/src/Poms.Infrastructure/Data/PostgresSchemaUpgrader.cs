@@ -22,6 +22,10 @@ public static class PostgresSchemaUpgrader
             ALTER TABLE "Appointments" ADD COLUMN IF NOT EXISTS "AssignedClinicianName" character varying(200);
             ALTER TABLE "Appointments" ADD COLUMN IF NOT EXISTS "CancellationReason" character varying(500);
             ALTER TABLE "Appointments" ADD COLUMN IF NOT EXISTS "CancelledAt" timestamp with time zone;
+            ALTER TABLE "Appointments" ADD COLUMN IF NOT EXISTS "PreviousAppointmentDate" date;
+            ALTER TABLE "Appointments" ADD COLUMN IF NOT EXISTS "PreviousAppointmentTime" time without time zone;
+            ALTER TABLE "Appointments" ADD COLUMN IF NOT EXISTS "RescheduleReason" character varying(500);
+            ALTER TABLE "Appointments" ADD COLUMN IF NOT EXISTS "RescheduledAt" timestamp with time zone;
             ALTER TABLE "Assessments" ADD COLUMN IF NOT EXISTS "StartTime" time without time zone;
             ALTER TABLE "Assessments" ADD COLUMN IF NOT EXISTS "EndTime" time without time zone;
             ALTER TABLE "Deliveries" ADD COLUMN IF NOT EXISTS "DeliveryTime" time without time zone;

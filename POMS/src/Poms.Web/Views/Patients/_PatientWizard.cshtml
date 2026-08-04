@@ -12,6 +12,7 @@
     var startStep = ViewBag.ShowDuplicateWarning == true ? 4 : 0;
     var dobValue = ViewData.ModelState[nameof(Model.Dob)]?.AttemptedValue
         ?? (Model.Dob == default ? "" : Model.Dob.ToString("yyyy-MM-dd"));
+    var latestAllowedDob = DateTime.Today.AddDays(-3).ToString("yyyy-MM-dd");
 }
 
 <form asp-action="@action"
@@ -144,6 +145,7 @@
                            class="form-control"
                            type="date"
                            value="@dobValue"
+                           max="@latestAllowedDob"
                            required
                            data-val="true"
                            data-val-required="Date of birth is required."
@@ -244,14 +246,14 @@
                     <label asp-for="CenterId" class="form-label required-label"></label>
                     @if (isEdit)
                     {
-                        <select asp-for="CenterId" class="form-select" disabled asp-items="ViewBag.Centers" data-review-label="Centre"></select>
+                        <select asp-for="CenterId" class="form-select" disabled asp-items="ViewBag.Centers" data-review-label="Branch"></select>
                         <input type="hidden" asp-for="CenterId" />
-                        <div class="form-text">The registration centre cannot be changed.</div>
+                        <div class="form-text">The registration branch cannot be changed.</div>
                     }
                     else
                     {
-                        <select asp-for="CenterId" class="form-select" required asp-items="ViewBag.Centers" data-review-label="Centre">
-                            <option value="">Select centre</option>
+                        <select asp-for="CenterId" class="form-select" required asp-items="ViewBag.Centers" data-review-label="Branch">
+                            <option value="">Select branch</option>
                         </select>
                     }
                     <span asp-validation-for="CenterId" class="text-danger"></span>

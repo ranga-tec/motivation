@@ -81,7 +81,7 @@
                             <tr><th>Employment:</th><td>@(Model.Employment ?? "N/A")</td></tr>
                             <tr><th>Category:</th><td>@Model.Category @(Model.Category == Poms.Domain.Enums.PatientCategory.Foreign ? $"({Model.Nationality})" : "")</td></tr>
                             <tr><th>Identification:</th><td>@Model.IdentificationType: @Model.IdentificationNumber</td></tr>
-                            <tr><th>Location:</th><td>@Model.Center.Name</td></tr>
+                            <tr><th>Branch:</th><td>@Model.Center.Name</td></tr>
                         </table>
                     </div>
                 </div>
@@ -204,7 +204,7 @@
                 @if (Model.Appointments.Any())
                 {
                     <table class="table table-striped">
-                        <thead><tr><th>Date</th><th>Type</th><th>Prosthetist / Orthotist</th><th>Status</th><th>Notes / cancellation reason</th></tr></thead>
+                        <thead><tr><th>Date</th><th>Type</th><th>Prosthetist / Orthotist</th><th>Status</th><th>Notes / schedule changes</th></tr></thead>
                         <tbody>
                             @foreach (var a in Model.Appointments.OrderByDescending(a => a.AppointmentDate))
                             {
@@ -221,6 +221,14 @@
                                     <td>@a.Status</td>
                                     <td>
                                         @a.Notes
+                                        @if (a.RescheduledAt.HasValue)
+                                        {
+                                            <div class="small text-secondary">
+                                                Rescheduled from @a.PreviousAppointmentDate?.ToString("dd-MMM-yyyy")
+                                                @(a.PreviousAppointmentTime?.ToString("HH:mm") ?? "time not set"):
+                                                @a.RescheduleReason
+                                            </div>
+                                        }
                                         @if (a.Status == Poms.Domain.Enums.AppointmentStatus.Cancelled &&
                                             !string.IsNullOrWhiteSpace(a.CancellationReason))
                                         {

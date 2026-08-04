@@ -46,14 +46,17 @@ public class PatientsController : Controller
             .Include(p => p.Center)
             .AsQueryable();
 
-        if (!string.IsNullOrEmpty(searchString))
+        if (!string.IsNullOrWhiteSpace(searchString))
         {
+            var normalizedSearch = searchString.Trim().ToLower();
             query = query.Where(p =>
-                p.PatientNumber.Contains(searchString) ||
-                p.FullName.Contains(searchString) ||
-                p.NameWithInitials.Contains(searchString) ||
-                p.IdentificationNumber.Contains(searchString) ||
-                p.Contacts.Any(c => c.TelephoneNo.Contains(searchString)));
+                p.PatientNumber.ToLower().Contains(normalizedSearch) ||
+                p.FullName.ToLower().Contains(normalizedSearch) ||
+                p.NameWithInitials.ToLower().Contains(normalizedSearch) ||
+                p.IdentificationNumber.ToLower().Contains(normalizedSearch) ||
+                p.Contacts.Any(c => c.TelephoneNo.ToLower().Contains(normalizedSearch)));
+
+            searchString = searchString.Trim();
         }
 
         if (centerId.HasValue)

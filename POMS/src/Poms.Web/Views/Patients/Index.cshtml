@@ -57,9 +57,9 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <label for="centerFilter" class="form-label">Location</label>
+                <label for="centerFilter" class="form-label">Branch</label>
                 <select name="centerId" id="centerFilter" class="form-select">
-                    <option value="">All Locations</option>
+                    <option value="">All Branches</option>
                     @foreach (var center in ViewBag.Centers as SelectList)
                     {
                         <option value="@center.Value" selected="@(center.Value == ViewBag.CenterId?.ToString())">@center.Text</option>
@@ -101,7 +101,7 @@
                 <th>DOB</th>
                 <th>Category</th>
                 <th>Identification</th>
-                <th>Location</th>
+                <th>Branch</th>
                 <th>Registration Date</th>
                 <th>Actions</th>
             </tr>

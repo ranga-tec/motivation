@@ -94,7 +94,7 @@ public class PatientViewModel : IValidatableObject
     public string? TravelTimeDistance { get; set; }
 
     [Required]
-    [Display(Name = "Centre / Location")]
+    [Display(Name = "Branch")]
     public int CenterId { get; set; }
 
     [Display(Name = "Date of Registration")]
@@ -136,6 +136,14 @@ public class PatientViewModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        var latestAllowedDob = DateOnly.FromDateTime(DateTime.Today.AddDays(-3));
+        if (Dob != default && Dob > latestAllowedDob)
+        {
+            yield return new ValidationResult(
+                $"Date of birth must be on or before {latestAllowedDob:dd-MMM-yyyy}.",
+                new[] { nameof(Dob) });
+        }
+
         if (ProfilePhoto?.Length > PatientPhotoValidator.MaxFileSizeBytes)
         {
             yield return new ValidationResult(

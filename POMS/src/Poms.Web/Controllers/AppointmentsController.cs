@@ -203,6 +203,43 @@ public class AppointmentsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    // POST: Appointments/Reschedule/5
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Reschedule(
+        Guid id,
+        DateOnly newAppointmentDate,
+        TimeOnly? newAppointmentTime,
+        string rescheduleReason)
+    {
+        var appointment = await _context.Appointments
+            .Include(item => item.Episode)
+            .FirstOrDefaultAsync(item => item.Id == id);
+        if (appointment is null)
+            return NotFound();
+
+        if (!await CanAccessAppointmentAsync(appointment, "RescheduleAppointment"))
+            return NotFound();
+
+        try
+        {
+            appointment.Reschedule(
+                newAppointmentDate,
+                newAppointmentTime,
+                rescheduleReason,
+                User.Identity?.Name);
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
+        {
+            TempData["Error"] = exception.Message;
+            return RedirectToAction(nameof(Index));
+        }
+
+        await _context.SaveChangesAsync();
+        TempData["Success"] = "Appointment rescheduled.";
+        return RedirectToAction(nameof(Index));
+    }
+
     private async Task PopulateDropdowns(AppointmentViewModel model)
     {
         ViewBag.Patients = new SelectList(

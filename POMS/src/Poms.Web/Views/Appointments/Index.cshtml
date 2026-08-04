@@ -58,7 +58,17 @@
                         @a.Status
                     </span>
                 </td>
-                <td>@a.Notes</td>
+                <td>
+                    @a.Notes
+                    @if (a.RescheduledAt.HasValue)
+                    {
+                        <span class="d-block small text-secondary">
+                            Rescheduled from @a.PreviousAppointmentDate?.ToString("dd-MMM-yyyy")
+                            @(a.PreviousAppointmentTime?.ToString("HH:mm") ?? "time not set"):
+                            @a.RescheduleReason
+                        </span>
+                    }
+                </td>
                 <td>
                     @if (a.Status == Poms.Domain.Enums.AppointmentStatus.Scheduled)
                     {
@@ -66,11 +76,73 @@
                             <button type="submit" class="btn btn-sm btn-success">Done</button>
                         </form>
                         <button type="button"
+                                class="btn btn-sm btn-outline-primary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#rescheduleAppointment-@a.Id">
+                            Reschedule
+                        </button>
+                        <button type="button"
                                 class="btn btn-sm btn-outline-danger"
                                 data-bs-toggle="modal"
                                 data-bs-target="#cancelAppointment-@a.Id">
                             Cancel
                         </button>
+                        <div class="modal fade"
+                             id="rescheduleAppointment-@a.Id"
+                             tabindex="-1"
+                             aria-labelledby="rescheduleAppointmentLabel-@a.Id"
+                             aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content text-start">
+                                    <form asp-action="Reschedule" asp-route-id="@a.Id" method="post">
+                                        <div class="modal-header">
+                                            <h2 class="modal-title fs-5" id="rescheduleAppointmentLabel-@a.Id">
+                                                Reschedule appointment
+                                            </h2>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p class="text-secondary">
+                                                Current appointment: @a.AppointmentDate.ToString("dd-MMM-yyyy")
+                                                @(a.AppointmentTime?.ToString("HH:mm") ?? "time not set")
+                                            </p>
+                                            <div class="row g-3">
+                                                <div class="col-sm-7">
+                                                    <label for="newAppointmentDate-@a.Id" class="form-label">New date <span aria-hidden="true">*</span></label>
+                                                    <input id="newAppointmentDate-@a.Id"
+                                                           name="newAppointmentDate"
+                                                           type="date"
+                                                           class="form-control"
+                                                           value="@a.AppointmentDate.ToString("yyyy-MM-dd")"
+                                                           required />
+                                                </div>
+                                                <div class="col-sm-5">
+                                                    <label for="newAppointmentTime-@a.Id" class="form-label">New time</label>
+                                                    <input id="newAppointmentTime-@a.Id"
+                                                           name="newAppointmentTime"
+                                                           type="time"
+                                                           class="form-control"
+                                                           value="@a.AppointmentTime?.ToString("HH:mm")" />
+                                                </div>
+                                                <div class="col-12">
+                                                    <label for="rescheduleReason-@a.Id" class="form-label">Reason <span aria-hidden="true">*</span></label>
+                                                    <textarea id="rescheduleReason-@a.Id"
+                                                              name="rescheduleReason"
+                                                              class="form-control"
+                                                              rows="3"
+                                                              maxlength="@Poms.Domain.Entities.Appointment.RescheduleReasonMaxLength"
+                                                              required></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Keep current appointment</button>
+                                            <button type="submit" class="btn btn-primary">Save new schedule</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
                         <div class="modal fade"
                              id="cancelAppointment-@a.Id"
                              tabindex="-1"
