@@ -28,6 +28,7 @@ public class PatientViewModel : IValidatableObject
     public DateOnly Dob { get; set; }
 
     [Required]
+    [Display(Name = "Gender")]
     public Sex Sex { get; set; }
 
     [Display(Name = "Employment")]

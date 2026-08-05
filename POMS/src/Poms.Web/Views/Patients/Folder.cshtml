@@ -77,7 +77,7 @@
                             <tr><th width="40%">Full Name:</th><td>@Model.FullName</td></tr>
                             <tr><th>Name with Initials:</th><td>@Model.NameWithInitials</td></tr>
                             <tr><th>Date of Birth:</th><td>@Model.Dob.ToString("dd-MMM-yyyy")</td></tr>
-                            <tr><th>Sex:</th><td>@Model.Sex</td></tr>
+                            <tr><th>Gender:</th><td>@Model.Sex</td></tr>
                             <tr><th>Employment:</th><td>@(Model.Employment ?? "N/A")</td></tr>
                             <tr><th>Category:</th><td>@Model.Category @(Model.Category == Poms.Domain.Enums.PatientCategory.Foreign ? $"({Model.Nationality})" : "")</td></tr>
                             <tr><th>Identification:</th><td>@Model.IdentificationType: @Model.IdentificationNumber</td></tr>
