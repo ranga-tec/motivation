@@ -7,6 +7,13 @@ namespace Poms.Web.ViewModels;
 
 public class PatientViewModel : IValidatableObject
 {
+    public static IReadOnlyList<string> GuardianRelationshipOptions { get; } =
+    [
+        "Mother", "Father", "Spouse", "Brother", "Sister", "Son", "Daughter",
+        "Niece", "Nephew", "Grandmother", "Grandfather", "Aunt", "Uncle",
+        "Cousin", "Caregiver", "Friend", "Other"
+    ];
+
     public Guid Id { get; set; }
 
     [Display(Name = "Patient Number")]
@@ -91,6 +98,15 @@ public class PatientViewModel : IValidatableObject
     [Display(Name = "Referral Source (Other)")]
     public string? ReferralSourceOther { get; set; }
 
+    [Display(Name = "Referral Person Name")]
+    [StringLength(150)]
+    public string? ReferralPersonName { get; set; }
+
+    [Display(Name = "Referral Person Contact Number")]
+    [Phone]
+    [StringLength(30)]
+    public string? ReferralPersonContactNumber { get; set; }
+
     [Display(Name = "Time/Distance to Travel to Centre")]
     public string? TravelTimeDistance { get; set; }
 
@@ -109,6 +125,16 @@ public class PatientViewModel : IValidatableObject
     [Display(Name = "Remarks")]
     [DataType(DataType.MultilineText)]
     public string? Remarks { get; set; }
+
+    [Required]
+    [StringLength(400)]
+    [Display(Name = "Handled By (Prosthetist / Orthotist)")]
+    public string AssignedClinicianEntry { get; set; } = string.Empty;
+
+    public string? AssignedClinicianUserId { get; set; }
+
+    [BindNever]
+    public IReadOnlyList<AppointmentAssigneeOption> AssigneeOptions { get; set; } = [];
 
     // Guardian / Carer Information
     [Required]

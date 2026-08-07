@@ -59,7 +59,11 @@
                     <tr><th>Province:</th><td>@Model.Province.Name</td></tr>
                     <tr><th>District:</th><td>@Model.District.Name</td></tr>
                     <tr><th>Branch:</th><td>@Model.Center.Name</td></tr>
+                    <tr><th>Handled by:</th><td>@(Model.AssignedClinicianName ?? "Not assigned")</td></tr>
                     <tr><th>Email:</th><td>@(Model.Email ?? "N/A")</td></tr>
+                    <tr><th>Referral source:</th><td>@(Model.ReferralSource?.Name ?? Model.ReferralSourceOther ?? "N/A")</td></tr>
+                    <tr><th>Referral person:</th><td>@(Model.ReferralPersonName ?? "N/A")</td></tr>
+                    <tr><th>Referral contact:</th><td>@(Model.ReferralPersonContactNumber ?? "N/A")</td></tr>
                 </table>
             </div>
         </div>

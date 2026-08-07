@@ -427,6 +427,8 @@
         const district = form.querySelector("#DistrictId");
         const city = form.querySelector("#CityId");
         const contacts = form.querySelector("#contactsContainer");
+        const assigneeEntry = form.querySelector("[data-assignee-entry]");
+        const assigneeUserId = form.querySelector("[data-assignee-user-id]");
         initializePatientPhoto(form);
         if (city) initializeSearchableCity(form, city);
 
@@ -445,6 +447,18 @@
         referral?.addEventListener("change", toggleReferralOther);
         toggleNationality();
         toggleReferralOther();
+
+        const syncAssignee = () => {
+            if (!assigneeEntry || !assigneeUserId) return;
+            const entered = assigneeEntry.value.trim().toLocaleLowerCase();
+            const matched = [...form.querySelectorAll("#patientAssigneeOptions option")]
+                .find((option) => option.value.trim().toLocaleLowerCase() === entered);
+            assigneeUserId.value = matched?.dataset.userId || "";
+        };
+        assigneeEntry?.addEventListener("input", syncAssignee);
+        assigneeEntry?.addEventListener("change", syncAssignee);
+        form.addEventListener("submit", syncAssignee);
+        syncAssignee();
 
         if (province && district && city) {
             const selectedDistrict = district.dataset.selected;

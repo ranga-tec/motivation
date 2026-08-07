@@ -268,6 +268,18 @@
                     <label asp-for="ReferralSourceOther" class="form-label"></label>
                     <input asp-for="ReferralSourceOther" class="form-control" />
                 </div>
+                <div class="col-md-6">
+                    <label asp-for="ReferralPersonName" class="form-label"></label>
+                    <input asp-for="ReferralPersonName" class="form-control" autocomplete="name" data-review-label="Referral person" />
+                    <div class="form-text">Optional.</div>
+                    <span asp-validation-for="ReferralPersonName" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="ReferralPersonContactNumber" class="form-label"></label>
+                    <input asp-for="ReferralPersonContactNumber" class="form-control" autocomplete="tel" inputmode="tel" data-review-label="Referral contact" />
+                    <div class="form-text">Optional.</div>
+                    <span asp-validation-for="ReferralPersonContactNumber" class="text-danger"></span>
+                </div>
             </div>
 
             <fieldset class="workflow-subsection mt-4">
@@ -324,7 +336,18 @@
                 </div>
                 <div class="col-md-5">
                     <label asp-for="GuardianRelationship" class="form-label required-label"></label>
-                    <input asp-for="GuardianRelationship" class="form-control" required data-review-label="Relationship" />
+                    <select asp-for="GuardianRelationship" class="form-select" required data-review-label="Relationship">
+                        <option value="">Select relationship</option>
+                        @foreach (var relationship in Poms.Web.ViewModels.PatientViewModel.GuardianRelationshipOptions)
+                        {
+                            <option value="@relationship">@relationship</option>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Model.GuardianRelationship) &&
+                            !Poms.Web.ViewModels.PatientViewModel.GuardianRelationshipOptions.Contains(Model.GuardianRelationship))
+                        {
+                            <option value="@Model.GuardianRelationship">@Model.GuardianRelationship</option>
+                        }
+                    </select>
                     <span asp-validation-for="GuardianRelationship" class="text-danger"></span>
                 </div>
                 <div class="col-12">
@@ -355,6 +378,27 @@
             </div>
 
             <div class="row g-3">
+                <div class="col-12">
+                    <label asp-for="AssignedClinicianEntry" class="form-label required-label"></label>
+                    <input asp-for="AssignedClinicianEntry"
+                           class="form-control"
+                           list="patientAssigneeOptions"
+                           required
+                           autocomplete="off"
+                           data-assignee-entry
+                           data-review-label="Handled by" />
+                    <input asp-for="AssignedClinicianUserId" type="hidden" data-assignee-user-id />
+                    <datalist id="patientAssigneeOptions">
+                        @foreach (var option in Model.AssigneeOptions)
+                        {
+                            <option value="@option.DisplayText" data-user-id="@option.UserId">
+                                @(option.IsPreferred ? "Prosthetist / Orthotist" : "Staff")
+                            </option>
+                        }
+                    </datalist>
+                    <div class="form-text">Search staff by name, designation, or employee number. A custom name may also be entered.</div>
+                    <span asp-validation-for="AssignedClinicianEntry" class="text-danger"></span>
+                </div>
                 <div class="col-md-6">
                     <label asp-for="TravelTimeDistance" class="form-label"></label>
                     <input asp-for="TravelTimeDistance" class="form-control" placeholder="For example, 45 minutes / 25 km" />

@@ -36,7 +36,13 @@ public class PatientNumberService : IPatientNumberService
 
             if (series == null)
             {
-                series = new NumberSeries { FlagCode = flagCode, Year = year, LastSeq = 0 };
+                series = new NumberSeries
+                {
+                    CenterId = centerId,
+                    FlagCode = flagCode,
+                    Year = year,
+                    LastSeq = 0
+                };
                 _context.NumberSeries.Add(series);
             }
 

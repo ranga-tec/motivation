@@ -82,6 +82,7 @@
                             <tr><th>Category:</th><td>@Model.Category @(Model.Category == Poms.Domain.Enums.PatientCategory.Foreign ? $"({Model.Nationality})" : "")</td></tr>
                             <tr><th>Identification:</th><td>@Model.IdentificationType: @Model.IdentificationNumber</td></tr>
                             <tr><th>Branch:</th><td>@Model.Center.Name</td></tr>
+                            <tr><th>Handled by:</th><td>@(Model.AssignedClinicianName ?? "Not assigned")</td></tr>
                         </table>
                     </div>
                 </div>
@@ -94,6 +95,9 @@
                             <tr><th width="40%">Address:</th><td>@Model.Address1<br />@Model.Address2</td></tr>
                             <tr><th>Province / District / City:</th><td>@Model.Province.Name / @Model.District.Name / @(Model.City?.Name ?? Model.CityOther ?? "N/A")</td></tr>
                             <tr><th>Email:</th><td>@(Model.Email ?? "N/A")</td></tr>
+                            <tr><th>Referral source:</th><td>@(Model.ReferralSource?.Name ?? Model.ReferralSourceOther ?? "N/A")</td></tr>
+                            <tr><th>Referral person:</th><td>@(Model.ReferralPersonName ?? "N/A")</td></tr>
+                            <tr><th>Referral contact:</th><td>@(Model.ReferralPersonContactNumber ?? "N/A")</td></tr>
                             <tr><th>Telephone:</th>
                                 <td>
                                     @foreach (var c in Model.Contacts)
@@ -204,7 +208,7 @@
                 @if (Model.Appointments.Any())
                 {
                     <table class="table table-striped">
-                        <thead><tr><th>Date</th><th>Type</th><th>Prosthetist / Orthotist</th><th>Status</th><th>Notes / schedule changes</th></tr></thead>
+                        <thead><tr><th>Date</th><th>Type</th><th>Handled by</th><th>Status</th><th>Notes / schedule changes</th></tr></thead>
                         <tbody>
                             @foreach (var a in Model.Appointments.OrderByDescending(a => a.AppointmentDate))
                             {

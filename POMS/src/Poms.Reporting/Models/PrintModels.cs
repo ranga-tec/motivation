@@ -19,6 +19,9 @@ public class PatientPrintModel
     public string City { get; set; } = "";
     public string? Email { get; set; }
     public string ReferralSource { get; set; } = "";
+    public string? ReferralPersonName { get; set; }
+    public string? ReferralPersonContactNumber { get; set; }
+    public string? AssignedClinicianName { get; set; }
     public string GuardianName { get; set; } = "";
     public string GuardianRelationship { get; set; } = "";
     public string? GuardianAddress { get; set; }

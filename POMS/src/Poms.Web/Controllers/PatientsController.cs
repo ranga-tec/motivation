@@ -18,6 +18,7 @@ public class PatientsController : Controller
     private readonly IDuplicateCheckService _duplicateCheckService;
     private readonly IFileStorageService _fileStorageService;
     private readonly IRestrictedAccessService _restrictedAccess;
+    private readonly IAppointmentAssigneeService _appointmentAssignees;
     private readonly ILogger<PatientsController> _logger;
 
     public PatientsController(
@@ -26,6 +27,7 @@ public class PatientsController : Controller
         IDuplicateCheckService duplicateCheckService,
         IFileStorageService fileStorageService,
         IRestrictedAccessService restrictedAccess,
+        IAppointmentAssigneeService appointmentAssignees,
         ILogger<PatientsController> logger)
     {
         _context = context;
@@ -33,6 +35,7 @@ public class PatientsController : Controller
         _duplicateCheckService = duplicateCheckService;
         _fileStorageService = fileStorageService;
         _restrictedAccess = restrictedAccess;
+        _appointmentAssignees = appointmentAssignees;
         _logger = logger;
     }
 
@@ -143,13 +146,14 @@ public class PatientsController : Controller
     // GET: Patients/Create
     public async Task<IActionResult> Create()
     {
-        await PopulateDropdowns();
         var model = new PatientViewModel
         {
             RegistrationDate = DateOnly.FromDateTime(DateTime.Today),
             RegistrationProcessedBy = User.Identity?.Name ?? "",
             Contacts = new List<PatientContactViewModel> { new() }
         };
+
+        await PopulateDropdowns(model);
 
         return PatientFormResult(model, "create");
     }
@@ -163,6 +167,11 @@ public class PatientsController : Controller
         var photoValidation = await PatientPhotoValidator.ValidateAsync(model.ProfilePhoto);
         if (!photoValidation.IsValid)
             ModelState.AddModelError(nameof(model.ProfilePhoto), photoValidation.Error!);
+        var assignee = await _appointmentAssignees.ResolveAsync(
+            model.AssignedClinicianEntry,
+            model.AssignedClinicianUserId);
+        if (!assignee.IsValid)
+            ModelState.AddModelError(nameof(model.AssignedClinicianEntry), assignee.Error!);
 
         if (ModelState.IsValid)
         {
@@ -210,6 +219,10 @@ public class PatientsController : Controller
                         Email = model.Email,
                         ReferralSourceId = model.ReferralSourceId,
                         ReferralSourceOther = model.ReferralSourceOther,
+                        ReferralPersonName = model.ReferralPersonName,
+                        ReferralPersonContactNumber = model.ReferralPersonContactNumber,
+                        AssignedClinicianUserId = assignee.UserId,
+                        AssignedClinicianName = assignee.FullName,
                         TravelTimeDistance = model.TravelTimeDistance,
                         CenterId = model.CenterId,
                         RegistrationDate = registrationDate,
@@ -279,7 +292,7 @@ public class PatientsController : Controller
             }
         }
 
-        await PopulateDropdowns();
+        await PopulateDropdowns(model);
         return PatientFormResult(model, "create");
     }
 
@@ -316,6 +329,10 @@ public class PatientsController : Controller
             Email = patient.Email,
             ReferralSourceId = patient.ReferralSourceId,
             ReferralSourceOther = patient.ReferralSourceOther,
+            ReferralPersonName = patient.ReferralPersonName,
+            ReferralPersonContactNumber = patient.ReferralPersonContactNumber,
+            AssignedClinicianUserId = patient.AssignedClinicianUserId,
+            AssignedClinicianEntry = patient.AssignedClinicianName ?? string.Empty,
             TravelTimeDistance = patient.TravelTimeDistance,
             CenterId = patient.CenterId,
             RegistrationDate = patient.RegistrationDate,
@@ -341,7 +358,7 @@ public class PatientsController : Controller
         if (model.Contacts.Count == 0)
             model.Contacts.Add(new PatientContactViewModel());
 
-        await PopulateDropdowns();
+        await PopulateDropdowns(model, hydrateAssignee: true);
         return PatientFormResult(model, "edit");
     }
 
@@ -356,6 +373,11 @@ public class PatientsController : Controller
         var photoValidation = await PatientPhotoValidator.ValidateAsync(model.ProfilePhoto);
         if (!photoValidation.IsValid)
             ModelState.AddModelError(nameof(model.ProfilePhoto), photoValidation.Error!);
+        var assignee = await _appointmentAssignees.ResolveAsync(
+            model.AssignedClinicianEntry,
+            model.AssignedClinicianUserId);
+        if (!assignee.IsValid)
+            ModelState.AddModelError(nameof(model.AssignedClinicianEntry), assignee.Error!);
 
         if (ModelState.IsValid)
         {
@@ -403,6 +425,10 @@ public class PatientsController : Controller
                     patient.Email = model.Email;
                     patient.ReferralSourceId = model.ReferralSourceId;
                     patient.ReferralSourceOther = model.ReferralSourceOther;
+                    patient.ReferralPersonName = model.ReferralPersonName;
+                    patient.ReferralPersonContactNumber = model.ReferralPersonContactNumber;
+                    patient.AssignedClinicianUserId = assignee.UserId;
+                    patient.AssignedClinicianName = assignee.FullName;
                     patient.TravelTimeDistance = model.TravelTimeDistance;
                     patient.Remarks = model.Remarks;
                     patient.GuardianName = model.GuardianName;
@@ -506,7 +532,7 @@ public class PatientsController : Controller
             }
         }
 
-        await PopulateDropdowns();
+        await PopulateDropdowns(model);
         await PopulateExistingPhotoStateAsync(model);
         return PatientFormResult(model, "edit");
     }
@@ -648,7 +674,7 @@ public class PatientsController : Controller
             : View(mode == "edit" ? "Edit" : "Create", model);
     }
 
-    private async Task PopulateDropdowns()
+    private async Task PopulateDropdowns(PatientViewModel? model = null, bool hydrateAssignee = false)
     {
         ViewBag.Provinces = new SelectList(await _context.Provinces.OrderBy(p => p.Name).ToListAsync(), "Id", "Name");
         ViewBag.Districts = new SelectList(await _context.Districts.OrderBy(d => d.Name).ToListAsync(), "Id", "Name");
@@ -658,6 +684,17 @@ public class PatientsController : Controller
         ViewBag.PatientCategories = new SelectList(Enum.GetValues(typeof(PatientCategory)).Cast<PatientCategory>());
         ViewBag.IdentificationTypes = new SelectList(Enum.GetValues(typeof(IdentificationType)).Cast<IdentificationType>());
         ViewBag.ReferralSources = new SelectList(await _context.ReferralSources.Where(r => r.IsActive).ToListAsync(), "Id", "Name");
+        if (model is not null)
+        {
+            model.AssigneeOptions = await _appointmentAssignees.GetOptionsAsync();
+            if (hydrateAssignee && !string.IsNullOrWhiteSpace(model.AssignedClinicianUserId))
+            {
+                var selected = model.AssigneeOptions.FirstOrDefault(option =>
+                    option.UserId == model.AssignedClinicianUserId);
+                if (selected is not null)
+                    model.AssignedClinicianEntry = selected.DisplayText;
+            }
+        }
     }
 
     private async Task ApplyRestrictedFiltersAndAudit(Patient patient, string action)

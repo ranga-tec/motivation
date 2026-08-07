@@ -130,6 +130,24 @@ public class SchedulingWorkflowTests
             result.MemberNames.Contains(nameof(PatientViewModel.Dob)));
     }
 
+    [Fact]
+    public void PatientRegistration_RequiresAHandler()
+    {
+        var model = new PatientViewModel();
+
+        Validate(model).Should().Contain(result =>
+            result.MemberNames.Contains(nameof(PatientViewModel.AssignedClinicianEntry)));
+    }
+
+    [Fact]
+    public void GuardianRelationshipOptions_ContainCommonRelationships()
+    {
+        PatientViewModel.GuardianRelationshipOptions.Should().Contain(new[]
+        {
+            "Mother", "Father", "Niece", "Brother", "Sister", "Spouse"
+        });
+    }
+
     [Theory]
     [InlineData(10, 0, 9, 0)]
     [InlineData(9, 0, 9, 0)]
@@ -216,6 +234,22 @@ public class SchedulingWorkflowTests
             "PreviousAppointmentTime",
             "RescheduleReason",
             "RescheduledAt"
+        });
+        await reader.DisposeAsync();
+
+        columns.Clear();
+        await using var patientCommand = connection.CreateCommand();
+        patientCommand.CommandText = "PRAGMA table_info(\"Patients\");";
+        await using var patientReader = await patientCommand.ExecuteReaderAsync();
+        while (await patientReader.ReadAsync())
+            columns.Add(patientReader.GetString(1));
+
+        columns.Should().Contain(new[]
+        {
+            "ReferralPersonName",
+            "ReferralPersonContactNumber",
+            "AssignedClinicianUserId",
+            "AssignedClinicianName"
         });
     }
 

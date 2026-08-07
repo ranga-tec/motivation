@@ -32,7 +32,12 @@ public class Patient : BaseEntity
 
     public int? ReferralSourceId { get; set; }
     public string? ReferralSourceOther { get; set; }
+    public string? ReferralPersonName { get; set; }
+    public string? ReferralPersonContactNumber { get; set; }
     public string? TravelTimeDistance { get; set; }
+
+    public string? AssignedClinicianUserId { get; set; }
+    public string? AssignedClinicianName { get; set; }
 
     public DateOnly RegistrationDate { get; set; }
     public string RegistrationProcessedBy { get; set; } = default!;

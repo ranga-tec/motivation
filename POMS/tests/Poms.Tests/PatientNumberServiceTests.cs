@@ -58,6 +58,7 @@ public class PatientNumberServiceTests : IDisposable
         var result = await service.GeneratePatientNumberAsync(_unflaggedCenterId, new DateOnly(2026, 6, 21));
 
         result.Should().Be("2026/0001");
+        (await _context.NumberSeries.SingleAsync()).CenterId.Should().Be(_unflaggedCenterId);
     }
 
     [Fact]

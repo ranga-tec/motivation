@@ -71,6 +71,8 @@ public class PrintFormService : IPrintFormService
                             right.Item().Element(c => Box(c, "Province / District / City:", $"{model.Province} / {model.District} / {model.City}"));
                             right.Item().Element(c => Box(c, "Email:", model.Email));
                             right.Item().Element(c => Box(c, "Referral Source:", model.ReferralSource));
+                            right.Item().Element(c => Box(c, "Referral Person:", model.ReferralPersonName));
+                            right.Item().Element(c => Box(c, "Referral Contact:", model.ReferralPersonContactNumber));
                         });
                     });
 
@@ -91,6 +93,7 @@ public class PrintFormService : IPrintFormService
                     });
 
                     col.Item().Element(c => Box(c, "Time/Distance to travel to center:", model.TravelTimeDistance));
+                    col.Item().Element(c => Box(c, "Handled by (Prosthetist / Orthotist):", model.AssignedClinicianName));
 
                     col.Item().Row(row =>
                     {

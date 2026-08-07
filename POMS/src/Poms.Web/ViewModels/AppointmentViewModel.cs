@@ -30,7 +30,7 @@ public class AppointmentViewModel
 
     [Required]
     [StringLength(400)]
-    [Display(Name = "Prosthetist / Orthotist")]
+    [Display(Name = "Handled By (Prosthetist / Orthotist)")]
     public string AssignedClinicianEntry { get; set; } = string.Empty;
 
     public string? AssignedClinicianUserId { get; set; }

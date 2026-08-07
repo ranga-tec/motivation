@@ -32,6 +32,11 @@ public static class PostgresSchemaUpgrader
             ALTER TABLE "FollowUps" ADD COLUMN IF NOT EXISTS "StartTime" time without time zone;
             ALTER TABLE "FollowUps" ADD COLUMN IF NOT EXISTS "EndTime" time without time zone;
             ALTER TABLE "Episodes" ADD COLUMN IF NOT EXISTS "RecordTime" time without time zone;
+            ALTER TABLE "NumberSeries" ADD COLUMN IF NOT EXISTS "CenterId" integer;
+            ALTER TABLE "Patients" ADD COLUMN IF NOT EXISTS "ReferralPersonName" character varying(150);
+            ALTER TABLE "Patients" ADD COLUMN IF NOT EXISTS "ReferralPersonContactNumber" character varying(30);
+            ALTER TABLE "Patients" ADD COLUMN IF NOT EXISTS "AssignedClinicianUserId" text;
+            ALTER TABLE "Patients" ADD COLUMN IF NOT EXISTS "AssignedClinicianName" character varying(200);
 
             CREATE TABLE IF NOT EXISTS "EmployeeProfiles" (
                 "Id" uuid NOT NULL,
@@ -65,6 +70,8 @@ public static class PostgresSchemaUpgrader
             CREATE INDEX IF NOT EXISTS "IX_EpisodeDocuments_IsRestricted" ON "EpisodeDocuments" ("IsRestricted");
             CREATE INDEX IF NOT EXISTS "IX_Appointments_AssignedClinicianUserId"
                 ON "Appointments" ("AssignedClinicianUserId");
+            CREATE INDEX IF NOT EXISTS "IX_Patients_AssignedClinicianUserId"
+                ON "Patients" ("AssignedClinicianUserId");
 
             DO $$
             BEGIN
@@ -75,6 +82,22 @@ public static class PostgresSchemaUpgrader
                 ) THEN
                     ALTER TABLE "Appointments"
                         ADD CONSTRAINT "FK_Appointments_AspNetUsers_AssignedClinicianUserId"
+                        FOREIGN KEY ("AssignedClinicianUserId")
+                        REFERENCES "AspNetUsers" ("Id")
+                        ON DELETE SET NULL;
+                END IF;
+            END
+            $$;
+
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1
+                    FROM pg_constraint
+                    WHERE conname = 'FK_Patients_AspNetUsers_AssignedClinicianUserId'
+                ) THEN
+                    ALTER TABLE "Patients"
+                        ADD CONSTRAINT "FK_Patients_AspNetUsers_AssignedClinicianUserId"
                         FOREIGN KEY ("AssignedClinicianUserId")
                         REFERENCES "AspNetUsers" ("Id")
                         ON DELETE SET NULL;

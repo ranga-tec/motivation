@@ -47,6 +47,10 @@ public class PomsDbContext : IdentityDbContext
             entity.Property(e => e.FullName).HasMaxLength(200).IsRequired();
             entity.Property(e => e.NameWithInitials).HasMaxLength(100).IsRequired();
             entity.Property(e => e.IdentificationNumber).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.ReferralPersonName).HasMaxLength(150);
+            entity.Property(e => e.ReferralPersonContactNumber).HasMaxLength(30);
+            entity.Property(e => e.AssignedClinicianUserId).HasMaxLength(450);
+            entity.Property(e => e.AssignedClinicianName).HasMaxLength(200);
             entity.Property(e => e.Sex).HasConversion<string>();
             entity.Property(e => e.Category).HasConversion<string>();
             entity.Property(e => e.IdentificationType).HasConversion<string>();
@@ -57,6 +61,11 @@ public class PomsDbContext : IdentityDbContext
             entity.HasOne(e => e.City).WithMany().HasForeignKey(e => e.CityId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(e => e.Center).WithMany().HasForeignKey(e => e.CenterId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(e => e.ReferralSource).WithMany().HasForeignKey(e => e.ReferralSourceId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => e.AssignedClinicianUserId);
+            entity.HasOne<IdentityUser>()
+                .WithMany()
+                .HasForeignKey(e => e.AssignedClinicianUserId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasQueryFilter(e => !e.IsDeleted);
         });
