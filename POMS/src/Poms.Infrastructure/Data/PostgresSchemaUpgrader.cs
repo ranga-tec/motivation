@@ -75,6 +75,21 @@ public static class PostgresSchemaUpgrader
 
             DO $$
             BEGIN
+                -- Early prototype databases required FirstName. The current model uses FullName.
+                IF EXISTS (
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                      AND table_name = 'Patients'
+                      AND column_name = 'FirstName'
+                ) THEN
+                    ALTER TABLE "Patients" ALTER COLUMN "FirstName" DROP NOT NULL;
+                END IF;
+            END
+            $$;
+
+            DO $$
+            BEGIN
                 IF NOT EXISTS (
                     SELECT 1
                     FROM pg_constraint
