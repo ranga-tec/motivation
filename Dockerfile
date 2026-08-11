@@ -28,6 +28,7 @@ COPY --from=build /app/publish .
 
 # Railway provides PORT environment variable at runtime
 ENV ASPNETCORE_ENVIRONMENT=Production \
+    DOTNET_USE_POLLING_FILE_WATCHER=1 \
     PORT=8080
 
 EXPOSE 8080
