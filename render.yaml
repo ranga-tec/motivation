@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: poms-motivation
+    runtime: docker
+    plan: free
+    region: singapore
+    repo: https://github.com/ranga-tec/motivation
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: poms-motivation-db
+          property: connectionString
+      - key: FileStorage__RootPath
+        value: /app/storage
+      - key: DataProtection__KeysPath
+        value: /app/data-protection-keys
+      - key: Security__ForceHttps
+        value: "false"
+
+databases:
+  - name: poms-motivation-db
+    plan: free
+    region: singapore
+    databaseName: poms
+    user: poms
+    ipAllowList: []
