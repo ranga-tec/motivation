@@ -34,6 +34,22 @@ The prototype branch resolves switch targets from configuration in `POMS/src/Pom
 
 If both apps share a PostgreSQL cluster, keep them in separate databases.
 
+## Legacy Patient Form OCR
+
+Authorized data-entry staff can open **Patient Folder → Import old form** to read a photographed
+Exceed Lanka registration form. OCR prefills the normal registration wizard for human review; it
+does not create a patient until staff complete the required fields and press **Register patient**.
+On save, POMS generates the normal patient number and database GUIDs, then attaches the original
+scan as a restricted registration document. Unfinished scans expire from staging after 24 hours.
+
+Users can select **OpenAI vision** (recommended for handwriting) or **Offline OCR** (Tesseract,
+no API charge). The Docker images install Tesseract automatically. For local Windows development,
+install Tesseract and set `TESSERACT_EXECUTABLE_PATH` to `tesseract.exe` when it is not on `PATH`.
+
+Configure OpenAI with `OPENAI_API_KEY` (or `PatientFormOcr__ApiKey`). Optional overrides are
+`PatientFormOcr__Model`, `PatientFormOcr__Endpoint`, `PatientFormOcr__Enabled`, and nested
+`PatientFormOcr__Offline__*` settings. Do not place an API key in `appsettings.json` or commit it.
+
 ## Deployment Docs
 
 - Railway deployment: [`DEPLOY_RAILWAY.md`](DEPLOY_RAILWAY.md)

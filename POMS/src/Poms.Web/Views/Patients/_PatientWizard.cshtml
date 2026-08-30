@@ -33,6 +33,16 @@
         <input type="hidden" asp-for="PatientNumber" />
     }
     <input type="hidden" asp-for="ConfirmDuplicateWarning" id="confirmDuplicateWarning" />
+    <input type="hidden" asp-for="IsLegacyImport" />
+    <input type="hidden" asp-for="LegacyPatientFileNumber" />
+    <input type="hidden" asp-for="OcrPreferredName" />
+    <input type="hidden" asp-for="OcrOverallConfidence" />
+    <input type="hidden" asp-for="OcrProvider" />
+    <input type="hidden" asp-for="OcrImportToken" />
+    @for (var warningIndex = 0; warningIndex < Model.OcrWarnings.Count; warningIndex++)
+    {
+        <input type="hidden" name="OcrWarnings[@warningIndex]" value="@Model.OcrWarnings[warningIndex]" />
+    }
 
     <header class="modal-header workflow-header">
         <div>
@@ -65,6 +75,52 @@
         </div>
 
         <div asp-validation-summary="All" class="alert alert-danger validation-summary-valid" role="alert" tabindex="-1"></div>
+
+        @if (Model.IsLegacyImport)
+        {
+            <div class="alert alert-info" role="status">
+                <h2 class="h6"><i class="fa-solid fa-wand-magic-sparkles me-2" aria-hidden="true"></i>OCR draft ready for review</h2>
+                <p class="mb-2">
+                    The scan has not created a patient record. Check every field, complete the required blanks,
+                    and enter the original registration date before saving. The original scan will be attached
+                    to the new patient folder when you save.
+                </p>
+                <dl class="row small mb-0">
+                    @if (!string.IsNullOrWhiteSpace(Model.LegacyPatientFileNumber))
+                    {
+                        <dt class="col-sm-3">Legacy file number</dt>
+                        <dd class="col-sm-9">@Model.LegacyPatientFileNumber</dd>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(Model.OcrPreferredName))
+                    {
+                        <dt class="col-sm-3">Preferred name on form</dt>
+                        <dd class="col-sm-9">@Model.OcrPreferredName</dd>
+                    }
+                    @if (Model.OcrOverallConfidence.HasValue)
+                    {
+                        <dt class="col-sm-3">Overall OCR confidence</dt>
+                        <dd class="col-sm-9">@Model.OcrOverallConfidence.Value.ToString("P0")</dd>
+                    }
+                    @if (Model.OcrProvider.HasValue)
+                    {
+                        <dt class="col-sm-3">OCR method</dt>
+                        <dd class="col-sm-9">@Model.OcrProvider</dd>
+                    }
+                </dl>
+                @if (Model.OcrWarnings.Count > 0)
+                {
+                    <details class="mt-2">
+                        <summary>Review @Model.OcrWarnings.Count OCR warning(s)</summary>
+                        <ul class="mb-0 mt-2">
+                            @foreach (var warning in Model.OcrWarnings)
+                            {
+                                <li>@warning</li>
+                            }
+                        </ul>
+                    </details>
+                }
+            </div>
+        }
 
         @if (ViewBag.ShowDuplicateWarning == true)
         {
@@ -155,7 +211,9 @@
                 </div>
                 <div class="col-md-4">
                     <label asp-for="Sex" class="form-label required-label"></label>
-                    <select asp-for="Sex" class="form-select" required asp-items="ViewBag.SexOptions" data-review-label="Gender"></select>
+                    <select asp-for="Sex" class="form-select" required asp-items="ViewBag.SexOptions" data-review-label="Gender">
+                        <option value="">Select gender</option>
+                    </select>
                     <span asp-validation-for="Sex" class="text-danger"></span>
                 </div>
                 <div class="col-md-4">

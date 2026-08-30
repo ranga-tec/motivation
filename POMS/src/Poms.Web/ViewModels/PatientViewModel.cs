@@ -36,7 +36,7 @@ public class PatientViewModel : IValidatableObject
 
     [Required]
     [Display(Name = "Gender")]
-    public Sex Sex { get; set; }
+    public Sex? Sex { get; set; }
 
     [Display(Name = "Employment")]
     public string? Employment { get; set; }
@@ -160,6 +160,26 @@ public class PatientViewModel : IValidatableObject
 
     // Duplicate-check confirmation flag (Phase 2.2/2.3)
     public bool ConfirmDuplicateWarning { get; set; }
+
+    // OCR import state is used only while staff review the extracted draft.
+    // These fields are never copied to the Patient entity.
+    public bool IsLegacyImport { get; set; }
+
+    [StringLength(100)]
+    public string? LegacyPatientFileNumber { get; set; }
+
+    [StringLength(100)]
+    public string? OcrPreferredName { get; set; }
+
+    [Range(0, 1)]
+    public double? OcrOverallConfidence { get; set; }
+
+    public PatientFormOcrProvider? OcrProvider { get; set; }
+
+    [StringLength(32)]
+    public string? OcrImportToken { get; set; }
+
+    public List<string> OcrWarnings { get; set; } = [];
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {

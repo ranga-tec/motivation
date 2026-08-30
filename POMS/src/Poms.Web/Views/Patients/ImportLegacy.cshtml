@@ -1,0 +1,92 @@
+@model Poms.Web.ViewModels.PatientFormOcrUploadViewModel
+
+@{
+    ViewData["Title"] = "Import Legacy Patient Form";
+}
+
+<div class="workflow-page">
+    <div class="card shadow-sm mx-auto" style="max-width: 760px;">
+        <div class="card-body p-4 p-lg-5">
+            <span class="page-eyebrow">Legacy data entry</span>
+            <h1 class="h2 mb-2">Read a patient form with OCR</h1>
+            <p class="text-secondary">
+                Upload one clear JPG or PNG, choose an OCR method, then review every extracted value before saving.
+                Missing or uncertain values stay blank.
+            </p>
+
+            @if (!Model.AnyConfigured)
+            {
+                <div class="alert alert-warning" role="alert">
+                    No OCR method is available. Install Tesseract for Offline OCR or configure the OpenAI API key.
+                </div>
+            }
+
+            <form asp-action="ImportLegacy" method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger validation-summary-valid" role="alert"></div>
+
+                <fieldset class="mb-4">
+                    <legend class="form-label required-label">OCR method</legend>
+                    <div class="vstack gap-2">
+                        @foreach (var provider in Model.Providers)
+                        {
+                            var optionId = $"ocr-provider-{provider.Provider}";
+                            <label class="border rounded p-3 d-flex gap-3 @(provider.IsConfigured ? "" : "text-secondary bg-light")" for="@optionId">
+                                <input asp-for="Provider"
+                                       id="@optionId"
+                                       type="radio"
+                                       value="@provider.Provider"
+                                       disabled="@(!provider.IsConfigured)" />
+                                <span>
+                                    <strong>@provider.DisplayName</strong>
+                                    @if (!provider.IsConfigured)
+                                    {
+                                        <span class="badge text-bg-secondary ms-1">Unavailable</span>
+                                    }
+                                    <span class="d-block small mt-1">@provider.Description</span>
+                                </span>
+                            </label>
+                        }
+                    </div>
+                    <span asp-validation-for="Provider" class="text-danger"></span>
+                </fieldset>
+
+                <div class="mb-3">
+                    <label asp-for="FormImage" class="form-label required-label"></label>
+                    <input asp-for="FormImage"
+                           class="form-control"
+                           type="file"
+                           accept="image/jpeg,image/png"
+                           required
+                           disabled="@(!Model.AnyConfigured)" />
+                    <div class="form-text">JPG or PNG, up to 10 MB. Photograph the full page in good light.</div>
+                    <span asp-validation-for="FormImage" class="text-danger"></span>
+                </div>
+
+                <div class="alert alert-light border small">
+                    <i class="fa-solid fa-shield-halved me-2" aria-hidden="true"></i>
+                    POMS stages the scan locally for up to 24 hours and attaches it as a restricted registration document
+                    only after the reviewed patient record is saved. OpenAI mode sends the image to the configured API with
+                    response storage disabled; Offline mode keeps OCR processing on this server.
+                </div>
+
+                <div class="alert alert-warning small" role="note">
+                    Handwriting recognition is never guaranteed. OpenAI is recommended for forms like this sample;
+                    Offline OCR is strongest on printed or very clear block handwriting.
+                </div>
+
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit" class="btn btn-primary" disabled="@(!Model.AnyConfigured)">
+                        <i class="fa-solid fa-wand-magic-sparkles me-1" aria-hidden="true"></i>
+                        Read form and review
+                    </button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">Back to patient folder</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

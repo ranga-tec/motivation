@@ -19,6 +19,7 @@ public class PatientsController : Controller
     private readonly IFileStorageService _fileStorageService;
     private readonly IRestrictedAccessService _restrictedAccess;
     private readonly IAppointmentAssigneeService _appointmentAssignees;
+    private readonly IPatientFormOcrService _patientFormOcr;
     private readonly ILogger<PatientsController> _logger;
 
     public PatientsController(
@@ -28,6 +29,7 @@ public class PatientsController : Controller
         IFileStorageService fileStorageService,
         IRestrictedAccessService restrictedAccess,
         IAppointmentAssigneeService appointmentAssignees,
+        IPatientFormOcrService patientFormOcr,
         ILogger<PatientsController> logger)
     {
         _context = context;
@@ -36,6 +38,7 @@ public class PatientsController : Controller
         _fileStorageService = fileStorageService;
         _restrictedAccess = restrictedAccess;
         _appointmentAssignees = appointmentAssignees;
+        _patientFormOcr = patientFormOcr;
         _logger = logger;
     }
 
@@ -158,11 +161,94 @@ public class PatientsController : Controller
         return PatientFormResult(model, "create");
     }
 
+    // GET: Patients/ImportLegacy
+    public IActionResult ImportLegacy()
+    {
+        Response.Headers.CacheControl = "no-store, private";
+        var model = new PatientFormOcrUploadViewModel
+        {
+            Providers = _patientFormOcr.Providers
+        };
+        model.Provider = model.Providers.FirstOrDefault(provider =>
+                provider.Provider == PatientFormOcrProvider.OpenAi && provider.IsConfigured)?.Provider
+            ?? model.Providers.FirstOrDefault(provider => provider.IsConfigured)?.Provider;
+        return View(model);
+    }
+
+    // POST: Patients/ImportLegacy
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequestSizeLimit(PatientFormImageValidator.MaxFileSizeBytes + (64 * 1024))]
+    public async Task<IActionResult> ImportLegacy(
+        PatientFormOcrUploadViewModel upload,
+        CancellationToken cancellationToken)
+    {
+        Response.Headers.CacheControl = "no-store, private";
+        upload.Providers = _patientFormOcr.Providers;
+
+        if (!upload.Provider.HasValue || !_patientFormOcr.IsConfigured(upload.Provider.Value))
+            ModelState.AddModelError(nameof(upload.Provider), "Select an OCR method that is available.");
+
+        var validation = await PatientFormImageValidator.ValidateAsync(upload.FormImage, cancellationToken);
+        if (!validation.IsValid)
+            ModelState.AddModelError(nameof(upload.FormImage), validation.Error!);
+
+        if (!ModelState.IsValid)
+            return View(upload);
+
+        StagedOcrImport? stagedImport = null;
+        try
+        {
+            await using var stream = upload.FormImage!.OpenReadStream();
+            var extraction = await _patientFormOcr.ExtractAsync(
+                upload.Provider!.Value,
+                stream,
+                validation.ContentType!,
+                cancellationToken);
+
+            stagedImport = await _fileStorageService.StageOcrImportAsync(
+                upload.FormImage,
+                validation.ContentType!,
+                cancellationToken);
+            var model = await BuildPatientDraftAsync(
+                extraction,
+                upload.Provider.Value,
+                stagedImport.Token);
+            await PopulateDropdowns(model);
+            ViewData["PatientFormMode"] = "create";
+            ViewData["PatientFormModal"] = false;
+            return View("Create", model);
+        }
+        catch (PatientFormOcrException ex)
+        {
+            if (stagedImport is not null)
+                await _fileStorageService.DeleteStagedOcrImportAsync(stagedImport.Token);
+            _logger.LogWarning(ex, "Patient registration OCR failed for {FileName}", upload.FormImage!.FileName);
+            ModelState.AddModelError(string.Empty, ex.Message);
+            return View(upload);
+        }
+        catch (Exception ex)
+        {
+            if (stagedImport is not null)
+                await _fileStorageService.DeleteStagedOcrImportAsync(stagedImport.Token);
+            _logger.LogError(ex, "Unexpected patient registration OCR failure for {FileName}", upload.FormImage!.FileName);
+            ModelState.AddModelError(string.Empty, "OCR failed unexpectedly. Try the scan again.");
+            return View(upload);
+        }
+    }
+
     // POST: Patients/Create
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(PatientViewModel model)
     {
+        if (model.IsLegacyImport && !model.RegistrationDate.HasValue)
+        {
+            ModelState.AddModelError(
+                nameof(model.RegistrationDate),
+                "Enter the original registration date before saving this legacy record.");
+        }
+
         await ValidateLocationAsync(model);
         var photoValidation = await PatientPhotoValidator.ValidateAsync(model.ProfilePhoto);
         if (!photoValidation.IsValid)
@@ -191,9 +277,9 @@ public class PatientsController : Controller
             }
             else
             {
+                var savedFilePaths = new List<string>();
                 try
                 {
-                    string? savedPhotoPath = null;
                     var registrationDate = model.RegistrationDate ?? DateOnly.FromDateTime(DateTime.Today);
                     var patientNumber = await _patientNumberService.GeneratePatientNumberAsync(
                         model.CenterId, registrationDate);
@@ -204,7 +290,7 @@ public class PatientsController : Controller
                         FullName = model.FullName,
                         NameWithInitials = model.NameWithInitials,
                         Dob = model.Dob,
-                        Sex = model.Sex,
+                        Sex = model.Sex!.Value,
                         Employment = model.Employment,
                         Category = model.Category,
                         Nationality = model.Nationality,
@@ -252,7 +338,7 @@ public class PatientsController : Controller
                     if (model.ProfilePhoto is not null)
                     {
                         var savedPhoto = await _fileStorageService.SaveFileAsync(model.ProfilePhoto, patientNumber);
-                        savedPhotoPath = savedPhoto.StoragePath;
+                        savedFilePaths.Add(savedPhoto.StoragePath);
                         patient.Documents.Add(new PatientDocument
                         {
                             DocumentType = DocumentType.PatientPhoto,
@@ -266,16 +352,39 @@ public class PatientsController : Controller
                         });
                     }
 
-                    _context.Add(patient);
-                    try
+                    if (model.IsLegacyImport && !string.IsNullOrWhiteSpace(model.OcrImportToken))
                     {
-                        await _context.SaveChangesAsync();
+                        var savedScan = await _fileStorageService.MaterializeOcrImportAsync(
+                            model.OcrImportToken,
+                            patientNumber);
+                        savedFilePaths.Add(savedScan.StoragePath);
+                        patient.Documents.Add(new PatientDocument
+                        {
+                            DocumentType = DocumentType.ScannedRegistrationForm,
+                            FileName = savedScan.FileName,
+                            StoragePath = savedScan.StoragePath,
+                            ContentType = savedScan.ContentType,
+                            Notes = $"Legacy registration form imported with {model.OcrProvider}; legacy file number: {model.LegacyPatientFileNumber ?? "not provided"}",
+                            UploadedBy = User.Identity?.Name ?? "",
+                            UploadedAt = DateTime.UtcNow,
+                            IsRestricted = true,
+                            CreatedBy = User.Identity?.Name
+                        });
                     }
-                    catch
+
+                    _context.Add(patient);
+                    await _context.SaveChangesAsync();
+
+                    if (model.IsLegacyImport && !string.IsNullOrWhiteSpace(model.OcrImportToken))
                     {
-                        if (savedPhotoPath is not null)
-                            await _fileStorageService.DeleteFileAsync(savedPhotoPath);
-                        throw;
+                        try
+                        {
+                            await _fileStorageService.DeleteStagedOcrImportAsync(model.OcrImportToken);
+                        }
+                        catch (Exception cleanupException)
+                        {
+                            _logger.LogWarning(cleanupException, "Could not remove staged OCR scan {Token}", model.OcrImportToken);
+                        }
                     }
 
                     _logger.LogInformation("Patient {PatientNumber} created by {User}",
@@ -286,6 +395,17 @@ public class PatientsController : Controller
                 }
                 catch (Exception ex)
                 {
+                    foreach (var savedFilePath in savedFilePaths)
+                    {
+                        try
+                        {
+                            await _fileStorageService.DeleteFileAsync(savedFilePath);
+                        }
+                        catch (Exception cleanupException)
+                        {
+                            _logger.LogWarning(cleanupException, "Could not remove unsaved patient file {StoragePath}", savedFilePath);
+                        }
+                    }
                     _logger.LogError(ex, "Error creating patient");
                     ModelState.AddModelError("", "An error occurred while creating the patient.");
                 }
@@ -410,7 +530,7 @@ public class PatientsController : Controller
                     patient.FullName = model.FullName;
                     patient.NameWithInitials = model.NameWithInitials;
                     patient.Dob = model.Dob;
-                    patient.Sex = model.Sex;
+                    patient.Sex = model.Sex!.Value;
                     patient.Employment = model.Employment;
                     patient.Category = model.Category;
                     patient.Nationality = model.Nationality;
@@ -621,6 +741,118 @@ public class PatientsController : Controller
     {
         return _context.Patients.Any(e => e.Id == id);
     }
+
+    private async Task<PatientViewModel> BuildPatientDraftAsync(
+        PatientFormOcrResult extraction,
+        PatientFormOcrProvider provider,
+        string importToken)
+    {
+        var districts = await _context.Districts
+            .Include(d => d.Province)
+            .ToListAsync();
+        var district = FindBestNameMatch(districts, d => d.Name, extraction.District);
+
+        var centers = await _context.Centers
+            .Where(c => c.IsActive)
+            .ToListAsync();
+        var center = FindBestNameMatch(centers, c => $"{c.Code} {c.Name}", extraction.Centre);
+
+        var referralSources = await _context.ReferralSources
+            .Where(r => r.IsActive)
+            .ToListAsync();
+        var referral = FindBestNameMatch(referralSources, r => r.Name, extraction.ReferralSource);
+
+        DateOnly.TryParseExact(
+            extraction.DateOfBirth,
+            "yyyy-MM-dd",
+            out var dob);
+
+        Sex? sex = Enum.TryParse<Sex>(extraction.Gender, true, out var parsedSex)
+            ? parsedSex
+            : null;
+
+        var contacts = extraction.Contacts
+            .Where(c => !string.IsNullOrWhiteSpace(c.TelephoneNumber))
+            .Select(c =>
+            {
+                DateOnly.TryParseExact(c.DateConfirmed, "yyyy-MM-dd", out var confirmedOn);
+                return new PatientContactViewModel
+                {
+                    TelephoneNo = c.TelephoneNumber?.Trim(),
+                    DateConfirmed = confirmedOn == default ? null : confirmedOn,
+                    PersonChecked = c.PersonChecked?.Trim()
+                };
+            })
+            .ToList();
+
+        if (contacts.Count == 0)
+            contacts.Add(new PatientContactViewModel());
+
+        return new PatientViewModel
+        {
+            FullName = extraction.FullName?.Trim() ?? string.Empty,
+            NameWithInitials = string.Empty,
+            Dob = dob,
+            Sex = sex,
+            Employment = extraction.Employment?.Trim(),
+            Category = PatientCategory.Local,
+            IdentificationType = IdentificationType.NIC,
+            IdentificationNumber = extraction.IdentificationNumber?.Trim() ?? string.Empty,
+            Address1 = extraction.Address?.Trim() ?? string.Empty,
+            ProvinceId = district?.ProvinceId ?? 0,
+            DistrictId = district?.Id ?? 0,
+            CityOther = extraction.City?.Trim(),
+            Email = extraction.Email?.Trim(),
+            CenterId = center?.Id ?? 0,
+            ReferralSourceId = referral?.Id,
+            ReferralSourceOther = referral is null ? extraction.ReferralSource?.Trim() : null,
+            TravelTimeDistance = extraction.TravelTimeDistance?.Trim(),
+            RegistrationDate = null,
+            RegistrationProcessedBy = User.Identity?.Name ?? string.Empty,
+            AssignedClinicianEntry = string.Empty,
+            GuardianName = extraction.GuardianName?.Trim() ?? string.Empty,
+            GuardianRelationship = extraction.GuardianRelationship?.Trim() ?? string.Empty,
+            GuardianAddress = extraction.GuardianAddress?.Trim(),
+            GuardianPhone = extraction.GuardianPhone?.Trim(),
+            GuardianMobile = extraction.GuardianMobile?.Trim(),
+            Contacts = contacts,
+            IsLegacyImport = true,
+            LegacyPatientFileNumber = extraction.PatientFileNumber?.Trim(),
+            OcrPreferredName = extraction.PreferredName?.Trim(),
+            OcrOverallConfidence = extraction.OverallConfidence,
+            OcrProvider = provider,
+            OcrImportToken = importToken,
+            OcrWarnings = extraction.Warnings
+                .Where(warning => !string.IsNullOrWhiteSpace(warning))
+                .Select(warning => warning.Trim())
+                .Take(20)
+                .ToList()
+        };
+    }
+
+    private static T? FindBestNameMatch<T>(
+        IEnumerable<T> values,
+        Func<T, string> nameSelector,
+        string? extractedName)
+        where T : class
+    {
+        var sought = NormalizeForMatch(extractedName);
+        if (sought.Length == 0)
+            return null;
+
+        return values.FirstOrDefault(value => NormalizeForMatch(nameSelector(value)) == sought)
+            ?? values.FirstOrDefault(value =>
+            {
+                var candidate = NormalizeForMatch(nameSelector(value));
+                return candidate.Contains(sought, StringComparison.Ordinal) ||
+                       sought.Contains(candidate, StringComparison.Ordinal);
+            });
+    }
+
+    private static string NormalizeForMatch(string? value) =>
+        string.Concat((value ?? string.Empty)
+            .Where(char.IsLetterOrDigit)
+            .Select(char.ToUpperInvariant));
 
     private async Task PopulateExistingPhotoStateAsync(PatientViewModel model)
     {

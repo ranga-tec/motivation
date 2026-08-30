@@ -6,6 +6,7 @@ using Poms.Infrastructure.Data;
 using Poms.Infrastructure.Services;
 using Poms.Reporting.Services;
 using Poms.Web.Models;
+using Poms.Web.Services;
 using Serilog;
 
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
@@ -123,11 +124,32 @@ builder.Services.AddScoped<IPatientNumberService, PatientNumberService>();
 builder.Services.AddScoped<IDuplicateCheckService, DuplicateCheckService>();
 builder.Services.AddScoped<IFileStorageService>(_ =>
     new FileStorageService(rootPath, maxFileSizeMB, allowedExtensions));
+builder.Services.AddHostedService<OcrImportCleanupService>();
 builder.Services.AddScoped<IPrintFormService, PrintFormService>();
 builder.Services.AddScoped<IReportQueryService, ReportQueryService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IRestrictedAccessService, RestrictedAccessService>();
 builder.Services.AddScoped<IAppointmentAssigneeService, AppointmentAssigneeService>();
+builder.Services.AddOptions<PatientFormOcrOptions>()
+    .Bind(builder.Configuration.GetSection(PatientFormOcrOptions.SectionName))
+    .PostConfigure(options =>
+    {
+        if (string.IsNullOrWhiteSpace(options.ApiKey))
+            options.ApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+        var tesseractPath = Environment.GetEnvironmentVariable("TESSERACT_EXECUTABLE_PATH");
+        if (!string.IsNullOrWhiteSpace(tesseractPath))
+            options.Offline.ExecutablePath = tesseractPath;
+    });
+builder.Services.AddHttpClient<OpenAiPatientFormOcrService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(90);
+});
+builder.Services.AddTransient<TesseractPatientFormOcrService>();
+builder.Services.AddTransient<IPatientFormOcrEngine>(services =>
+    services.GetRequiredService<OpenAiPatientFormOcrService>());
+builder.Services.AddTransient<IPatientFormOcrEngine>(services =>
+    services.GetRequiredService<TesseractPatientFormOcrService>());
+builder.Services.AddScoped<IPatientFormOcrService, PatientFormOcrService>();
 
 // Add AutoMapper
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());

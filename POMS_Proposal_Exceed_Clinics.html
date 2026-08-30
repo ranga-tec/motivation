@@ -281,7 +281,7 @@
             <div style="margin-bottom: 60px;">
                 <h1 style="font-size: 18pt; color: #2c5282; margin-bottom: 10px;">NeurAlsEdge</h1>
                 <p style="font-size: 11pt; color: #666;">AI-First Software & IoT Solutions</p>
-                <p style="font-size: 10pt; color: #666;">www.neuralsedge.com</p>
+                <p style="font-size: 10pt; color: #666;">&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; www.neuralsedge.com</p>
             </div>
 
             <div class="cover-title">PROJECT PROPOSAL</div>
@@ -298,8 +298,8 @@
 
             <div class="proposal-date">
                 <p><strong>Prepared By:</strong> Ranga Nanayakkara</p>
-                <p><strong>Date:</strong> December 2025</p>
-                <p><strong>Valid Until:</strong> February 2025</p>
+                <p><strong>Date:</strong>10th December 2025</p>
+                <p><strong>Valid Until:</strong>10th February 2025</p>
             </div>
         </div>
     </div>
@@ -634,143 +634,7 @@
         </div>
     </div>
 
-    <!-- PAGE 9: SECURITY & TECHNICAL ARCHITECTURE -->
-    <div class="page">
-        <div class="header">
-            <h1>Security & Technical Architecture</h1>
-        </div>
-
-        <div class="section">
-            <div class="section-title">7. Security & Compliance Features</div>
-
-            <div class="subsection-title">Authentication & Authorization</div>
-            <ul>
-                <li><strong>ASP.NET Core Identity:</strong> Industry-standard user management with secure password hashing (PBKDF2)</li>
-                <li><strong>Account Lockout:</strong> Automatic lockout after 5 failed login attempts</li>
-                <li><strong>Password Policy:</strong> Requires uppercase, lowercase, digit, special character, minimum 8 characters</li>
-                <li><strong>Role-Based Access Control:</strong> Three user roles with detailed permission matrix</li>
-                <li><strong>Session Management:</strong> Secure cookies with HttpOnly and Secure flags, 30-minute sliding expiration</li>
-            </ul>
-
-            <div class="subsection-title">User Roles & Permissions</div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Role</th>
-                        <th>Access Level</th>
-                        <th>Key Permissions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><strong>ADMIN</strong></td>
-                        <td>Full System Access</td>
-                        <td>User management, system configuration, all reports, audit logs, device catalog, location management</td>
-                    </tr>
-                    <tr>
-                        <td><strong>CLINICIAN</strong></td>
-                        <td>Clinical Operations</td>
-                        <td>Patient registration, episode management, clinical documentation (assessment, fitting, delivery), clinical reports, document management</td>
-                    </tr>
-                    <tr>
-                        <td><strong>DATA_ENTRY</strong></td>
-                        <td>Basic Data Entry</td>
-                        <td>Patient registration, episode creation, document upload, view dashboard (limited access)</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <div class="subsection-title">Audit Trail & Data Protection</div>
-            <ul>
-                <li><strong>Automatic Audit Logging:</strong> All entities track CreatedBy, CreatedAt, UpdatedBy, UpdatedAt, DeletedBy, DeletedAt</li>
-                <li><strong>Change History:</strong> Complete tracking of all system changes with before/after values</li>
-                <li><strong>Soft Delete:</strong> Data never permanently deleted, ensuring compliance and recovery capability</li>
-                <li><strong>Query Filters:</strong> Deleted records automatically excluded from normal queries</li>
-            </ul>
-
-            <div class="subsection-title">Data Encryption & Security</div>
-            <ul>
-                <li><strong>HTTPS Enforced:</strong> All connections use SSL/TLS 1.2+ encryption</li>
-                <li><strong>Database Encryption:</strong> Support for Transparent Data Encryption (TDE) on SQL Server</li>
-                <li><strong>File System Encryption:</strong> Recommended BitLocker (Windows) or LUKS (Linux) for file storage</li>
-                <li><strong>SQL Injection Prevention:</strong> Entity Framework parameterized queries throughout</li>
-                <li><strong>XSS Protection:</strong> Automatic HTML encoding in all views</li>
-                
-            </ul>
-<br>
-            <div class="subsection-title">File Upload Security</div>
-            <ul>
-                <li>File size validation (configurable maximum)</li>
-                <li>File extension whitelist (PDF, JPG, JPEG, PNG, DOCX only)</li>
-                <li>Content type validation</li>
-                <li>Filename sanitization to prevent directory traversal</li>
-                <li>Isolated storage directories per patient/episode</li>
-                <li>Access control on all file downloads</li>
-            </ul>
-        </div>
-
-        <div class="section">
-            <div class="section-title">8. Technical Architecture</div>
-
-            <div class="subsection-title">Technology Stack</div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Layer</th>
-                        <th>Technology</th>
-                        <th>Purpose</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Backend</td>
-                        <td>ASP.NET Core 8.0</td>
-                        <td>Web framework, API, business logic</td>
-                    </tr>
-                    <tr>
-                        <td>Database</td>
-                        <td>SQL Server / PostgreSQL</td>
-                        <td>Data persistence (dual support)</td>
-                    </tr>
-                    <tr>
-                        <td>Frontend</td>
-                        <td>Razor Pages + Bootstrap 5</td>
-                        <td>Responsive UI, mobile support</td>
-                    </tr>
-                    <tr>
-                        <td>Authentication</td>
-                        <td>ASP.NET Identity</td>
-                        <td>User management, RBAC</td>
-                    </tr>
-                    <tr>
-                        <td>Logging</td>
-                        <td>Serilog</td>
-                        <td>Structured logging, daily rotation</td>
-                    </tr>
-                    <tr>
-                        <td>ORM</td>
-                        <td>Entity Framework Core 8.0</td>
-                        <td>Database access, migrations</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <div class="subsection-title">Architecture Pattern</div>
-            <p>Clean Architecture with separated concerns:</p>
-            <ul>
-                <li><strong>Domain Layer:</strong> Entities, enums, interfaces (business logic core)</li>
-                <li><strong>Infrastructure Layer:</strong> Data access, file storage, external services</li>
-                <li><strong>Application Layer:</strong> Business logic orchestration</li>
-                <li><strong>Presentation Layer:</strong> MVC controllers, views, view models</li>
-            </ul>
-
-            <p><strong>Design Principles:</strong> Domain-Driven Design (DDD), Repository pattern, Dependency Injection, SOLID principles</p>
-        </div>
-
-        <div class="footer">
-           
-        </div>
-    </div>
+    
 
     <!-- PAGE 10: MOBILE & RESPONSIVE DESIGN -->
     <div class="page">
@@ -1190,7 +1054,7 @@
 
                 <p style="margin-top: 15px; margin-bottom: 5px;"><strong>Website:</strong> www.neuralsedge.com</p>
                 <p style="margin-bottom: 5px;"><strong>Email:</strong> ranga@neuralsedge.com</p>
-                <p style="margin-bottom: 5px;"><strong>Phone:</strong> [Your Phone Number]</p>
+                <p style="margin-bottom: 5px;"><strong>Phone:</strong> 071-5-884499</p>
 
                 <p style="margin-top: 15px; font-size: 10pt; color: #666;">
                     We look forward to partnering with Exceed Prosthetics & Orthotics to deliver a world-class patient management system that supports your mission of transforming lives through professional prosthetic and orthotic care.
@@ -1200,7 +1064,7 @@
 <br><br><br><br><br><br><br>
         <div class="signature-section">
             <div class="signature-box">
-                <p><strong>For NeurAlsEdge:</strong></p>
+                <p><strong>For Neurlsedge:</strong></p>
                 <p style="margin-top: 40px;">_______________________</p>
                 <p>Ranga Nanayakkara</p>
                 <p>Founder & Lead Developer</p>

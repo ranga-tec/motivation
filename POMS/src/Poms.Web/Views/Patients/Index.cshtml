@@ -10,12 +10,17 @@
         <h1 class="mb-1">Patient folder</h1>
         <p class="text-secondary mb-0">Find an existing patient or start a guided registration.</p>
     </div>
-    <a asp-action="Create"
-       class="btn btn-primary btn-lg"
-       data-workflow-modal-url="@Url.Action("Create", "Patients", new { modal = true })"
-       data-workflow-modal-target="#patientRegistrationModal">
-        <i class="fa-solid fa-user-plus me-1" aria-hidden="true"></i> Register new patient
-    </a>
+    <div class="d-flex flex-wrap gap-2 justify-content-end">
+        <a asp-action="ImportLegacy" class="btn btn-outline-primary btn-lg">
+            <i class="fa-solid fa-file-image me-1" aria-hidden="true"></i> Import old form
+        </a>
+        <a asp-action="Create"
+           class="btn btn-primary btn-lg"
+           data-workflow-modal-url="@Url.Action("Create", "Patients", new { modal = true })"
+           data-workflow-modal-target="#patientRegistrationModal">
+            <i class="fa-solid fa-user-plus me-1" aria-hidden="true"></i> Register new patient
+        </a>
+    </div>
 </div>
 
 <div class="card filter-card mb-4">

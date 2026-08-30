@@ -1,0 +1,2 @@
+X:\Developments\motivation\BUGS\image.png  this © 2025 - POMS - Prosthetic, Orthotic & Spinal Patient Management System ිිැි section in every form is not allined propery and no fixed possition  fix it and check overall UI for the
+  look . after we need user creation and access management module. add it . after that give a setting to change the theme of the system dark, light etc .but also keep the curent theme too.                          

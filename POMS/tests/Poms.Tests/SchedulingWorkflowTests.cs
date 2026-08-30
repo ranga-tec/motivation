@@ -118,10 +118,12 @@ public class SchedulingWorkflowTests
             Dob = DateOnly.FromDateTime(DateTime.Today.AddDays(-2)),
             FullName = "Test Patient",
             NameWithInitials = "T Patient",
+            Sex = Sex.Female,
             IdentificationNumber = "TEST-001",
             Address1 = "Test address",
             CityOther = "Test city",
             RegistrationProcessedBy = "tester",
+            AssignedClinicianEntry = "Test Prosthetist",
             GuardianName = "Test Guardian",
             GuardianRelationship = "Parent"
         };
@@ -208,7 +210,7 @@ public class SchedulingWorkflowTests
     }
 
     [Fact]
-    public async Task SqliteSchemaUpgrader_IsIdempotentForAppointmentReschedulingColumns()
+    public async Task SqliteSchemaUpgrader_IsIdempotentForRuntimeCompatibilityColumns()
     {
         await using var connection = new SqliteConnection("DataSource=:memory:");
         await connection.OpenAsync();
@@ -251,6 +253,16 @@ public class SchedulingWorkflowTests
             "AssignedClinicianUserId",
             "AssignedClinicianName"
         });
+        await patientReader.DisposeAsync();
+
+        columns.Clear();
+        await using var numberSeriesCommand = connection.CreateCommand();
+        numberSeriesCommand.CommandText = "PRAGMA table_info(\"NumberSeries\");";
+        await using var numberSeriesReader = await numberSeriesCommand.ExecuteReaderAsync();
+        while (await numberSeriesReader.ReadAsync())
+            columns.Add(numberSeriesReader.GetString(1));
+
+        columns.Should().Contain("CenterId");
     }
 
     private static List<ValidationResult> Validate(object model)
