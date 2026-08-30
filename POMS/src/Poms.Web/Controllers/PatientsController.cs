@@ -91,7 +91,13 @@ public class PatientsController : Controller
         ViewBag.DistrictId = districtId;
         ViewBag.CityId = cityId;
         ViewBag.CurrentPage = page;
+        ViewBag.TotalCount = totalCount;
         ViewBag.TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+        // The patient folder searches as the user types, so return just the results
+        // block for those requests and leave the surrounding page untouched.
+        if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            return PartialView("_PatientResults", patients);
 
         await PopulateDropdowns();
         return View(patients);

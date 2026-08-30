@@ -1,0 +1,124 @@
+@model IEnumerable<Poms.Domain.Entities.DeviceCatalog>
+
+@{
+    ViewData["Title"] = "Devices";
+}
+
+<h1>Devices</h1>
+<p class="text-secondary">Devices listed here are the options offered when recording a delivery.</p>
+
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item"><a class="nav-link active" asp-action="Devices">Devices</a></li>
+    <li class="nav-item"><a class="nav-link" asp-action="DeviceTypes">Device types</a></li>
+</ul>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<form asp-action="DeviceCreate" method="post" class="row g-2 mb-4 align-items-end">
+    <div class="col-md-3">
+        <label for="newDeviceType" class="form-label">Device type</label>
+        <select name="DeviceTypeId" id="newDeviceType" class="form-select" asp-items="ViewBag.DeviceTypes" required>
+            <option value="">Select a type</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <label for="newDeviceCode" class="form-label">Code</label>
+        <input name="Code" id="newDeviceCode" class="form-control" placeholder="e.g. TTP" maxlength="20" required />
+    </div>
+    <div class="col-md-4">
+        <label for="newDeviceName" class="form-label">Device name</label>
+        <input name="Name" id="newDeviceName" class="form-control" placeholder="e.g. Trans-tibial prosthesis" maxlength="150" required />
+    </div>
+    <div class="col-md-1">
+        <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" name="IsActive" value="true" id="newDeviceActive" checked />
+            <label class="form-check-label" for="newDeviceActive">Active</label>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">
+            <i class="fa-solid fa-plus me-1" aria-hidden="true"></i> Add device
+        </button>
+    </div>
+</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr><th>Type</th><th>Code</th><th>Name</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+        @if (!Model.Any())
+        {
+            <tr>
+                <td colspan="5" class="text-center text-secondary py-4">
+                    No devices yet. Add the first one using the form above.
+                </td>
+            </tr>
+        }
+        @foreach (var device in Model)
+        {
+            <tr>
+                <td>@device.DeviceType.Name</td>
+                <td><code>@device.Code</code></td>
+                <td>@device.Name</td>
+                <td>
+                    @if (device.IsActive)
+                    {
+                        <span class="badge bg-success">Active</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">Inactive</span>
+                    }
+                </td>
+                <td>
+                    <details>
+                        <summary class="btn btn-sm btn-outline-warning">Edit</summary>
+                        <form asp-action="DeviceEdit" method="post" class="row g-2 mt-2 align-items-center">
+                            <input type="hidden" name="Id" value="@device.Id" />
+                            <div class="col-md-3">
+                                <select name="DeviceTypeId" class="form-select form-select-sm">
+                                    @foreach (var type in ViewBag.DeviceTypes as SelectList)
+                                    {
+                                        <option value="@type.Value" selected="@(type.Value == device.DeviceTypeId.ToString())">@type.Text</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <input name="Code" class="form-control form-control-sm" value="@device.Code" maxlength="20" required />
+                            </div>
+                            <div class="col-md-4">
+                                <input name="Name" class="form-control form-control-sm" value="@device.Name" maxlength="150" required />
+                            </div>
+                            <div class="col-md-1">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="IsActive" value="true"
+                                           id="deviceActive-@device.Id" checked="@device.IsActive" />
+                                    <label class="form-check-label small" for="deviceActive-@device.Id">Active</label>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-sm btn-warning w-100">Save</button>
+                            </div>
+                        </form>
+                    </details>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<a asp-action="Index" class="btn btn-secondary">Back to Admin</a>

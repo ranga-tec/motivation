@@ -146,6 +146,54 @@ public static class SampleDataSeeder
         await context.SaveChangesAsync();
     }
 
+    public static async Task SeedDeviceCatalogAsync(PomsDbContext context)
+    {
+        if (await context.DeviceCatalogs.AnyAsync()) return;
+
+        // Starter catalogue so deliveries can be recorded on a fresh database.
+        // Administration > Devices is the place to extend or deactivate these.
+        var typesByCode = await context.DeviceTypes
+            .ToDictionaryAsync(t => t.Code, StringComparer.OrdinalIgnoreCase);
+
+        if (typesByCode.Count == 0) return;
+
+        var devices = new (string TypeCode, string Code, string Name)[]
+        {
+            ("PROS", "PROS-PP", "Partial foot prosthesis"),
+            ("PROS", "PROS-TT", "Trans-tibial prosthesis"),
+            ("PROS", "PROS-KD", "Knee disarticulation prosthesis"),
+            ("PROS", "PROS-TF", "Trans-femoral prosthesis"),
+            ("PROS", "PROS-HD", "Hip disarticulation prosthesis"),
+            ("PROS", "PROS-TR", "Trans-radial prosthesis"),
+            ("PROS", "PROS-TH", "Trans-humeral prosthesis"),
+            ("ORTH", "ORTH-FO", "Foot orthosis"),
+            ("ORTH", "ORTH-AFO", "Ankle foot orthosis (AFO)"),
+            ("ORTH", "ORTH-KAFO", "Knee ankle foot orthosis (KAFO)"),
+            ("ORTH", "ORTH-KO", "Knee orthosis"),
+            ("ORTH", "ORTH-HKAFO", "Hip knee ankle foot orthosis (HKAFO)"),
+            ("ORTH", "ORTH-WHO", "Wrist hand orthosis"),
+            ("ORTH", "ORTH-EO", "Elbow orthosis"),
+            ("SPIN", "SPIN-CO", "Cervical orthosis"),
+            ("SPIN", "SPIN-TLSO", "Thoraco-lumbo-sacral orthosis (TLSO)"),
+            ("SPIN", "SPIN-LSO", "Lumbo-sacral orthosis (LSO)")
+        };
+
+        foreach (var device in devices)
+        {
+            if (!typesByCode.TryGetValue(device.TypeCode, out var deviceType)) continue;
+
+            context.DeviceCatalogs.Add(new DeviceCatalog
+            {
+                DeviceTypeId = deviceType.Id,
+                Code = device.Code,
+                Name = device.Name,
+                IsActive = true
+            });
+        }
+
+        await context.SaveChangesAsync();
+    }
+
     public static async Task SeedNationalitiesAsync(PomsDbContext context)
     {
         if (await context.Nationalities.AnyAsync()) return;

@@ -552,7 +552,132 @@ public class AdminController : Controller
         return RedirectToAction(nameof(Users));
     }
 
+    // ---------------- Device catalog ----------------
+
+    public async Task<IActionResult> Devices()
+    {
+        await PopulateDeviceTypes();
+        return View(await _context.DeviceCatalogs
+            .Include(d => d.DeviceType)
+            .OrderBy(d => d.DeviceType.Name).ThenBy(d => d.Name)
+            .ToListAsync());
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeviceCreate(DeviceViewModel model)
+    {
+        if (!await _context.DeviceTypes.AnyAsync(t => t.Id == model.DeviceTypeId))
+            ModelState.AddModelError(nameof(model.DeviceTypeId), "Select a device type.");
+
+        var code = model.Code?.Trim().ToUpperInvariant();
+        if (!string.IsNullOrEmpty(code) && await _context.DeviceCatalogs.AnyAsync(d => d.Code == code))
+            ModelState.AddModelError(nameof(model.Code), $"Device code '{code}' is already used.");
+
+        if (!ModelState.IsValid)
+        {
+            TempData["Error"] = FirstModelStateError();
+            return RedirectToAction(nameof(Devices));
+        }
+
+        _context.DeviceCatalogs.Add(new DeviceCatalog
+        {
+            DeviceTypeId = model.DeviceTypeId,
+            Code = code!,
+            Name = model.Name.Trim(),
+            IsActive = model.IsActive
+        });
+        await _context.SaveChangesAsync();
+        TempData["Success"] = $"Device '{model.Name.Trim()}' added.";
+        return RedirectToAction(nameof(Devices));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeviceEdit(DeviceViewModel model)
+    {
+        var device = await _context.DeviceCatalogs.FindAsync(model.Id);
+        if (device == null) return NotFound();
+
+        if (!await _context.DeviceTypes.AnyAsync(t => t.Id == model.DeviceTypeId))
+            ModelState.AddModelError(nameof(model.DeviceTypeId), "Select a device type.");
+
+        var code = model.Code?.Trim().ToUpperInvariant();
+        if (!string.IsNullOrEmpty(code) &&
+            await _context.DeviceCatalogs.AnyAsync(d => d.Code == code && d.Id != model.Id))
+            ModelState.AddModelError(nameof(model.Code), $"Device code '{code}' is already used.");
+
+        if (!ModelState.IsValid)
+        {
+            TempData["Error"] = FirstModelStateError();
+            return RedirectToAction(nameof(Devices));
+        }
+
+        device.DeviceTypeId = model.DeviceTypeId;
+        device.Code = code!;
+        device.Name = model.Name.Trim();
+        device.IsActive = model.IsActive;
+        await _context.SaveChangesAsync();
+        TempData["Success"] = $"Device '{device.Name}' updated.";
+        return RedirectToAction(nameof(Devices));
+    }
+
+    public async Task<IActionResult> DeviceTypes()
+        => View(await _context.DeviceTypes.OrderBy(t => t.Name).ToListAsync());
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeviceTypeCreate(string code, string name)
+    {
+        code = (code ?? string.Empty).Trim().ToUpperInvariant();
+        name = (name ?? string.Empty).Trim();
+
+        if (code.Length == 0 || name.Length == 0)
+            TempData["Error"] = "A device type needs both a code and a name.";
+        else if (await _context.DeviceTypes.AnyAsync(t => t.Code == code))
+            TempData["Error"] = $"Device type code '{code}' is already used.";
+        else
+        {
+            _context.DeviceTypes.Add(new DeviceType { Code = code, Name = name });
+            await _context.SaveChangesAsync();
+            TempData["Success"] = $"Device type '{name}' added.";
+        }
+
+        return RedirectToAction(nameof(DeviceTypes));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeviceTypeEdit(int id, string code, string name)
+    {
+        var deviceType = await _context.DeviceTypes.FindAsync(id);
+        if (deviceType == null) return NotFound();
+
+        code = (code ?? string.Empty).Trim().ToUpperInvariant();
+        name = (name ?? string.Empty).Trim();
+
+        if (code.Length == 0 || name.Length == 0)
+            TempData["Error"] = "A device type needs both a code and a name.";
+        else if (await _context.DeviceTypes.AnyAsync(t => t.Code == code && t.Id != id))
+            TempData["Error"] = $"Device type code '{code}' is already used.";
+        else
+        {
+            deviceType.Code = code;
+            deviceType.Name = name;
+            await _context.SaveChangesAsync();
+            TempData["Success"] = $"Device type '{name}' updated.";
+        }
+
+        return RedirectToAction(nameof(DeviceTypes));
+    }
+
     // ---------------- Helpers ----------------
+
+    private async Task PopulateDeviceTypes()
+    {
+        ViewBag.DeviceTypes = new SelectList(
+            await _context.DeviceTypes.OrderBy(t => t.Name).ToListAsync(), "Id", "Name");
+    }
 
     private async Task PopulateDistricts()
     {

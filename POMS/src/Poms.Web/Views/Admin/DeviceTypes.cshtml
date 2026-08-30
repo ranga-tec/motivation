@@ -1,0 +1,70 @@
+@model IEnumerable<Poms.Domain.Entities.DeviceType>
+
+@{
+    ViewData["Title"] = "Device types";
+}
+
+<h1>Device types</h1>
+<p class="text-secondary">Device types group the device catalogue, for example prosthesis or orthosis.</p>
+
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item"><a class="nav-link" asp-action="Devices">Devices</a></li>
+    <li class="nav-item"><a class="nav-link active" asp-action="DeviceTypes">Device types</a></li>
+</ul>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<form asp-action="DeviceTypeCreate" method="post" class="row g-2 mb-4 align-items-end">
+    <div class="col-md-2">
+        <label for="newTypeCode" class="form-label">Code</label>
+        <input name="code" id="newTypeCode" class="form-control" placeholder="e.g. WCHR" maxlength="20" required />
+    </div>
+    <div class="col-md-4">
+        <label for="newTypeName" class="form-label">Name</label>
+        <input name="name" id="newTypeName" class="form-control" placeholder="e.g. Wheelchair" maxlength="150" required />
+    </div>
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">
+            <i class="fa-solid fa-plus me-1" aria-hidden="true"></i> Add type
+        </button>
+    </div>
+</form>
+
+<table class="table table-striped">
+    <thead><tr><th>Code</th><th>Name</th><th></th></tr></thead>
+    <tbody>
+        @foreach (var type in Model)
+        {
+            <tr>
+                <td><code>@type.Code</code></td>
+                <td>@type.Name</td>
+                <td>
+                    <details>
+                        <summary class="btn btn-sm btn-outline-warning">Edit</summary>
+                        <form asp-action="DeviceTypeEdit" method="post" class="row g-2 mt-2">
+                            <input type="hidden" name="id" value="@type.Id" />
+                            <div class="col-md-4"><input name="code" class="form-control form-control-sm" value="@type.Code" maxlength="20" required /></div>
+                            <div class="col-md-5"><input name="name" class="form-control form-control-sm" value="@type.Name" maxlength="150" required /></div>
+                            <div class="col-md-3"><button type="submit" class="btn btn-sm btn-warning w-100">Save</button></div>
+                        </form>
+                    </details>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<a asp-action="Index" class="btn btn-secondary">Back to Admin</a>

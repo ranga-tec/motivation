@@ -25,11 +25,19 @@
 
 <div class="card filter-card mb-4">
     <div class="card-body">
-        <form asp-action="Index" method="get" class="row g-3">
+        <form asp-action="Index" method="get" class="row g-3" id="patientSearchForm">
             <div class="col-md-4">
                 <label for="patientSearch" class="form-label">Search patients</label>
-                <input type="text" name="searchString" value="@ViewBag.SearchString"
-                       id="patientSearch" class="form-control" placeholder="Name, patient number, ID or phone" />
+                <div class="position-relative">
+                    <input type="search" name="searchString" value="@ViewBag.SearchString"
+                           id="patientSearch" class="form-control" autocomplete="off"
+                           placeholder="Start typing a name, patient number, ID or phone" />
+                    <span class="position-absolute top-50 end-0 translate-middle-y me-2 d-none"
+                          id="patientSearchSpinner" aria-hidden="true">
+                        <span class="spinner-border spinner-border-sm text-primary"></span>
+                    </span>
+                </div>
+                <div class="form-text">Results update as you type.</div>
             </div>
             <div class="col-md-2">
                 <label for="provinceFilter" class="form-label">Province</label>
@@ -72,7 +80,7 @@
                 </select>
             </div>
             <div class="col-12 d-flex gap-2">
-                <button type="submit" class="btn btn-primary">
+                <button type="submit" class="btn btn-primary" id="patientSearchSubmit">
                     <i class="fa-solid fa-magnifying-glass me-1" aria-hidden="true"></i> Search
                 </button>
                 <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
@@ -97,59 +105,9 @@
     </div>
 </div>
 
-<div class="table-responsive">
-    <table class="table table-striped table-hover">
-        <thead>
-            <tr>
-                <th>Patient Number</th>
-                <th>Name</th>
-                <th>DOB</th>
-                <th>Category</th>
-                <th>Identification</th>
-                <th>Branch</th>
-                <th>Registration Date</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var item in Model)
-            {
-                <tr>
-                    <td><strong>@item.PatientNumber</strong></td>
-                    <td>@item.FullName</td>
-                    <td>@item.Dob.ToString("dd-MMM-yyyy")</td>
-                    <td>@item.Category</td>
-                    <td>@item.IdentificationType: @item.IdentificationNumber</td>
-                    <td>@item.Center.Name</td>
-                    <td>@item.RegistrationDate.ToString("dd-MMM-yyyy")</td>
-                    <td>
-                        <a asp-action="Folder" asp-route-id="@item.Id" class="btn btn-sm btn-info">View</a>
-                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning">Edit</a>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+<div id="patientResults" aria-live="polite" aria-busy="false">
+    @await Html.PartialAsync("_PatientResults", Model)
 </div>
-
-@if (ViewBag.TotalPages > 1)
-{
-    <nav>
-        <ul class="pagination">
-            @for (int i = 1; i <= ViewBag.TotalPages; i++)
-            {
-                <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
-                    <a class="page-link" asp-action="Index" asp-route-page="@i"
-                       asp-route-searchString="@ViewBag.SearchString"
-                       asp-route-provinceId="@ViewBag.ProvinceId"
-                       asp-route-districtId="@ViewBag.DistrictId"
-                       asp-route-cityId="@ViewBag.CityId"
-                       asp-route-centerId="@ViewBag.CenterId">@i</a>
-                </li>
-            }
-        </ul>
-    </nav>
-}
 
 @section Scripts {
     <script>
@@ -173,6 +131,87 @@
                         $.each(data, function (i, c) { $('#cityFilter').append($('<option>').val(c.id).text(c.name)); });
                     });
                 }
+            });
+
+            // ---- Type-ahead patient search -------------------------------------
+            // The Search button remains in the markup as the no-JS fallback, but it
+            // is hidden once this handler takes over so typing alone drives results.
+            var $form = $('#patientSearchForm');
+            var $results = $('#patientResults');
+            var $spinner = $('#patientSearchSpinner');
+            var debounceTimer = null;
+            var pending = null;
+            var page = 1;
+
+            $('#patientSearchSubmit').addClass('d-none');
+
+            function currentQuery() {
+                var params = {
+                    searchString: $('#patientSearch').val(),
+                    provinceId: $('#provinceFilter').val(),
+                    districtId: $('#districtFilter').val(),
+                    cityId: $('#cityFilter').val(),
+                    centerId: $('#centerFilter').val(),
+                    page: page
+                };
+                Object.keys(params).forEach(function (key) {
+                    if (params[key] === '' || params[key] == null) { delete params[key]; }
+                });
+                return params;
+            }
+
+            function runSearch() {
+                var params = currentQuery();
+                if (pending) { pending.abort(); }
+                $spinner.removeClass('d-none');
+                $results.attr('aria-busy', 'true');
+
+                pending = $.ajax({
+                    url: '@Url.Action("Index", "Patients")',
+                    data: params,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                }).done(function (html) {
+                    $results.html(html);
+                    var query = $.param(params);
+                    history.replaceState(null, '', query ? '?' + query : location.pathname);
+                }).fail(function (xhr, status) {
+                    if (status === 'abort') { return; }
+                    $results.html('<div class="alert alert-danger mb-0">Search failed. Check your connection and try again.</div>');
+                }).always(function () {
+                    pending = null;
+                    $spinner.addClass('d-none');
+                    $results.attr('aria-busy', 'false');
+                });
+            }
+
+            $('#patientSearch').on('input search', function () {
+                page = 1;
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(runSearch, 300);
+            });
+
+            $('#provinceFilter, #districtFilter, #cityFilter, #centerFilter').on('change', function () {
+                page = 1;
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(runSearch, 150);
+            });
+
+            // Keep pagination inside the live results instead of a full page load.
+            $results.on('click', '.pagination .page-link', function (e) {
+                e.preventDefault();
+                var href = $(this).attr('href') || '';
+                var match = /[?&]page=(\d+)/.exec(href);
+                page = match ? parseInt(match[1], 10) : 1;
+                runSearch();
+                $('html, body').animate({ scrollTop: $results.offset().top - 80 }, 200);
+            });
+
+            // Enter inside the filter form should refresh in place, not reload.
+            $form.on('submit', function (e) {
+                e.preventDefault();
+                page = 1;
+                clearTimeout(debounceTimer);
+                runSearch();
             });
         });
     </script>

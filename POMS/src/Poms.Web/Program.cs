@@ -204,6 +204,7 @@ using (var scope = app.Services.CreateScope())
         await SampleDataSeeder.SeedMainProblemTypesAsync(context);
         await SampleDataSeeder.SeedCauseReasonTypesAsync(context);
         await SampleDataSeeder.SeedNationalitiesAsync(context);
+        await SampleDataSeeder.SeedDeviceCatalogAsync(context);
         Log.Information("Database seeded successfully");
     }
     catch (Exception ex)
