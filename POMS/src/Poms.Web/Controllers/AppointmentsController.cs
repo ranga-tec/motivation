@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -74,6 +74,40 @@ public class AppointmentsController : Controller
         return View(vm);
     }
 
+    // AJAX: Appointments/SearchPatients
+    [HttpGet]
+    public async Task<JsonResult> SearchPatients(string term)
+    {
+        term = (term ?? string.Empty).Trim();
+        if (term.Length < 2) return Json(Array.Empty<object>());
+
+        var needle = term.ToLower();
+        var patients = await _context.Patients
+            .Where(p =>
+                p.PatientNumber.ToLower().Contains(needle) ||
+                p.FullName.ToLower().Contains(needle) ||
+                p.NameWithInitials.ToLower().Contains(needle) ||
+                p.IdentificationNumber.ToLower().Contains(needle))
+            .OrderBy(p => p.FullName)
+            .Take(15)
+            .Select(p => new
+            {
+                p.Id,
+                p.PatientNumber,
+                p.FullName,
+                p.Dob,
+                CenterName = p.Center.Name
+            })
+            .ToListAsync();
+
+        return Json(patients.Select(p => new
+        {
+            value = p.Id,
+            text = $"{p.PatientNumber} - {p.FullName}",
+            detail = $"DOB {p.Dob:dd-MMM-yyyy} · {p.CenterName}"
+        }));
+    }
+
     // AJAX: Appointments/GetEpisodesByPatient
     [HttpGet]
     public async Task<JsonResult> GetEpisodesByPatient(Guid patientId)
@@ -81,15 +115,44 @@ public class AppointmentsController : Controller
         var access = await _restrictedAccess.GetScopeAsync(User);
         var episodes = await access.Filter(_context.Episodes)
             .Where(episode => episode.PatientId == patientId)
-            .Select(e => new { e.Id, e.RecordDate, e.RecordTime, e.Status })
+            .OrderByDescending(episode => episode.RecordDate)
+            .Select(e => new
+            {
+                e.Id,
+                e.RecordDate,
+                e.RecordTime,
+                e.Status,
+                CenterName = e.Center.Name,
+                e.Remarks,
+                Assessments = e.Assessments.Count,
+                Fittings = e.Fittings.Count,
+                Deliveries = e.Deliveries.Count
+            })
             .ToListAsync();
-        return Json(episodes.Select(episode => new
+
+        return Json(episodes.Select(episode =>
         {
-            episode.Id,
-            DisplayName =
-                $"{episode.RecordDate:dd-MMM-yyyy}" +
-                (episode.RecordTime.HasValue ? $" {episode.RecordTime.Value:HH:mm}" : "") +
-                $" - {episode.Status}"
+            var activity = new List<string>();
+            if (episode.Assessments > 0) activity.Add($"{episode.Assessments} assessment(s)");
+            if (episode.Fittings > 0) activity.Add($"{episode.Fittings} fitting(s)");
+            if (episode.Deliveries > 0) activity.Add($"{episode.Deliveries} delivery(ies)");
+
+            var detail = string.Join(" · ", new[]
+            {
+                episode.CenterName,
+                activity.Count > 0 ? string.Join(", ", activity) : "No activity recorded yet",
+                episode.Remarks
+            }.Where(part => !string.IsNullOrWhiteSpace(part)));
+
+            return new
+            {
+                episode.Id,
+                DisplayName =
+                    $"{episode.RecordDate:dd-MMM-yyyy}" +
+                    (episode.RecordTime.HasValue ? $" {episode.RecordTime.Value:HH:mm}" : "") +
+                    $" - {episode.Status}",
+                Detail = detail
+            };
         }));
     }
 

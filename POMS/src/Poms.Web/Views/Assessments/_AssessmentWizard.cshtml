@@ -1,4 +1,4 @@
-@model Poms.Web.ViewModels.AssessmentViewModel
+﻿@model Poms.Web.ViewModels.AssessmentViewModel
 
 @{
     var isEdit = string.Equals(ViewData["AssessmentFormMode"] as string, "edit", StringComparison.OrdinalIgnoreCase);
@@ -52,12 +52,8 @@
 
         <section data-wizard-step class="workflow-step" aria-labelledby="assessmentOverview">
             <div class="workflow-section-heading">
-                <span class="workflow-section-icon" aria-hidden="true"><i class="fa-solid fa-stethoscope"></i></span>
-                <div>
-                    <span class="workflow-eyebrow">Step 1</span>
-                    <h2 id="assessmentOverview" class="h4">Assessment overview</h2>
-                    <p>Choose the assessment pathway, body region, date, and side.</p>
-                </div>
+                <h2 id="assessmentOverview">Assessment overview</h2>
+                <p>Choose the assessment pathway, body region, date, and side.</p>
             </div>
 
             <div class="row g-3">
@@ -107,12 +103,8 @@
 
         <section data-wizard-step class="workflow-step" aria-labelledby="assessmentClinical" hidden>
             <div class="workflow-section-heading">
-                <span class="workflow-section-icon" aria-hidden="true"><i class="fa-solid fa-notes-medical"></i></span>
-                <div>
-                    <span class="workflow-eyebrow">Step 2</span>
-                    <h2 id="assessmentClinical" class="h4">Clinical details</h2>
-                    <p>Record the main problem and its cause or pathology.</p>
-                </div>
+                <h2 id="assessmentClinical">Clinical details</h2>
+                <p>Record the main problem and its cause or pathology.</p>
             </div>
 
             <div class="row g-3">
@@ -153,12 +145,8 @@
 
         <section data-wizard-step class="workflow-step" aria-labelledby="assessmentPrescription" hidden>
             <div class="workflow-section-heading">
-                <span class="workflow-section-icon" aria-hidden="true"><i class="fa-solid fa-file-prescription"></i></span>
-                <div>
-                    <span class="workflow-eyebrow">Step 3</span>
-                    <h2 id="assessmentPrescription" class="h4">Prescription</h2>
-                    <p>Select the recommended device. Bilateral assessments require a prescription for each side.</p>
-                </div>
+                <h2 id="assessmentPrescription">Prescription</h2>
+                <p>Select the recommended device. Bilateral assessments require a prescription for each side.</p>
             </div>
 
             <div id="singlePrescriptionBlock" class="workflow-subsection">
@@ -166,7 +154,7 @@
                 <select asp-for="PrescriptionCode" class="form-select prescription-select" data-selected="@Model.PrescriptionCode" data-review-label="Prescription"></select>
                 <span asp-validation-for="PrescriptionCode" class="text-danger"></span>
 
-                <div class="mt-3">
+                <div class="mt-3 subtype-field" data-subtype-field>
                     <label asp-for="SubType" class="form-label">Subtype</label>
                     <select asp-for="SubType" class="form-select subtype-select" data-selected="@Model.SubType"></select>
                 </div>
@@ -209,12 +197,8 @@
 
         <section data-wizard-step class="workflow-step" aria-labelledby="assessmentReview" hidden>
             <div class="workflow-section-heading">
-                <span class="workflow-section-icon" aria-hidden="true"><i class="fa-solid fa-circle-check"></i></span>
-                <div>
-                    <span class="workflow-eyebrow">Step 4</span>
-                    <h2 id="assessmentReview" class="h4">Review assessment</h2>
-                    <p>Confirm the clinical details and prescription before saving.</p>
-                </div>
+                <h2 id="assessmentReview">Review assessment</h2>
+                <p>Confirm the clinical details and prescription before saving.</p>
             </div>
             <div class="review-panel" data-wizard-review aria-live="polite"></div>
         </section>

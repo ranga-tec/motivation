@@ -1,4 +1,4 @@
-(() => {
+﻿(() => {
     "use strict";
 
     const focusWithoutJump = (element) => {
@@ -32,6 +32,73 @@
         return control.value?.trim() || "";
     }
 
+    // The photo is the one field a reviewer cannot check by reading text, so the
+    // review step shows the actual image at a size worth looking at, and full size
+    // on click.
+    function renderReviewPhoto(form) {
+        const source = form.querySelector("[data-photo-image]");
+        if (!source || source.classList.contains("d-none") || !source.getAttribute("src")) return null;
+
+        const figure = document.createElement("figure");
+        figure.className = "review-photo";
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "review-photo-button";
+        button.setAttribute("aria-label", "Enlarge patient photo");
+
+        const image = document.createElement("img");
+        image.src = source.src;
+        image.alt = "Patient photo to be saved with this record";
+        button.append(image);
+
+        const caption = document.createElement("figcaption");
+        caption.textContent = "Patient photo — select to enlarge";
+
+        button.addEventListener("click", () => openPhotoZoom(image.src));
+        figure.append(button, caption);
+        return figure;
+    }
+
+    function openPhotoZoom(src) {
+        const existing = document.querySelector(".photo-zoom-overlay");
+        existing?.remove();
+
+        const overlay = document.createElement("div");
+        overlay.className = "photo-zoom-overlay";
+        overlay.setAttribute("role", "dialog");
+        overlay.setAttribute("aria-modal", "true");
+        overlay.setAttribute("aria-label", "Patient photo");
+        overlay.tabIndex = -1;
+
+        const image = document.createElement("img");
+        image.src = src;
+        image.alt = "Patient photo, enlarged";
+
+        const close = document.createElement("button");
+        close.type = "button";
+        close.className = "btn btn-light photo-zoom-close";
+        close.textContent = "Close";
+
+        const dismiss = () => {
+            overlay.remove();
+            document.removeEventListener("keydown", onKey);
+        };
+        const onKey = (event) => {
+            if (event.key === "Escape") dismiss();
+        };
+
+        close.addEventListener("click", dismiss);
+        overlay.addEventListener("click", (event) => {
+            if (event.target === overlay) dismiss();
+        });
+        document.addEventListener("keydown", onKey);
+
+        overlay.append(image, close);
+        document.body.append(overlay);
+        close.focus();
+    }
+
     function renderReview(form) {
         const review = form.querySelector("[data-wizard-review]");
         if (!review) return;
@@ -43,6 +110,10 @@
             if (!(control instanceof HTMLInputElement ||
                   control instanceof HTMLSelectElement ||
                   control instanceof HTMLTextAreaElement)) return;
+
+            // The chosen photo is shown as an image below, so its file name
+            // would only repeat it.
+            if (control instanceof HTMLInputElement && control.type === "file") return;
 
             const value = controlValue(control);
             if (!value || value.toLowerCase().startsWith("select ")) return;
@@ -60,7 +131,19 @@
             list.append(row);
         });
 
-        review.replaceChildren(list);
+        const photo = renderReviewPhoto(form);
+        review.replaceChildren(...(photo ? [photo, list] : [list]));
+    }
+
+    // Visually-hidden controls (the photo file input) and off-screen fields are
+    // focusable but would strand the caret somewhere the user cannot see.
+    function firstFocusableControl(container) {
+        return [...container.querySelectorAll("input, select, textarea")].find((control) => {
+            if (control.disabled || control.type === "hidden" || control.readOnly) return false;
+            if (control.closest(".visually-hidden") || control.classList.contains("visually-hidden")) return false;
+            if (control.closest("[hidden]")) return false;
+            return control.getClientRects().length > 0;
+        }) ?? null;
     }
 
     function initializeWizard(form) {
@@ -113,12 +196,12 @@
 
             if (current === steps.length - 1) renderReview(form);
 
+            // Focus the first field of the step, not its heading. The step count is
+            // an aria-live region, so screen readers still hear which step opened
+            // while keyboard users land where they actually have to type.
             if (moveFocus) {
-                const heading = steps[current].querySelector("h2");
-                if (heading) {
-                    heading.setAttribute("tabindex", "-1");
-                    focusWithoutJump(heading);
-                }
+                const target = firstFocusableControl(steps[current]);
+                if (target) focusWithoutJump(target);
             }
         };
 
@@ -155,6 +238,34 @@
             if (validateCurrentStep()) showStep(current + 1);
         });
         back.addEventListener("click", () => showStep(current - 1));
+
+        form.addEventListener("keydown", (event) => {
+            // Alt + arrow moves between steps from anywhere in the form.
+            if (event.altKey && (event.key === "ArrowRight" || event.key === "ArrowLeft")) {
+                event.preventDefault();
+                if (event.key === "ArrowLeft") {
+                    if (current > 0) showStep(current - 1);
+                } else if (current < steps.length - 1 && validateCurrentStep()) {
+                    showStep(current + 1);
+                }
+                return;
+            }
+
+            if (event.key !== "Enter" || event.altKey || event.ctrlKey || event.metaKey) return;
+
+            // Enter advances the wizard the way it advances a paper form. Controls
+            // that use Enter themselves keep it: multi-line text, buttons, links,
+            // and the city combobox where Enter picks the highlighted option.
+            const target = event.target;
+            if (target.matches("textarea, button, a, [data-searchable-city]") ||
+                target.closest(".city-combobox")) {
+                return;
+            }
+            if (current >= steps.length - 1) return;
+
+            event.preventDefault();
+            if (validateCurrentStep()) showStep(current + 1);
+        });
 
         form.addEventListener("invalid", (event) => {
             const invalidStep = steps.findIndex((step) => step.contains(event.target));
@@ -591,8 +702,29 @@
 
         const idNumber = form.querySelector("#IdentificationNumber");
         const duplicateAlert = form.querySelector("#duplicateAlert");
+
+        // An N/A identification type has no number to enter, so the field is
+        // emptied and disabled rather than left as a blank the user must ignore.
+        const idType = form.querySelector("[data-identification-type]");
+        const syncIdentificationNumber = () => {
+            if (!idType || !idNumber) return;
+            const notApplicable = idType.value === "NotApplicable";
+            idNumber.disabled = notApplicable;
+            idNumber.required = !notApplicable;
+            idNumber.closest(".col-lg-6, .col-md-4, [class*='col-']")
+                ?.classList.toggle("is-disabled-field", notApplicable);
+            idNumber.previousElementSibling?.classList.toggle("required-label", !notApplicable);
+            if (notApplicable) {
+                idNumber.value = "";
+                idNumber.classList.remove("is-invalid");
+                duplicateAlert?.classList.add("d-none");
+            }
+        };
+        idType?.addEventListener("change", syncIdentificationNumber);
+        syncIdentificationNumber();
+
         idNumber?.addEventListener("blur", async () => {
-            if (!idNumber.value.trim() || !duplicateAlert) return;
+            if (idNumber.disabled || !idNumber.value.trim() || !duplicateAlert) return;
             const query = new URLSearchParams({
                 idType: form.querySelector("#IdentificationType")?.value || "",
                 idNumber: idNumber.value,
@@ -699,8 +831,14 @@
             if (subtype) {
                 subtype.replaceChildren(new Option("Select subtype (optional)", ""));
                 subTypes.forEach((item) => subtype.add(new Option(item, item)));
-                subtype.hidden = subTypes.length === 0;
-                if (selectedSubtype) subtype.value = selectedSubtype;
+                const hasSubTypes = subTypes.length > 0;
+                subtype.hidden = !hasSubTypes;
+                // Hide the label with its select, otherwise a lone "Subtype"
+                // heading sits above nothing.
+                const subtypeField = subtype.closest("[data-subtype-field]");
+                if (subtypeField) subtypeField.hidden = !hasSubTypes;
+                if (!hasSubTypes) subtype.value = "";
+                else if (selectedSubtype) subtype.value = selectedSubtype;
             }
 
             const isOther = select.value === "OTHER";
@@ -758,10 +896,191 @@
         form.querySelectorAll(".prescription-select").forEach((select) => loadPrescriptions(select));
     }
 
+    /**
+     * Turns a <select> into a type-to-search dropdown, keeping the select as the
+     * posted value so nothing downstream changes. With data-combobox-endpoint the
+     * options come from the server as the user types; without it the select's own
+     * options are filtered in the browser.
+     *
+     * The endpoint returns [{ value, text, detail }] and `detail` is shown as a
+     * second line, which is how the record dropdown shows more than a date.
+     */
+    function initializeCombobox(select) {
+        if (select.dataset.comboboxInitialized === "true") return;
+        select.dataset.comboboxInitialized = "true";
+
+        const endpoint = select.dataset.comboboxEndpoint || "";
+        const placeholder = select.dataset.comboboxPlaceholder || "Type to search";
+        const listId = `${select.id || `combobox${Math.random().toString(36).slice(2)}`}Results`;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "combobox";
+
+        const input = document.createElement("input");
+        input.type = "search";
+        input.className = "form-control combobox-input";
+        input.placeholder = placeholder;
+        input.autocomplete = "off";
+        input.setAttribute("role", "combobox");
+        input.setAttribute("aria-autocomplete", "list");
+        input.setAttribute("aria-expanded", "false");
+        input.setAttribute("aria-controls", listId);
+        const labelText = select.labels?.[0]?.textContent?.trim();
+        if (labelText) input.setAttribute("aria-label", labelText);
+
+        const list = document.createElement("div");
+        list.id = listId;
+        list.className = "combobox-list";
+        list.setAttribute("role", "listbox");
+        list.hidden = true;
+
+        wrapper.append(input, list);
+        select.insertAdjacentElement("afterend", wrapper);
+        select.classList.add("visually-hidden");
+        select.setAttribute("tabindex", "-1");
+        select.setAttribute("aria-hidden", "true");
+
+        const localOptions = () => [...select.options]
+            .filter((option) => option.value)
+            .map((option) => ({ value: option.value, text: option.text, detail: option.dataset.detail || "" }));
+
+        // Show the current selection when the page loads with one already set.
+        const selected = select.selectedOptions[0];
+        if (selected?.value) input.value = selected.text;
+
+        let matches = [];
+        let activeIndex = -1;
+        let debounce = null;
+
+        const close = () => {
+            list.hidden = true;
+            input.setAttribute("aria-expanded", "false");
+            input.removeAttribute("aria-activedescendant");
+            activeIndex = -1;
+        };
+
+        // Some pickers must still accept a name that is not in the list (staff
+        // without an account), so the raw text is mirrored into a companion field.
+        const textTarget = select.dataset.comboboxTextTarget
+            ? document.getElementById(select.dataset.comboboxTextTarget)
+            : null;
+        const syncTextTarget = () => {
+            if (textTarget) textTarget.value = input.value.trim();
+        };
+
+        const choose = (option) => {
+            if (![...select.options].some((existing) => existing.value === option.value)) {
+                select.add(new Option(option.text, option.value));
+            }
+            select.value = option.value;
+            input.value = option.text;
+            syncTextTarget();
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+            close();
+        };
+
+        const render = () => {
+            list.replaceChildren();
+            activeIndex = -1;
+
+            if (!matches.length) {
+                const empty = document.createElement("div");
+                empty.className = "combobox-empty";
+                empty.textContent = input.value.trim() ? "No matches" : "Start typing to search";
+                list.append(empty);
+            } else {
+                matches.forEach((option, index) => {
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.id = `${listId}Option${index}`;
+                    button.className = "combobox-option";
+                    button.setAttribute("role", "option");
+                    button.append(document.createTextNode(option.text));
+                    if (option.detail) {
+                        const detail = document.createElement("small");
+                        detail.textContent = option.detail;
+                        button.append(detail);
+                    }
+                    button.addEventListener("mousedown", (event) => event.preventDefault());
+                    button.addEventListener("click", () => choose(option));
+                    list.append(button);
+                });
+            }
+
+            list.hidden = false;
+            input.setAttribute("aria-expanded", "true");
+        };
+
+        const search = async () => {
+            const query = input.value.trim();
+            if (!endpoint) {
+                const needle = query.toLocaleLowerCase();
+                matches = localOptions()
+                    .filter((option) => !needle ||
+                        option.text.toLocaleLowerCase().includes(needle) ||
+                        option.detail.toLocaleLowerCase().includes(needle))
+                    .slice(0, 15);
+                render();
+                return;
+            }
+
+            if (query.length < 2) {
+                matches = [];
+                render();
+                return;
+            }
+
+            try {
+                const response = await fetch(`${endpoint}?term=${encodeURIComponent(query)}`, {
+                    headers: { "X-Requested-With": "XMLHttpRequest" }
+                });
+                if (!response.ok) throw new Error(`Request failed with ${response.status}`);
+                matches = await response.json();
+            } catch {
+                matches = [];
+            }
+            render();
+        };
+
+        const setActive = (index) => {
+            const items = [...list.querySelectorAll(".combobox-option")];
+            if (!items.length) return;
+            activeIndex = (index + items.length) % items.length;
+            items.forEach((item, i) => item.classList.toggle("is-active", i === activeIndex));
+            input.setAttribute("aria-activedescendant", items[activeIndex].id);
+        };
+
+        input.addEventListener("input", () => {
+            // Clearing the box clears the selection, so a stale id is never posted.
+            select.value = "";
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+            syncTextTarget();
+            clearTimeout(debounce);
+            debounce = setTimeout(search, endpoint ? 250 : 0);
+        });
+        input.addEventListener("focus", search);
+        input.addEventListener("blur", () => setTimeout(close, 120));
+        input.addEventListener("keydown", (event) => {
+            if (event.key === "ArrowDown") {
+                event.preventDefault();
+                if (list.hidden) search(); else setActive(activeIndex + 1);
+            } else if (event.key === "ArrowUp") {
+                event.preventDefault();
+                setActive(activeIndex - 1);
+            } else if (event.key === "Enter" && !list.hidden && activeIndex >= 0) {
+                event.preventDefault();
+                choose(matches[activeIndex]);
+            } else if (event.key === "Escape") {
+                close();
+            }
+        });
+    }
+
     function initializeContainedUi(root = document) {
         root.querySelectorAll("[data-workflow-wizard]").forEach(initializeWizard);
         root.querySelectorAll("[data-patient-form]").forEach(initializePatientForm);
         root.querySelectorAll("[data-assessment-form]").forEach(initializeAssessmentForm);
+        root.querySelectorAll("select[data-combobox]").forEach(initializeCombobox);
     }
 
     async function loadModal(trigger) {
@@ -792,7 +1111,8 @@
             dialog.innerHTML = await response.text();
             window.jQuery?.validator?.unobtrusive?.parse(dialog);
             initializeContainedUi(dialog);
-            focusWithoutJump(dialog.querySelector(".modal-title"));
+            const firstField = firstFocusableControl(dialog);
+            focusWithoutJump(firstField ?? dialog.querySelector(".modal-title"));
         } catch {
             dialog.innerHTML = `
                 <div class="modal-content">

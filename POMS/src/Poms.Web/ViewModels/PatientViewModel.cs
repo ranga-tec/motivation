@@ -61,10 +61,11 @@ public class PatientViewModel : IValidatableObject
     [Display(Name = "Identification Type")]
     public IdentificationType IdentificationType { get; set; }
 
-    [Required]
+    // Not [Required]: an N/A identification type legitimately leaves this blank.
+    // See Validate below.
     [Display(Name = "Identification Number")]
     [StringLength(50)]
-    public string IdentificationNumber { get; set; } = default!;
+    public string? IdentificationNumber { get; set; }
 
     [Required]
     [Display(Name = "Address Line 1")]
@@ -87,7 +88,9 @@ public class PatientViewModel : IValidatableObject
     [Display(Name = "City (if not listed)")]
     public string? CityOther { get; set; }
 
-    [EmailAddress]
+    // Not [EmailAddress]: staff record "N/A" when a patient has no address.
+    // See Validate below.
+    [StringLength(256)]
     public string? Email { get; set; }
 
     public List<PatientContactViewModel> Contacts { get; set; } = new();
@@ -211,5 +214,32 @@ public class PatientViewModel : IValidatableObject
                 "Select a city or enter one if not listed.",
                 new[] { nameof(CityOther) });
         }
+
+        if (IdentificationType != IdentificationType.NotApplicable &&
+            string.IsNullOrWhiteSpace(IdentificationNumber))
+        {
+            yield return new ValidationResult(
+                "Identification number is required. Choose N/A as the type if the patient has no document.",
+                new[] { nameof(IdentificationNumber) });
+        }
+
+        if (!string.IsNullOrWhiteSpace(Email) && !IsNotApplicable(Email) &&
+            !new EmailAddressAttribute().IsValid(Email))
+        {
+            yield return new ValidationResult(
+                "Enter a valid email address, or N/A if the patient has none.",
+                new[] { nameof(Email) });
+        }
+    }
+
+    /// <summary>
+    /// Accepts the handful of spellings staff actually type for "no value on file".
+    /// </summary>
+    public static bool IsNotApplicable(string? value)
+    {
+        var trimmed = value?.Trim().TrimEnd('.');
+        return string.Equals(trimmed, "N/A", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(trimmed, "NA", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(trimmed, "N/A/", StringComparison.OrdinalIgnoreCase);
     }
 }

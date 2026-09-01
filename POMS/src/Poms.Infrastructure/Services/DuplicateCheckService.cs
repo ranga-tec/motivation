@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Poms.Domain.Enums;
 using Poms.Infrastructure.Data;
 
@@ -6,7 +6,7 @@ namespace Poms.Infrastructure.Services;
 
 public interface IDuplicateCheckService
 {
-    Task<DuplicateCheckResult> CheckAsync(IdentificationType idType, string idNumber,
+    Task<DuplicateCheckResult> CheckAsync(IdentificationType idType, string? idNumber,
         string? fullName, DateOnly? dob, Guid? excludePatientId = null);
 }
 
@@ -27,14 +27,18 @@ public class DuplicateCheckService : IDuplicateCheckService
         _context = context;
     }
 
-    public async Task<DuplicateCheckResult> CheckAsync(IdentificationType idType, string idNumber,
+    public async Task<DuplicateCheckResult> CheckAsync(IdentificationType idType, string? idNumber,
         string? fullName, DateOnly? dob, Guid? excludePatientId = null)
     {
-        var exact = await _context.Patients
-            .Where(p => p.IdentificationType == idType && p.IdentificationNumber == idNumber)
-            .Where(p => excludePatientId == null || p.Id != excludePatientId)
-            .Select(p => new { p.PatientNumber, p.FullName })
-            .FirstOrDefaultAsync();
+        // Patients registered without a document share a blank identification
+        // number, so it can never establish that two records are the same person.
+        var exact = idType == IdentificationType.NotApplicable || string.IsNullOrWhiteSpace(idNumber)
+            ? null
+            : await _context.Patients
+                .Where(p => p.IdentificationType == idType && p.IdentificationNumber == idNumber)
+                .Where(p => excludePatientId == null || p.Id != excludePatientId)
+                .Select(p => new { p.PatientNumber, p.FullName })
+                .FirstOrDefaultAsync();
 
         if (exact != null)
         {

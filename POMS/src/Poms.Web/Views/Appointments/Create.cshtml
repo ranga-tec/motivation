@@ -1,4 +1,4 @@
-@model Poms.Web.ViewModels.AppointmentViewModel
+﻿@model Poms.Web.ViewModels.AppointmentViewModel
 
 @{
     ViewData["Title"] = "New Appointment";
@@ -18,9 +18,13 @@
         }
         else
         {
-            <select asp-for="PatientId" id="patientSelect" class="form-select" asp-items="ViewBag.Patients">
+            <select asp-for="PatientId" id="patientSelect" class="form-select"
+                    data-combobox
+                    data-combobox-endpoint="@Url.Action("SearchPatients", "Appointments")"
+                    data-combobox-placeholder="Search by name, patient number or ID">
                 <option value="">-- Select Patient --</option>
             </select>
+            <div class="form-text">Start typing at least two characters to search.</div>
         }
         <span asp-validation-for="PatientId" class="text-danger"></span>
     </div>
@@ -49,25 +53,24 @@
 
     <div class="mb-3">
         <label asp-for="AssignedClinicianEntry" class="form-label"></label>
-        <input asp-for="AssignedClinicianEntry"
-               class="form-control"
-               type="search"
-               list="appointmentAssigneeOptions"
-               autocomplete="off"
-               placeholder="Search staff or type a custom name"
-               aria-describedby="assigneeHelp" />
-        <input asp-for="AssignedClinicianUserId" type="hidden" />
-        <datalist id="appointmentAssigneeOptions">
-            @foreach (var option in Model.AssigneeOptions)
+        <select id="assigneeSelect" class="form-select"
+                data-combobox
+                data-combobox-text-target="AssignedClinicianEntry"
+                data-combobox-placeholder="Search clinicians, or type a name"
+                aria-describedby="assigneeHelp">
+            <option value="">-- Select clinician --</option>
+            @foreach (var option in Model.AssigneeOptions.OrderByDescending(o => o.IsPreferred).ThenBy(o => o.DisplayText))
             {
                 <option value="@option.DisplayText"
-                        data-user-id="@option.UserId">
-                    @(option.IsPreferred ? "Prosthetist / Orthotist" : "Staff")
-                </option>
+                        data-user-id="@option.UserId"
+                        data-detail="@(option.IsPreferred ? "Prosthetist / Orthotist" : "Staff")"
+                        selected="@(option.DisplayText == Model.AssignedClinicianEntry)">@option.DisplayText</option>
             }
-        </datalist>
+        </select>
+        <input asp-for="AssignedClinicianEntry" type="hidden" />
+        <input asp-for="AssignedClinicianUserId" type="hidden" />
         <div id="assigneeHelp" class="form-text">
-            Search existing staff by name, designation or employee number. If the person has no account, type their name and continue.
+            Search existing staff by name, designation or employee number — prosthetists and orthotists are listed first. If the person has no account, type their name and continue.
         </div>
         <span asp-validation-for="AssignedClinicianEntry" class="text-danger"></span>
     </div>
@@ -85,26 +88,28 @@
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
     <script>
         $(document).ready(function () {
-            const assigneeInput = document.getElementById('AssignedClinicianEntry');
+            const assigneeSelect = document.getElementById('assigneeSelect');
+            const assigneeEntry = document.getElementById('AssignedClinicianEntry');
             const assigneeUserId = document.getElementById('AssignedClinicianUserId');
-            const assigneeOptions = [...document.querySelectorAll('#appointmentAssigneeOptions option')];
 
             function syncAssignee() {
-                const entered = assigneeInput.value.trim();
-                const match = assigneeOptions.find(option =>
-                    option.value.localeCompare(entered, undefined, { sensitivity: 'accent' }) === 0);
-                assigneeUserId.value = match?.dataset.userId || '';
+                const chosen = assigneeSelect.selectedOptions[0];
+                if (chosen?.value) assigneeEntry.value = chosen.value;
+                assigneeUserId.value = chosen?.dataset.userId || '';
             }
 
-            assigneeInput.addEventListener('input', syncAssignee);
-            assigneeInput.addEventListener('change', syncAssignee);
-            assigneeInput.form.addEventListener('submit', syncAssignee);
+            assigneeSelect.addEventListener('change', syncAssignee);
+            assigneeSelect.form.addEventListener('submit', syncAssignee);
+            syncAssignee();
 
             function loadEpisodes(patientId) {
                 $('#episodeSelect').empty().append('<option value="">-- None / Not yet created --</option>');
                 if (patientId) {
                     $.get('/Appointments/GetEpisodesByPatient', { patientId: patientId }, function (data) {
-                        $.each(data, function (i, e) { $('#episodeSelect').append($('<option>').val(e.id).text(e.displayName)); });
+                        $.each(data, function (i, e) {
+                            const label = e.detail ? e.displayName + ' — ' + e.detail : e.displayName;
+                            $('#episodeSelect').append($('<option>').val(e.id).text(label).attr('data-detail', e.detail || ''));
+                        });
                     });
                 }
             }

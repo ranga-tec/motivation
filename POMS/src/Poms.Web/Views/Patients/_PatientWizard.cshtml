@@ -1,4 +1,4 @@
-@model Poms.Web.ViewModels.PatientViewModel
+﻿@model Poms.Web.ViewModels.PatientViewModel
 
 @{
     var isEdit = string.Equals(ViewData["PatientFormMode"] as string, "edit", StringComparison.OrdinalIgnoreCase);
@@ -47,8 +47,8 @@
     <header class="modal-header workflow-header">
         <div>
             <span class="workflow-eyebrow">@eyebrow</span>
-            <h1 class="modal-title h3 mb-1" id="patientWizardTitle" tabindex="-1">@title</h1>
-            <p class="text-secondary mb-0">Complete one short section at a time. You can go back without losing your entries.</p>
+            <h1 class="modal-title h5 mb-1" id="patientWizardTitle">@title</h1>
+            <p class="text-secondary small mb-0">Complete one short section at a time. You can go back without losing your entries.</p>
         </div>
         @if (isModal)
         {
@@ -136,15 +136,11 @@
 
         <section data-wizard-step class="workflow-step" aria-labelledby="patientStepIdentity">
             <div class="workflow-section-heading">
-                <span class="workflow-section-icon" aria-hidden="true"><i class="fa-solid fa-id-card"></i></span>
-                <div>
-                    <span class="workflow-eyebrow">Step 1</span>
-                    <h2 id="patientStepIdentity" class="h4">Patient identity</h2>
-                    <p>Start with the details used to identify the patient and prevent duplicate records.</p>
-                </div>
+                <h2 id="patientStepIdentity">Patient identity</h2>
+                <p>Start with the details used to identify the patient and prevent duplicate records.</p>
             </div>
 
-            <div class="patient-photo-card mb-4" data-patient-photo>
+            <div class="patient-photo-card" data-patient-photo>
                 <div class="patient-photo-preview" data-photo-preview>
                     <img src="@(Model.ExistingProfilePhotoUrl ?? "data:image/gif;base64,R0lGODlhAQABAAAAACw=")"
                          class="patient-photo-image @(Model.ExistingProfilePhotoUrl is null ? "d-none" : "")"
@@ -231,11 +227,15 @@
                 </div>
                 <div class="col-md-4">
                     <label asp-for="IdentificationType" class="form-label required-label"></label>
-                    <select asp-for="IdentificationType" class="form-select" required asp-items="ViewBag.IdentificationTypes" data-review-label="Identification type"></select>
+                    <select asp-for="IdentificationType" class="form-select" required asp-items="ViewBag.IdentificationTypes"
+                            data-identification-type data-review-label="Identification type"></select>
+                    <div class="form-text">Choose N/A when the patient has no identification document.</div>
                 </div>
                 <div class="col-lg-6">
                     <label asp-for="IdentificationNumber" class="form-label required-label"></label>
-                    <input asp-for="IdentificationNumber" class="form-control" required autocomplete="off" data-review-label="Identification number" aria-describedby="identificationHint duplicateAlert" />
+                    <input asp-for="IdentificationNumber" class="form-control" autocomplete="off"
+                           data-identification-number data-review-label="Identification number"
+                           aria-describedby="identificationHint duplicateAlert" />
                     <div id="identificationHint" class="form-text">Enter the number exactly as shown on the document.</div>
                     <span asp-validation-for="IdentificationNumber" class="text-danger"></span>
                     <div id="duplicateAlert" class="alert alert-warning mt-2 d-none" role="status"></div>
@@ -245,12 +245,8 @@
 
         <section data-wizard-step class="workflow-step" aria-labelledby="patientStepContact" hidden>
             <div class="workflow-section-heading">
-                <span class="workflow-section-icon" aria-hidden="true"><i class="fa-solid fa-location-dot"></i></span>
-                <div>
-                    <span class="workflow-eyebrow">Step 2</span>
-                    <h2 id="patientStepContact" class="h4">Contact and location</h2>
-                    <p>Record where the patient lives and the safest ways to contact them.</p>
-                </div>
+                <h2 id="patientStepContact">Contact and location</h2>
+                <p>Record where the patient lives and the safest ways to contact them.</p>
             </div>
 
             <div class="row g-3">
@@ -297,7 +293,9 @@
                 </div>
                 <div class="col-md-6">
                     <label asp-for="Email" class="form-label"></label>
-                    <input asp-for="Email" class="form-control" type="email" autocomplete="email" inputmode="email" data-review-label="Email" />
+                    <input asp-for="Email" class="form-control" type="text" autocomplete="email" inputmode="email"
+                           data-review-label="Email" aria-describedby="emailHint" />
+                    <div id="emailHint" class="form-text">Enter N/A if the patient has no email address.</div>
                     <span asp-validation-for="Email" class="text-danger"></span>
                 </div>
                 <div class="col-md-6">
@@ -378,12 +376,8 @@
 
         <section data-wizard-step class="workflow-step" aria-labelledby="patientStepGuardian" hidden>
             <div class="workflow-section-heading">
-                <span class="workflow-section-icon" aria-hidden="true"><i class="fa-solid fa-people-roof"></i></span>
-                <div>
-                    <span class="workflow-eyebrow">Step 3</span>
-                    <h2 id="patientStepGuardian" class="h4">Guardian or carer</h2>
-                    <p>Add the primary person supporting the patient.</p>
-                </div>
+                <h2 id="patientStepGuardian">Guardian or carer</h2>
+                <p>Add the primary person supporting the patient.</p>
             </div>
 
             <div class="row g-3">
@@ -427,12 +421,8 @@
 
         <section data-wizard-step class="workflow-step" aria-labelledby="patientStepRegistration" hidden>
             <div class="workflow-section-heading">
-                <span class="workflow-section-icon" aria-hidden="true"><i class="fa-solid fa-clipboard-check"></i></span>
-                <div>
-                    <span class="workflow-eyebrow">Step 4</span>
-                    <h2 id="patientStepRegistration" class="h4">Registration details</h2>
-                    <p>Finish the administrative information for this registration.</p>
-                </div>
+                <h2 id="patientStepRegistration">Registration details</h2>
+                <p>Finish the administrative information for this registration.</p>
             </div>
 
             <div class="row g-3">
@@ -483,12 +473,8 @@
 
         <section data-wizard-step class="workflow-step" aria-labelledby="patientStepReview" hidden>
             <div class="workflow-section-heading">
-                <span class="workflow-section-icon" aria-hidden="true"><i class="fa-solid fa-circle-check"></i></span>
-                <div>
-                    <span class="workflow-eyebrow">Step 5</span>
-                    <h2 id="patientStepReview" class="h4">Review and confirm</h2>
-                    <p>Check the key details before saving the patient record.</p>
-                </div>
+                <h2 id="patientStepReview">Review and confirm</h2>
+                <p>Check the key details before saving the patient record.</p>
             </div>
 
             <div class="review-panel" data-wizard-review aria-live="polite"></div>
@@ -510,6 +496,9 @@
                 <a asp-action="@cancelAction" asp-route-id="@cancelRouteId" class="btn btn-link text-secondary">Cancel</a>
             }
         </div>
+        <p class="workflow-shortcut-hint small text-secondary mb-0 me-2 d-none d-lg-block">
+            <kbd>Enter</kbd> next field group · <kbd>Alt</kbd>+<kbd>&larr;</kbd>/<kbd>&rarr;</kbd> change step
+        </p>
         <button type="button" class="btn btn-outline-secondary" data-wizard-back hidden>
             <i class="fa-solid fa-arrow-left me-1" aria-hidden="true"></i> Back
         </button>

@@ -8,7 +8,14 @@ using System.ComponentModel.DataAnnotations;
 public enum Sex { Male, Female, Other }
 public enum Side { Left, Right, Bilateral }
 public enum PatientCategory { Local, Foreign }
-public enum IdentificationType { NIC, DrivingLicense, Passport }
+public enum IdentificationType
+{
+    NIC,
+    [Display(Name = "Driving Licence")] DrivingLicense,
+    Passport,
+    // Legacy and infant records often have no identification document at all.
+    [Display(Name = "N/A")] NotApplicable
+}
 public enum AssessmentType { Prosthetic, Orthotic }
 public enum LimbCategory { UpperLimb, LowerLimb, Spinal }
 public enum RecordStatus { Active, Completed, Cancelled }

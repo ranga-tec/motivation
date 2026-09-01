@@ -1,45 +1,20 @@
-Appoinment types need followings 
-Assesment
-Fiting 
-Delivery 
-Followup 
-Gait training 
+![alt text](Requirement/image.png) these forms could fit in to screen within browser if we make headers smaller. and fonts may be too right ? . what do you think ? we  give options in the admin to change  sizez ?  But I think from  header text and sections allocate too much space so users have to scroll more to the down . 
 
 
+fix tab orders and showrt cuts in forms. tab initally focused to page header tests which shouldnt be . 
 
-Delevary date needs  time 
-Follow ups needs time  and time frame ( from time to end time )
+whan patients inital information registered final confirmation page also hould display image too which if the user wants click and zoom too.
 
+email address should support N/A 
 
+Identification Type should support N/A and disbled number text
 
-
-IN DASH BOARD following quich actions NEEds search
-
-         Add Fitting for…
-                         Add Delivery for
-                         Add Follow-up for…   
+records should be clinical records
 
 
-                    
-Assessment creation needs from time to end time with date
+Subtype text only visible when slect other from Prescription drop down 
 
-Cancelling apiontments needed note for reason and should only deactivate the record ,
-
-
-City in patient record not filled with all the cities  in sri lanka. 
+New Appointment page record patient  should provide on type search capabilities . qalso record drop down shold provide more details if there are any 
 
 
-new appointments needs adding prosthetist/orthetist from the users .
-
-in user creation also put dropdown for prostetist,orthetist or both for designation selection or custoome adding 
-
-patiant record adding also needs time with date
-
-sex should be renamed as sex in patient registration, Patient picture should be fit to the frame and should be displayed with patient
-
-  details when viwing later . location should be branch in patient registration. staff members should have a drop down sayin whats the
-
-  designation . prostetics,orthetics,general. DAto of birt selection should be limited for 3 days before current date and not future
-
-  selection . patient filtering is case sensitive remove that. appoinmebts should have reshedule buttton which let users to reschedule it with a new date and text box for reason for rescedualing .
- 
+Handled By (Prosthetist / Orthotist) should bring searchable dropdown of available clinicians .

@@ -1,3 +1,4 @@
+﻿using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -237,11 +238,28 @@ public class PatientsController : Controller
         }
     }
 
+    /// <summary>
+    /// An N/A identification type stores a blank number, and the various spellings
+    /// of "not applicable" staff type into Email are stored as one canonical value.
+    /// </summary>
+    private static void NormalizeOptionalIdentityFields(PatientViewModel model)
+    {
+        model.IdentificationNumber = model.IdentificationType == IdentificationType.NotApplicable
+            ? string.Empty
+            : model.IdentificationNumber?.Trim();
+
+        model.Email = PatientViewModel.IsNotApplicable(model.Email)
+            ? "N/A"
+            : model.Email?.Trim();
+    }
+
     // POST: Patients/Create
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(PatientViewModel model)
     {
+        NormalizeOptionalIdentityFields(model);
+
         if (model.IsLegacyImport && !model.RegistrationDate.HasValue)
         {
             ModelState.AddModelError(
@@ -295,7 +313,7 @@ public class PatientsController : Controller
                         Category = model.Category,
                         Nationality = model.Nationality,
                         IdentificationType = model.IdentificationType,
-                        IdentificationNumber = model.IdentificationNumber,
+                        IdentificationNumber = model.IdentificationNumber ?? string.Empty,
                         Address1 = model.Address1,
                         Address2 = model.Address2,
                         ProvinceId = model.ProvinceId,
@@ -487,6 +505,8 @@ public class PatientsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(Guid id, PatientViewModel model)
     {
+        NormalizeOptionalIdentityFields(model);
+
         if (id != model.Id) return NotFound();
 
         await ValidateLocationAsync(model);
@@ -535,7 +555,7 @@ public class PatientsController : Controller
                     patient.Category = model.Category;
                     patient.Nationality = model.Nationality;
                     patient.IdentificationType = model.IdentificationType;
-                    patient.IdentificationNumber = model.IdentificationNumber;
+                    patient.IdentificationNumber = model.IdentificationNumber ?? string.Empty;
                     patient.Address1 = model.Address1;
                     patient.Address2 = model.Address2;
                     patient.ProvinceId = model.ProvinceId;
@@ -914,7 +934,16 @@ public class PatientsController : Controller
         ViewBag.Centers = new SelectList(await _context.Centers.Where(c => c.IsActive).ToListAsync(), "Id", "Name");
         ViewBag.SexOptions = new SelectList(Enum.GetValues(typeof(Sex)).Cast<Sex>());
         ViewBag.PatientCategories = new SelectList(Enum.GetValues(typeof(PatientCategory)).Cast<PatientCategory>());
-        ViewBag.IdentificationTypes = new SelectList(Enum.GetValues(typeof(IdentificationType)).Cast<IdentificationType>());
+        // Built from the [Display] names so the list reads "N/A" and "Driving Licence".
+        ViewBag.IdentificationTypes = new SelectList(
+            Enum.GetValues<IdentificationType>().Select(type => new
+            {
+                Value = type.ToString(),
+                Text = type.GetType().GetField(type.ToString())?
+                    .GetCustomAttributes(typeof(DisplayAttribute), false)
+                    .Cast<DisplayAttribute>().FirstOrDefault()?.Name ?? type.ToString()
+            }),
+            "Value", "Text");
         ViewBag.ReferralSources = new SelectList(await _context.ReferralSources.Where(r => r.IsActive).ToListAsync(), "Id", "Name");
         if (model is not null)
         {
