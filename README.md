@@ -1,38 +1,30 @@
-# POMS
+﻿# POMS
 
 POMS is an ASP.NET Core MVC application for prosthetic, orthotic, and spinal patient management.
 
-## Live Services
+## Live Service
 
-- Prototype: `https://motivation-production-f454.up.railway.app`
-- Production: `https://motivation-production-production.up.railway.app`
+- <https://poms-motivation-production.up.railway.app>
 
-Both Railway services expose `/health` and support cross-app auto-login switching through `/Switch/Go`.
+One Railway service (`poms-motivation` in project `kind-presence`) backed by a managed PostgreSQL
+database. It exposes `/health` and deploys automatically from GitHub `main`.
 
-## Branch Model
+The earlier prototype/production split, the two `motivation-production-*` URLs, and the Render
+demo are all retired. `production-backup` still exists as a branch but backs no live service.
 
-- `main`: prototype line, Contabo fallback assets, and environment-driven version switching
-- `production-backup`: restored production line with the fuller dashboard/reports/admin feature set
+## Database And Storage
 
-Do not replace `main` with `production-backup` anymore. The project now runs the prototype and production variants as separate Railway services.
+- PostgreSQL on Railway, reached through `DATABASE_URL`.
+- Uploaded patient files and ASP.NET data-protection keys live on a Railway volume mounted at
+  `/app/storage`, so they survive redeploys.
+- Schema is created with `EnsureCreatedAsync()` plus `PostgresSchemaUpgrader`. There are no EF Core
+  migrations on the PostgreSQL path, so a destructive schema change needs the upgrader updated.
 
-## Switching Between Prototype And Production
+## Clinical Reference Data
 
-Prototype and production switching is driven by:
-
-- `VersionSwitch__Current`
-- `VersionSwitch__PrototypeUrl`
-- `VersionSwitch__ProductionUrl`
-- `SWITCH_SECRET`
-
-The prototype branch resolves switch targets from configuration in `POMS/src/Poms.Web/Models/VersionSwitchOptions.cs` and `POMS/src/Poms.Web/Controllers/SwitchController.cs`.
-
-## Databases
-
-- Prototype uses the standard Railway PostgreSQL database for the `motivation` service.
-- Production must use a separate PostgreSQL database from prototype. Reusing the same identity tables across both variants causes schema conflicts.
-
-If both apps share a PostgreSQL cluster, keep them in separate databases.
+Fresh databases seed locations, referral sources, problem and cause types, nationalities, and a
+starter catalogue of 17 prosthetic, orthotic, and spinal devices. Administrators maintain these
+under **Admin → Devices** and the other reference-data screens.
 
 ## Legacy Patient Form OCR
 
@@ -50,14 +42,32 @@ Configure OpenAI with `OPENAI_API_KEY` (or `PatientFormOcr__ApiKey`). Optional o
 `PatientFormOcr__Model`, `PatientFormOcr__Endpoint`, `PatientFormOcr__Enabled`, and nested
 `PatientFormOcr__Offline__*` settings. Do not place an API key in `appsettings.json` or commit it.
 
-## Deployment Docs
+## Documentation
 
-- Railway deployment: [`DEPLOY_RAILWAY.md`](DEPLOY_RAILWAY.md)
-- Contabo fallback deployment: [`DEPLOY_CONTABO.md`](DEPLOY_CONTABO.md)
-- Internal branch/deployment handoff notes: [`AGENT_NOTES.md`](AGENT_NOTES.md)
+- Current deployment: [`DEPLOY_RAILWAY.md`](DEPLOY_RAILWAY.md)
+- Engineering handover, revision history, known issues: [`AGENT_HANDOVER.md`](AGENT_HANDOVER.md)
+- VPS fallback (Contabo, Kamatera, any Ubuntu host): [`DEPLOY_CONTABO.md`](DEPLOY_CONTABO.md)
+- Outstanding requests from the system owner: [`TODO.md`](TODO.md)
+- Historical, describing retired environments: [`DEPLOYMENT_HANDOVER.md`](DEPLOYMENT_HANDOVER.md),
+  [`AGENT_NOTES.md`](AGENT_NOTES.md)
+
+## Local Development
+
+Development uses SQLite, so no database server is required.
+
+```bash
+ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://localhost:5011   dotnet run --project POMS/src/Poms.Web --no-launch-profile
+
+dotnet test POMS/POMS.sln -c Release
+```
 
 ## Seed Users
 
-Fresh databases seed the standard role emails from `POMS/src/Poms.Infrastructure/Data/DbInitializer.cs`.
+Fresh databases seed fixed role accounts and passwords from
+`POMS/src/Poms.Infrastructure/Data/DbInitializer.cs`.
 
-The live Railway passwords were rotated after deployment and are intentionally not documented in the repository. After any fresh deploy, rotate the seeded passwords immediately.
+> **Security warning.** Those credentials are committed to this repository and currently work on
+> the live service. Anyone who can read this repository can sign in as an administrator. Rotating
+> a password inside the running app is not durable either, because a fresh database re-seeds the
+> original values. Remove the hard-coded passwords and make first-administrator creation
+> secret-driven before any real patient data is entered.

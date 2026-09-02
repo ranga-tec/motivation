@@ -1,4 +1,10 @@
-# Agent Handoff Notes - POMS Project
+﻿# Agent Handoff Notes - POMS Project
+
+> **Historical document — superseded on 2026-09-02.**
+> The environments described below are retired: the two `motivation-production-*` Railway
+> services return 404 and the Render demo is unreachable. POMS now runs as a single Railway
+> service with managed PostgreSQL. See [`AGENT_HANDOVER.md`](AGENT_HANDOVER.md) and
+> [`DEPLOY_RAILWAY.md`](DEPLOY_RAILWAY.md). Kept for background only.
 
 **Last Updated:** 2026-04-27
 

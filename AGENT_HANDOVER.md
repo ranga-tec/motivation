@@ -1,440 +1,241 @@
 # POMS Agent Handover
 
-Status date: 2026-08-14 (Asia/Colombo)
+Status date: 2026-09-02 (Asia/Colombo)
 
-## 1. Purpose
+## 1. Read this first
 
-This document gives the next engineering or operations agent enough context to continue the POMS hosting work without repeating discovery. It distinguishes the currently live Render demonstration, repository deployment options, the planned Azure pilot, known risks, and the exact point where the previous session stopped.
+This file replaces the 2026-08-14 handover, which described a Render demonstration and a planned
+Azure pilot. **Both are gone.** Render is unreachable, the two older Railway services return 404,
+and no Azure resource was ever created. POMS now runs on one Railway service with a managed
+PostgreSQL database.
+
+If you are picking this up cold, read this file, then `DEPLOY_RAILWAY.md`. Treat
+`DEPLOYMENT_HANDOVER.md` and `AGENT_NOTES.md` as historical.
 
 ## 2. Executive status
 
-- POMS is currently reachable at <https://poms-motivation.onrender.com>.
-- The health endpoint <https://poms-motivation.onrender.com/health> returned `Healthy` with HTTP `200` on 2026-08-14.
-- The Render service is a demonstration environment. It uses SQLite, uploaded-file storage, and ASP.NET data-protection keys under `/tmp`; all can be lost on restart, redeployment, or instance replacement.
-- Render deploys automatically from GitHub branch `main`.
-- The preferred one-month Azure pilot has been designed but not provisioned.
-- Recommended Azure pilot: App Service for Linux B1 plus Azure Database for PostgreSQL Flexible Server B1MS with 32 GB storage.
-- Azure App Service F1 was rejected for dependable use because it is limited to 60 CPU minutes per day, has no SLA, and is intended for trials and learning.
-- Azure CLI is not installed on this workstation.
-- The prior Azure session stopped because no controllable Browser Use session was connected. No Azure resource group, App Service, PostgreSQL server, storage account, or Key Vault was created.
+- Live at <https://poms-motivation-production.up.railway.app>, deployed from GitHub `main`.
+- `/health` returned `Healthy` on 2026-09-02.
+- Storage is durable: managed PostgreSQL plus a Railway volume for uploads and data-protection keys.
+- Deployment is automatic — a push to `main` builds and releases.
+- **The seeded demonstration passwords are live and unrotated.** See Section 6.
+- The full test suite passes: 67 tests.
 
-## 3. Repository and Git state
+## 3. Repository state
 
 | Item | Value |
 | --- | --- |
 | Workspace | `X:\Developments\motivation` |
-| Repository | `https://github.com/ranga-tec/motivation` |
-| Current branch | `main` |
-| Local HEAD | `bbc6a6cb72d79d2aeb78eb2a97137add47cd6f84` |
-| `origin/main` | `459e2217e6b40f85a8b7ecea0b36ba70229552f6` |
-| Live Render commit last verified during deployment | `459e2217e6b40f85a8b7ecea0b36ba70229552f6` |
-| Local-only handover commit | `bbc6a6c` (`Document deployment and Azure handover`) |
-| Additional worktree branch | `production-backup` at `8039b62` |
+| Repository | <https://github.com/ranga-tec/motivation> |
+| Branch | `main` |
+| HEAD and `origin/main` | `3f3ad71` |
+| Other branch | `production-backup` — backs no live service |
 
-The local `main` branch contains the deployment handover commit that is not on `origin/main`. Do not push blindly: Render watches `main`, so a push can trigger a redeployment and erase the demo's temporary SQLite database, uploads, and login-cookie keys.
-
-The workspace was already dirty before this document was created. Preserve these user-owned changes and artifacts:
-
-- Modified: `POMS/tests/Poms.Tests/SchedulingWorkflowTests.cs`
-- Modified: `POMS_Proposal_Exceed_Clinics.html`
-- Untracked: `BUGS/`, `TODO.md`, `graphify-out/`, screenshots, and `output/`
-
-Inspect `git status --short` again before committing. Do not include unrelated files in a deployment commit.
+`main` and `origin/main` are level. The working tree is clean apart from a stray `image.png` at
+the repository root (a Kamatera pricing screenshot) that was deliberately left untracked.
 
 ## 4. Application overview
 
-POMS is an ASP.NET Core 8 MVC application. The web entry point is `POMS/src/Poms.Web/Program.cs`; persistence is implemented with Entity Framework Core through `PomsDbContext`.
+ASP.NET Core 8 MVC. Entry point `POMS/src/Poms.Web/Program.cs`; persistence through
+`PomsDbContext` (EF Core).
 
-Relevant hosting behavior:
+Provider selection:
 
-- If `DATABASE_URL` exists, `Program.cs` converts the URL into an Npgsql connection string and uses PostgreSQL.
-- Otherwise, `UsePostgreSQL` and `UseSQLite` select the configured provider.
-- Development defaults to SQLite through `appsettings.Development.json`.
-- The root `Dockerfile` builds and publishes `Poms.Web` using .NET 8 and listens on the platform-provided `PORT` (default `8080`).
-- `/health` is a process-level health endpoint. It does not currently prove that database initialization, storage access, or seeding succeeded.
-- PostgreSQL and SQLite are initialized with `EnsureCreatedAsync()` and provider-specific schema-upgrader classes.
-- `FileStorageService` writes patient files to a local filesystem; no Azure Blob implementation exists yet.
-- ASP.NET data-protection keys are persisted to a configured filesystem directory.
-- Uploaded extensions are limited by configuration to PDF, JPG/JPEG, PNG, and DOCX; the configured maximum is 10 MB.
+- `DATABASE_URL` present → parsed into an Npgsql connection string → PostgreSQL.
+- Otherwise `UsePostgreSQL` / `UseSQLite` decide. Development defaults to SQLite
+  (`appsettings.Development.json`, `poms-local.db`).
 
-Key files:
+Schema is created by `EnsureCreatedAsync()` plus `PostgresSchemaUpgrader` / `SqliteSchemaUpgrader`.
+**There are no EF Core migrations on the PostgreSQL path.** Additive changes are handled; renames
+and drops are not.
 
-- `POMS/src/Poms.Web/Program.cs`
-- `POMS/src/Poms.Web/appsettings.json`
-- `POMS/src/Poms.Web/appsettings.Production.json`
-- `POMS/src/Poms.Infrastructure/Data/PomsDbContext.cs`
-- `POMS/src/Poms.Infrastructure/Data/DbInitializer.cs`
-- `POMS/src/Poms.Infrastructure/Data/PostgresSchemaUpgrader.cs`
-- `POMS/src/Poms.Infrastructure/Data/SqliteSchemaUpgrader.cs`
-- `POMS/src/Poms.Infrastructure/Services/FileStorageService.cs`
-- `Dockerfile`
-- `.dockerignore`
-- `render.yaml`
-- `docker-compose.contabo.yml`
-- `DEPLOYMENT_HANDOVER.md`
-- `DEPLOY_CONTABO.md`
+Seeding on every start: roles and users (`DbInitializer`), then locations, referral sources, main
+problem types, cause/reason types, nationalities, and the device catalogue (`SampleDataSeeder`).
+Each seeder is a no-op when its table already has rows.
 
-## 5. Current Render demonstration
+## 5. Live environment
+
+See `DEPLOY_RAILWAY.md` for the complete configuration. Summary:
 
 | Item | Value |
 | --- | --- |
-| Application URL | <https://poms-motivation.onrender.com> |
-| Health URL | <https://poms-motivation.onrender.com/health> |
-| Dashboard | <https://dashboard.render.com/web/srv-d9td6qrncjis7390ldhg> |
-| Service ID | `srv-d9td6qrncjis7390ldhg` |
-| Service name | `poms-motivation` |
-| Runtime | Docker / .NET 8 |
-| Plan | Render free web service |
-| Region | Singapore |
-| Source | GitHub `main` |
-| Automatic deployment | On commit |
-| Database | SQLite |
-| SQLite path | `/tmp/poms-local.db` |
-| Upload path | `/tmp/poms-storage` |
-| Data-protection key path | `/tmp/poms-data-protection-keys` |
+| Railway project | `kind-presence` (`b9fcd418-f37a-4980-97e9-bc2c1b2e3161`) |
+| Services | `poms-motivation` (app), `Postgres` (database) |
+| Volumes | `poms-motivation-volume` → `/app/storage`; `postgres-volume` → PostgreSQL data |
+| Region | Amsterdam (`ams`) |
 
-Effective settings from `render.yaml`:
+Latency note: users are in Sri Lanka and the service is in Amsterdam. A Singapore region would cut
+round-trip time substantially. This has not been changed because it means re-provisioning.
+
+## 6. Credentials — open risk
+
+`POMS/src/Poms.Infrastructure/Data/DbInitializer.cs` seeds fixed accounts and passwords, and they
+are committed to the repository:
 
 ```text
-ASPNETCORE_ENVIRONMENT=Production
-DOTNET_USE_POLLING_FILE_WATCHER=1
-UsePostgreSQL=false
-UseSQLite=true
-ConnectionStrings__DefaultConnection=Data Source=/tmp/poms-local.db
-FileStorage__RootPath=/tmp/poms-storage
-DataProtection__KeysPath=/tmp/poms-data-protection-keys
-Security__ForceHttps=false
+admin@poms.lk / Admin@123           (ADMIN)
+clinician@poms.lk / Clinic@123      (CLINICIAN)
+registrar@poms.lk / Data@123        (DATA_ENTRY)
+viewer@poms.lk / View@123           (VIEWER)
+management@poms.lk / Manage@123     (MANAGEMENT)
 ```
 
-`DOTNET_USE_POLLING_FILE_WATCHER=1` was added after Render hit its Linux inotify watcher limit. `Security__ForceHttps=false` avoids an internal redirect loop behind Render's TLS-terminating proxy; the public Render URL still uses HTTPS.
+**These credentials work on the live site right now.** Older documentation claimed the live
+passwords had been rotated; that was true of the retired services, not this one. Anyone who reads
+this repository can sign in as an administrator.
 
-### Why PostgreSQL is not used on Render
+This is the single largest blocker before any real patient data is entered. Rotating a password in
+the running app is also not durable on its own: a fresh database re-seeds the original values.
 
-The connected Render workspace already used its free PostgreSQL allocation for `neuedge-erp-db`. Render rejected another free PostgreSQL database, so this POMS demo was switched to temporary SQLite rather than creating a paid service.
+Fix properly by making first-administrator creation secret-driven and removing the hard-coded
+passwords, then rotating.
 
-### Render deployment history
+## 7. Revision history — 2026-08-30 to 2026-09-02
 
-| Commit | Purpose |
+Five commits on top of `459e221`.
+
+| Commit | Summary |
 | --- | --- |
-| `967f045` | Add Render blueprint and Docker deployment files |
-| `93930f7` | Switch the free Render demo to SQLite under `/tmp` |
-| `459e221` | Use polling file watchers to avoid Render host limits |
-| `bbc6a6c` | Local-only deployment/Azure handover documentation |
+| `bbc6a6c` | Deployment/Azure handover documentation (written earlier, pushed in this window) |
+| `8f87609` | Patient form OCR import |
+| `3aca409` | Type-ahead patient search and the device catalogue admin |
+| `6ac9d7d` | Reverted the type-ahead patient search |
+| `3f3ad71` | Patient and appointment UX backlog |
 
-### Render warning
+### Infrastructure
 
-Do not enter real patient information. There is no dependable backup or restore point for `/tmp/poms-local.db` or `/tmp/poms-storage`. A pushed commit can redeploy the service and reset records, files, seeded-user state, and cookies.
+- Provisioned the `Postgres` service and pointed the app at it with
+  `DATABASE_URL=${{Postgres.DATABASE_URL}}`.
+- Removed `ConnectionStrings__DefaultConnection`, which had been `Data Source=/tmp/poms-local.db`.
+  The service had been running on an ephemeral SQLite file that was discarded on every redeploy.
+- Attached `poms-motivation-volume` at `/app/storage` and moved `FileStorage__RootPath` and
+  `DataProtection__KeysPath` onto it, so uploads and login cookies survive redeploys.
 
-## 6. Demonstration credentials and security
+### Features
 
-The application seeds predictable demonstration accounts in `POMS/src/Poms.Infrastructure/Data/DbInitializer.cs`.
+- **OCR import** (`8f87609`): OpenAI vision engine with a Tesseract offline fallback, image
+  validation, an `ImportLegacy` upload view, and a hosted cleanup service for staged scans.
+  Both Dockerfiles now install `tesseract-ocr`.
+- **Device catalogue** (`3aca409`): `DeviceCatalog` had a table and a delivery-form dropdown but no
+  UI at all, so the dropdown was always empty. Added **Administration → Devices** with device and
+  device-type CRUD, and seeded 17 standard prosthetic, orthotic, and spinal devices.
 
-Administrator requested for the demo:
+### Patient search — added, then reverted
 
-```text
-URL: https://poms-motivation.onrender.com
-Email: admin@poms.lk
-Temporary password: Admin@123
-Role: ADMIN
+`3aca409` replaced the Search button with type-as-you-go search; `6ac9d7d` reverted it at the
+user's request. The patient folder uses the Search button. Do not reintroduce type-ahead there
+without asking. Note the distinction: type-ahead **was** wanted on the appointment patient picker,
+which is a dropdown rather than a results table.
+
+### UX backlog (`3f3ad71`)
+
+Nine items from `TODO.md`:
+
+1. **Density.** The registration wizard announced the current step three times — modal header,
+   sticky stepper, and a per-step icon plus "STEP N" eyebrow. Roughly 715px of chrome sat above
+   the first input, so one field was visible. Removed the duplicated layer and compacted the
+   optional photo card; about 175px reclaimed. An admin font-size setting was considered and
+   rejected — it would shrink labels and inputs too, and browsers already offer zoom.
+2. **Focus.** Step changes and modal opens focused a heading. Both now focus the first real
+   field, skipping the visually-hidden photo input. `Enter` advances a step, `Alt`+arrow moves
+   between steps.
+3. **Review photo.** The review step shows the patient photo with click-to-enlarge.
+4. **Email accepts N/A** (also `NA`, `n/a`), still rejecting malformed addresses.
+5. **`IdentificationType.NotApplicable`** added. Selecting it clears and disables the number
+   field. Duplicate detection now ignores blank identification numbers, which would otherwise
+   match every such patient to every other.
+6. **"Records" renamed "Clinical Records"** in navigation, page titles, and the folder tab.
+7. **Prescription subtype** label no longer lingers after its select is hidden.
+8. **Appointments**: patient type-ahead via a new `SearchPatients` endpoint; the record dropdown
+   now shows centre and assessment/fitting/delivery counts.
+9. **Handled By** is a searchable clinician list that still accepts a typed name for staff who
+   have no account.
+
+A generic combobox in `site.js` (`select[data-combobox]`, optional `data-combobox-endpoint`)
+backs items 8 and 9 and shares styling with the existing city combobox.
+
+## 8. Known issues and unfinished work
+
+| Item | Detail |
+| --- | --- |
+| Seeded passwords live | Section 6. Highest priority before real data. |
+| No EF migrations on PostgreSQL | `EnsureCreated` plus a hand-written upgrader. A destructive schema change will not apply. |
+| `SearchPatients` untested with data | The endpoint returns 200 and valid JSON, but the local dev database has no patients, so matching is unexercised. |
+| `AutoMapper` 12.0.1 advisory | `GHSA-rvv3-g6hj-g44x`, high severity. Surfaces as `NU1903` on every build. |
+| `/health` is shallow | Process-level only. It does not prove database or storage access. |
+| No backups | Nothing dumps PostgreSQL on a schedule. Restore has never been tested. |
+| `ComponentCatalog` has no UI | Same gap the device catalogue had before `3aca409`. |
+| OpenAI OCR disabled in production | `OPENAI_API_KEY` is unset, so only offline Tesseract OCR runs. |
+| Amsterdam region | ~150ms+ from Sri Lanka. Singapore would be materially faster. |
+
+## 9. Local development
+
+Development uses SQLite, so no database server is needed.
+
+```bash
+ASPNETCORE_ENVIRONMENT=Development \
+ASPNETCORE_URLS=http://localhost:5011 \
+dotnet run --project POMS/src/Poms.Web --no-launch-profile
 ```
 
-Treat this credential as compromised by design because it exists in source and handover material. It is acceptable only for the disposable demo. Changing it inside the Render instance is not durable: a fresh SQLite database can restore the original seeded password.
+For offline OCR on Windows, Tesseract must be resolvable. It is commonly installed at
+`C:\Program Files\Tesseract-OCR\tesseract.exe` but not added to `PATH`, in which case the engine
+reports *Unavailable*. Either add it to `PATH` or set:
 
-Before any pilot containing real data:
-
-1. Remove all hard-coded passwords and unnecessary default accounts from `DbInitializer`.
-2. Seed the first administrator from a deployment secret or one-time administrative command.
-3. Rotate the administrator password immediately after first login.
-4. Add MFA or an approved external identity provider.
-5. Review role permissions and disable unused accounts.
-6. Never commit Azure, PostgreSQL, Blob Storage, or Key Vault credentials.
-
-## 7. Render operating procedure
-
-### Read-only health check
-
-```powershell
-curl.exe --fail --show-error https://poms-motivation.onrender.com/health
-curl.exe --head https://poms-motivation.onrender.com/
+```bash
+TESSERACT_EXECUTABLE_PATH="C:\Program Files\Tesseract-OCR\tesseract.exe"
 ```
 
-The free service may cold-start. Allow up to roughly 90 seconds before treating the first request as failed.
+The local database (`POMS/src/Poms.Web/poms-local.db`, gitignored) is empty of patients, which
+makes any search feature look broken locally. Seed a patient before judging search behaviour.
 
-### Authenticated smoke test
-
-1. Sign in with an authorized demonstration account.
-2. Register a clearly disposable test patient through all five steps.
-3. Confirm the patient appears in search and opens successfully.
-4. Verify any required upload/download workflow.
-5. Soft-delete the disposable record.
-6. Review Render logs for schema, file-storage, and authentication errors.
-
-The patient-registration workflow and admin login were verified on 2026-08-11. The health endpoint was rechecked on 2026-08-14 and returned HTTP `200 Healthy`.
-
-### Before any Render push/redeploy
-
-1. Confirm whether the demo contains data that must be retained.
-2. Export the SQLite database and `/tmp/poms-storage` before triggering a deploy if retention matters.
-3. Review the exact commit scope.
-4. Expect existing authentication cookies to become invalid if data-protection keys are replaced.
-5. Re-run the health and authenticated smoke tests after deployment.
-
-## 8. Other repository deployment path: Contabo
-
-The repository also contains a Docker Compose deployment for a Contabo VPS:
-
-- `poms-web`: application container built from the root `Dockerfile`
-- `poms-db`: `postgres:16-alpine`
-- Persistent named volumes for PostgreSQL data, patient files, and data-protection keys
-- Internal `DATABASE_URL` pointing from the web container to `poms-db`
-- Host port defaults to `8081`
-
-This path is documented in `DEPLOY_CONTABO.md` and `docker-compose.contabo.yml`. It is not the currently verified public deployment described in this handover. Never use the Compose default PostgreSQL password (`change-this-now`); supply a strong secret through the deployment environment.
-
-## 9. Azure decision and target architecture
-
-The chosen direction is an Azure pilot using paid-capability tiers funded by the eligible free-account credit—not App Service F1.
-
-| Concern | Azure target | Initial configuration |
-| --- | --- | --- |
-| Web application | Azure App Service for Linux | B1 for the pilot |
-| Relational database | Azure Database for PostgreSQL Flexible Server | Burstable B1MS, 32 GB, TLS required |
-| Temporary pilot file persistence | App Service `/home` | Single instance only |
-| Production patient files | Azure Storage / private Blob container | Standard GPv2, Hot LRS initially |
-| Secrets | App Service settings and Key Vault | Managed identity and least privilege |
-| ASP.NET data-protection keys | Blob-backed key ring protected by Key Vault | Separate path/container per environment |
-| Monitoring | Application Insights / Azure Monitor | 5xx, restart, database, storage, and budget alerts |
-
-Choose one region for the app, database, and storage. South India is geographically closer to Sri Lanka; Southeast Asia matches the current Render region. Confirm service availability, latency, data residency, and the current price before provisioning.
-
-### Azure free-account facts checked on 2026-08-14
-
-- Eligible new Azure customers can receive US$200 credit usable within 30 days.
-- The account must move to pay-as-you-go after 30 days or after the credit is exhausted to keep resources running and continue applicable free allowances; otherwise services are disabled.
-- The published 12-month PostgreSQL allowance includes up to 750 B1MS Flexible Server hours per month, 32 GB storage, and 32 GB backup storage for eligible new customers.
-- App Service F1 provides shared compute with 60 CPU minutes per day, 1 GB RAM, and 1 GB storage, with no SLA; Microsoft does not support it for production workloads.
-
-The earlier retail estimate, calculated on 2026-08-11, was approximately US$36.74/month in Southeast Asia or US$37.55/month in South India for B1 App Service, B1MS PostgreSQL with 32 GB storage, and 10 GB Hot LRS Blob storage. This is a planning estimate only; use the Azure Pricing Calculator or Retail Prices API immediately before provisioning.
-
-## 10. Exact Azure continuation point
-
-No Azure resources exist from the previous session. The last attempt stopped at account/browser preparation:
-
-- A Microsoft account picker was visible.
-- Normal Browser Use was not connected to the agent.
-- Azure CLI was not installed and remains unavailable as of 2026-08-14.
-- The user was told not to enable Full CDP access because it is unnecessary and elevated-risk.
-- Phone verification, card verification, legal acceptance, subscription upgrade, and pay-as-you-go authorization must be completed or approved by the user, never by the agent without explicit authorization.
-
-Two safe continuation routes are available.
-
-### Route A: Azure portal through connected Browser Use
-
-1. Connect the normal browser session in Codex/ChatGPT settings.
-2. Open the Azure free-account page and sign in to the intended Microsoft account.
-3. The user completes phone/card verification and any legal or billing acceptance.
-4. Confirm subscription name, credit status, region availability, and budget controls.
-5. Provision only after the user authorizes the named subscription and expected spend.
-
-Do not enable Full CDP access merely for this task.
-
-### Route B: Azure CLI
-
-1. Install Azure CLI using an approved installation method.
-2. Run `az login` and have the user complete interactive authentication.
-3. Run `az account show` and `az account list --output table`.
-4. Ask the user to confirm the exact subscription before creating resources.
-5. Set a budget alert before provisioning billable resources.
-
-## 11. Recommended Azure implementation sequence
-
-### Phase 0: approval and safety
-
-1. Confirm the Azure tenant, subscription, region, naming convention, owner, and monthly budget.
-2. Confirm that the account is eligible for the intended free credit and PostgreSQL allowance.
-3. Decide whether this is a disposable pilot or a clinical production project.
-4. Do not copy real patient data from Render into a pilot without governance approval.
-
-### Phase 1: application hardening
-
-1. Remove predictable seed credentials.
-2. Make first-admin creation secret-driven and optional.
-3. Replace the `EnsureCreated` PostgreSQL lifecycle with tested, versioned EF Core migrations.
-4. Make fatal schema or required-seeding failures fail startup/readiness.
-5. Add a readiness check that verifies database and required storage access.
-6. Review logs to ensure they do not expose credentials or patient data.
-
-### Phase 2: Azure foundation
-
-1. Create a resource group in the approved region.
-2. Create PostgreSQL Flexible Server B1MS with 32 GB storage, TLS enforced, backups configured, and public/network access minimized.
-3. Create a Linux B1 App Service plan and web app.
-4. Enable managed identity.
-5. Create the storage account and private Blob containers if the Blob work is included.
-6. Create Key Vault or use protected App Service settings for initial pilot secrets.
-7. Configure Application Insights, budget alerts, and operational alerts.
-
-### Phase 3: application configuration
-
-At minimum:
-
-```text
-ASPNETCORE_ENVIRONMENT=Production
-UsePostgreSQL=true
-UseSQLite=false
-ConnectionStrings__DefaultConnection=<protected Npgsql connection string>
-Security__ForceHttps=<value tested for the App Service proxy configuration>
+```bash
+dotnet build POMS/POMS.sln -c Release
+dotnet test POMS/POMS.sln -c Release      # 67 tests
 ```
 
-For the short single-instance pilot before Blob support:
+## 10. Hosting alternatives considered
 
-```text
-FileStorage__RootPath=/home/poms-storage
-DataProtection__KeysPath=/home/poms-data-protection-keys
-```
+`DEPLOY_CONTABO.md` plus `docker-compose.contabo.yml` describe the same stack on any Ubuntu VPS
+with Docker, which covers Kamatera and similar providers.
 
-Do not use `/tmp` on Azure for data that must survive. Do not scale the filesystem-based pilot beyond one instance. Blob Storage is required before multi-instance or production use.
+If moving to a VPS, note:
 
-### Phase 4: deployment
+- A 1 GB instance cannot run `docker compose up --build`; the .NET SDK build stage needs roughly
+  2 GB. Either use a 2 GB instance or build images in CI and pull them.
+- Railway provides TLS automatically. On a VPS you supply a domain plus Nginx and Let's Encrypt,
+  then set `Security__ForceHttps=true`.
+- Railway's managed volume is not a backup. On a VPS, `pg_dump` on a schedule is your
+  responsibility from day one.
 
-1. Deploy to a non-production/staging web app first.
-2. Prefer a controlled GitHub Actions or Azure deployment workflow over an undocumented manual upload.
-3. Apply and verify database migrations against a fresh test database.
-4. Keep secrets out of workflow logs and repository files.
-5. Record resource IDs, public URLs, configuration names, deployment commit, and rollback target.
+Azure was previously proposed (App Service B1 plus PostgreSQL Flexible Server B1MS, roughly
+US$37/month). No Azure resource was ever created and the Azure CLI is not installed. That plan is
+dormant, not in progress.
 
-### Phase 5: acceptance testing
+## 11. Agent operating rules
 
-Verify all of the following:
+1. Read this file and `DEPLOY_RAILWAY.md` before changing anything.
+2. Run `git status` first and preserve user-owned changes.
+3. Verify live state with `railway status` and `/health` rather than trusting this document's date.
+4. A push to `main` deploys to production. Confirm scope before pushing.
+5. Never commit secrets. `DATABASE_URL` stays a Railway reference, never a pasted connection string.
+6. Run `dotnet build` and `dotnet test` before pushing; the suite is fast.
+7. Do not reintroduce type-ahead on the patient folder search — it was explicitly reverted.
+8. Do not describe POMS as production-ready while Section 6 is open.
 
-1. `/health` and database/storage-aware readiness.
-2. Administrator login and authorization.
-3. Full five-step patient registration.
-4. Duplicate-patient detection.
-5. Patient search and folder access.
-6. Appointment scheduling workflow.
-7. File upload, download, authorization, and deletion.
-8. Reports and print views.
-9. Soft deletion and audit behavior.
-10. Restart persistence for database, files, and cookies.
-11. Backup restore into a separate test database.
-12. Logging, monitoring, budget, and failure alerts.
+## 12. Suggested next actions
 
-### Phase 6: cutover
+1. Remove hard-coded seed passwords; make the first administrator secret-driven; rotate.
+2. Add a scheduled `pg_dump` and test a restore.
+3. Replace `EnsureCreated` with versioned EF Core migrations before the schema changes again.
+4. Resolve the AutoMapper advisory.
+5. Decide on region — staying in Amsterdam or re-provisioning in Singapore.
+6. Deepen `/health` into a readiness check covering database and storage.
 
-1. Obtain acceptance from the system owner.
-2. Confirm backup and rollback steps.
-3. If Render contains data that must be retained, freeze writes and export SQLite plus files before any restart.
-4. Change the approved hostname only after acceptance tests pass.
-5. Rotate all temporary credentials.
-6. Monitor the new deployment closely during the initial operating period.
+## 13. References
 
-## 12. Production blockers and go-live gates
-
-Do not call POMS production-ready until all gates are complete:
-
-- Persistent PostgreSQL is in use and a restore has been tested.
-- PostgreSQL schema changes use versioned migrations.
-- Patient files are stored durably in a private container and end-to-end tests pass.
-- Data-protection keys survive restart and are protected appropriately.
-- Predictable seed credentials and unused default accounts are removed.
-- Privileged credentials are rotated and MFA/external identity is addressed.
-- Health/readiness verifies database and required storage dependencies.
-- Logs exclude patient data and secrets and have an approved retention policy.
-- Backup frequency, retention, recovery time objective, recovery point objective, and incident ownership are documented.
-- Monitoring and budget alerts are active and tested.
-- Data residency, privacy, security, and clinical-governance reviews are approved.
-- A staging deployment and rollback procedure have been exercised.
-- A named operator owns routine updates, backup review, access review, and incident response.
-
-## 13. Verification history
-
-### Verified on 2026-08-11
-
-- All 45 tests passed at that point in repository history.
-- Render `/health` returned `200 Healthy`.
-- Admin login worked.
-- Full five-step patient registration saved successfully.
-- The disposable test patient was soft-deleted.
-- Render automatic deployment from `main` was enabled.
-
-### Rechecked on 2026-08-14
-
-- Render `/health` returned body `Healthy` and HTTP `200`.
-- Local HEAD is `bbc6a6c`; `origin/main` is `459e221`.
-- Azure CLI is not installed.
-- A fresh Debug test run did not complete because the shared C# compiler locked `Poms.Web/obj/Debug/net8.0/Poms.Web.dll` (`CS2012`). This is a workstation/process lock, not a test assertion failure.
-- A second Release run with `UseSharedCompilation=false` exceeded the 180-second command limit without returning a conclusive result.
-- The build output reported that `AutoMapper` 12.0.1 has known high-severity advisory `GHSA-rvv3-g6hj-g44x`. Upgrade or otherwise resolve the advisory before production deployment.
-- Therefore, the last conclusive suite result remains the 45-test pass from 2026-08-11. Rerun the suite in a clean process/environment before deployment and record the result here.
-
-## 14. Useful commands
-
-### Repository inspection
-
-```powershell
-git status --short --branch
-git log --oneline --decorate -10
-git diff --check
-git diff --stat
-```
-
-### Build and test
-
-```powershell
-dotnet restore POMS\POMS.sln
-dotnet build POMS\POMS.sln --no-restore
-dotnet test POMS\POMS.sln --no-restore --verbosity minimal
-```
-
-### Local Docker build
-
-```powershell
-docker build --tag poms:handover .
-docker run --rm --publish 8080:8080 --env PORT=8080 poms:handover
-```
-
-Do not run the image against real data without persistent database/file/key configuration.
-
-### Render health
-
-```powershell
-curl.exe --fail --show-error --location --max-time 90 https://poms-motivation.onrender.com/health
-```
-
-## 15. Agent operating rules
-
-1. Start by reading this file and `DEPLOYMENT_HANDOVER.md`.
-2. Check `git status` before modifying anything; preserve user-owned changes.
-3. Confirm current external service state rather than relying on historical status.
-4. Never push `main` casually because Render auto-deploy can erase temporary data.
-5. Never expose or commit cloud/database secrets.
-6. Stop for user action at phone/card verification, legal acceptance, subscription selection, pay-as-you-go authorization, or any unexpected spend.
-7. Resolve the exact Azure subscription and resource targets before creating or deleting anything.
-8. Use a staging environment and reversible deployment path.
-9. Record every created Azure resource, configuration decision, deployment commit, validation result, cost assumption, and rollback step.
-10. Do not claim production readiness until every go-live gate is satisfied.
-
-## 16. Immediate next action
-
-The next agent should not start by changing application code or creating Azure resources. First:
-
-1. Ask the user to connect normal Browser Use or approve installation/authentication of Azure CLI.
-2. Verify the intended Azure account and subscription.
-3. Confirm free-credit eligibility, region, and a monthly budget cap.
-4. Obtain explicit authorization for the expected resources and spend.
-5. Then execute the Azure pilot sequence in Sections 10 and 11.
-
-Until that happens, Render remains the only verified live environment and must be treated as disposable.
-
-## 17. References
-
-- `DEPLOYMENT_HANDOVER.md` — earlier hosting and pricing handover
-- `DEPLOY_CONTABO.md` — Contabo VPS operating path
-- `render.yaml` — current Render blueprint
-- `docker-compose.contabo.yml` — VPS PostgreSQL/application stack
-- Azure account terms: <https://azure.microsoft.com/en-us/pricing/purchase-options/azure-account>
-- Azure free services: <https://azure.microsoft.com/en-us/pricing/free-services/>
-- Azure App Service Linux pricing: <https://azure.microsoft.com/en-us/pricing/details/app-service/linux/>
-- Azure PostgreSQL: <https://azure.microsoft.com/en-us/products/postgresql/>
-- Azure pricing calculator: <https://azure.microsoft.com/en-us/pricing/calculator/>
+- `DEPLOY_RAILWAY.md` — current live deployment
+- `DEPLOY_CONTABO.md` — VPS fallback path
+- `README.md` — application and feature overview
+- `TODO.md` — outstanding requests from the system owner
+- `DEPLOYMENT_HANDOVER.md`, `AGENT_NOTES.md` — historical, describe retired environments
