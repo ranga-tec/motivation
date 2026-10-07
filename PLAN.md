@@ -57,3 +57,18 @@ Status: complete on 2026-10-07. Verification: bearer/cookie scheme-selection tes
    - Prove: configuration keys, token expectations, and remaining OAuth client-registration work are explicit.
 5. Verify both authentication paths and regression safety.
    - Prove: API auth-selection tests and the full Release suite pass; unauthenticated API stays 401 and MVC login redirect stays intact.
+
+# Phase 3 separately deployable API host
+
+Status: complete on 2026-10-07. Verification: independent API host built and ran on port 5015; database health returned 200 against the development database, protected API returned 401, and configured-origin CORS preflight returned 204 with the expected origin.
+
+1. Create a dedicated `Poms.Api` ASP.NET Core host targeting .NET 8.
+   - Prove: it builds and runs independently from `Poms.Web` while sharing the current API controller source during migration.
+2. Configure bearer-only authentication and existing authorization policies.
+   - Prove: startup requires OIDC authority/audience and API endpoints never use MVC cookies.
+3. Add explicit frontend CORS and database configuration.
+   - Prove: only configured origins are allowed; PostgreSQL, SQLite development, and dependency health checks are supported.
+4. Add an API-specific container definition and operations documentation.
+   - Prove: the API can be published/deployed without Razor assets or the MVC process.
+5. Verify independent and combined builds.
+   - Prove: API host tests/smoke checks and the full solution Release suite pass while MVC remains operational.

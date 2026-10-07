@@ -47,6 +47,7 @@ Configure OpenAI with `OPENAI_API_KEY` (or `PatientFormOcr__ApiKey`). Optional o
 ## Documentation
 
 - Phase 1 API boundary and routes: [`POMS/API_PHASE1.md`](POMS/API_PHASE1.md)
+- Separate API host: [`POMS/API_HOST.md`](POMS/API_HOST.md)
 - Current deployment: [`DEPLOY_RAILWAY.md`](DEPLOY_RAILWAY.md)
 - Engineering handover, revision history, known issues: [`AGENT_HANDOVER.md`](AGENT_HANDOVER.md)
 - VPS fallback (Contabo, Kamatera, any Ubuntu host): [`DEPLOY_CONTABO.md`](DEPLOY_CONTABO.md)
