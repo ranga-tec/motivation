@@ -11,7 +11,8 @@
         .ToList();
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="content-page">
+<header class="page-header-professional patient-folder-header">
     <div class="d-flex align-items-center gap-3">
         <div class="patient-folder-photo">
             @if (profilePhoto is not null)
@@ -25,17 +26,18 @@
             }
         </div>
         <div>
-            <h1>Patient Folder</h1>
-            <p class="text-muted mb-0">Patient Number: <strong class="text-primary">@Model.PatientNumber</strong> &mdash; @Model.FullName</p>
+            <span class="page-eyebrow">Patient folder</span>
+            <h1>@Model.FullName</h1>
+            <p class="text-muted mb-0"><strong class="text-primary">@Model.PatientNumber</strong> · @Model.Dob.ToString("dd-MMM-yyyy") · @Model.Center.Name</p>
         </div>
     </div>
-    <div>
-        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">Edit</a>
-        <a asp-controller="Episodes" asp-action="Create" asp-route-patientId="@Model.Id" class="btn btn-success">+ New Record</a>
-        <a asp-controller="Print" asp-action="RegistrationForm" asp-route-patientId="@Model.Id" class="btn btn-outline-secondary" target="_blank">Print Registration Form</a>
-        <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+    <div class="page-actions">
+        <a asp-controller="Episodes" asp-action="Create" asp-route-patientId="@Model.Id" class="btn btn-primary"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i> New record</a>
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Edit patient</a>
+        <a asp-controller="Print" asp-action="RegistrationForm" asp-route-patientId="@Model.Id" class="btn btn-outline-secondary" target="_blank">Print</a>
+        <a asp-action="Index" class="btn btn-link text-secondary">Back to patients</a>
     </div>
-</div>
+</header>
 
 @if (TempData["Success"] != null)
 {
@@ -251,4 +253,5 @@
             </div>
         </div>
     </div>
+</div>
 </div>

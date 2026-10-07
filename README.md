@@ -7,7 +7,7 @@ POMS is an ASP.NET Core MVC application for prosthetic, orthotic, and spinal pat
 - <https://poms-motivation-production.up.railway.app>
 
 One Railway service (`poms-motivation` in project `kind-presence`) backed by a managed PostgreSQL
-database. It exposes `/health` and deploys automatically from GitHub `main`.
+database. It exposes a database-aware `/health` endpoint and deploys automatically from GitHub `main`.
 
 The earlier prototype/production split, the two `motivation-production-*` URLs, and the Render
 demo are all retired. `production-backup` still exists as a branch but backs no live service.
@@ -17,6 +17,8 @@ demo are all retired. `production-backup` still exists as a branch but backs no 
 - PostgreSQL on Railway, reached through `DATABASE_URL`.
 - Uploaded patient files and ASP.NET data-protection keys live on a Railway volume mounted at
   `/app/storage`, so they survive redeploys.
+- Production rejects `/tmp` storage unless `Storage__AllowEphemeral=true` explicitly marks a
+  disposable demo. This exception must never be used for real patient data.
 - Schema is created with `EnsureCreatedAsync()` plus `PostgresSchemaUpgrader`. There are no EF Core
   migrations on the PostgreSQL path, so a destructive schema change needs the upgrader updated.
 
@@ -63,11 +65,9 @@ dotnet test POMS/POMS.sln -c Release
 
 ## Seed Users
 
-Fresh databases seed fixed role accounts and passwords from
-`POMS/src/Poms.Infrastructure/Data/DbInitializer.cs`.
-
-> **Security warning.** Those credentials are committed to this repository and currently work on
-> the live service. Anyone who can read this repository can sign in as an administrator. Rotating
-> a password inside the running app is not durable either, because a fresh database re-seeds the
-> original values. Remove the hard-coded passwords and make first-administrator creation
-> secret-driven before any real patient data is entered.
+Development databases seed fixed demonstration accounts. Production never seeds those passwords.
+A fresh production database requires `BootstrapAdmin__Email` and
+`BootstrapAdmin__Password`; store both as deployment secrets. Once the administrator exists, the
+variables may be removed because subsequent users are managed from the Admin screen. Production
+also refuses to start if an existing demonstration account still uses its public development
+password.

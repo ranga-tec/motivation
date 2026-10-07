@@ -154,7 +154,7 @@
         const indicators = [...form.querySelectorAll("[data-step-indicator]")];
         const back = form.querySelector("[data-wizard-back]");
         const next = form.querySelector("[data-wizard-next]");
-        const submit = form.querySelector("[data-wizard-submit]");
+        const submit = form.querySelector("[data-form-submit], [data-wizard-submit]");
         const stepCount = form.querySelector(".workflow-step-count");
         const progress = form.querySelector('[role="progressbar"]');
         const progressBar = progress?.querySelector(".progress-bar");
@@ -1081,6 +1081,16 @@
         root.querySelectorAll("[data-patient-form]").forEach(initializePatientForm);
         root.querySelectorAll("[data-assessment-form]").forEach(initializeAssessmentForm);
         root.querySelectorAll("select[data-combobox]").forEach(initializeCombobox);
+        root.querySelectorAll("table.table").forEach((table) => {
+            if (table.parentElement?.classList.contains("table-responsive")) return;
+            const wrapper = document.createElement("div");
+            wrapper.className = "table-responsive";
+            wrapper.tabIndex = 0;
+            wrapper.setAttribute("role", "region");
+            wrapper.setAttribute("aria-label", table.getAttribute("aria-label") || "Scrollable data table");
+            table.before(wrapper);
+            wrapper.append(table);
+        });
     }
 
     async function loadModal(trigger) {
@@ -1140,7 +1150,7 @@
         if (!form) return;
         event.preventDefault();
 
-        const submit = form.querySelector("[data-wizard-submit]");
+        const submit = form.querySelector("[data-form-submit], [data-wizard-submit]");
         if (submit) {
             submit.disabled = true;
             submit.setAttribute("aria-busy", "true");

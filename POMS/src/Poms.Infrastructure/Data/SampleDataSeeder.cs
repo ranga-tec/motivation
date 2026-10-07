@@ -1,10 +1,110 @@
 using Microsoft.EntityFrameworkCore;
 using Poms.Domain.Entities;
+using Poms.Domain.Enums;
 
 namespace Poms.Infrastructure.Data;
 
 public static class SampleDataSeeder
 {
+    public static async Task SeedDemoPatientsAsync(PomsDbContext context)
+    {
+        const string demoPrefix = "DEMO-";
+        if (await context.Patients.AnyAsync(p => p.PatientNumber.StartsWith(demoPrefix))) return;
+
+        var ragama = await context.Centers.FirstAsync(c => c.Code == "RAG");
+        var colombo = await context.Centers.FirstAsync(c => c.Code == "COL");
+        var gampaha = await context.Districts.FirstAsync(d => d.Code == "GM");
+        var colomboDistrict = await context.Districts.FirstAsync(d => d.Code == "CO");
+        var western = await context.Provinces.FirstAsync(p => p.Code == "WP");
+        var ragamaCity = await context.Cities.FirstOrDefaultAsync(c => c.DistrictId == gampaha.Id);
+        var colomboCity = await context.Cities.FirstOrDefaultAsync(c => c.DistrictId == colomboDistrict.Id);
+        var doctorReferral = await context.ReferralSources.FirstAsync(r => r.Name == "Doctor referral");
+        var walkIn = await context.ReferralSources.FirstAsync(r => r.Name == "Walk-in");
+        var today = DateOnly.FromDateTime(DateTime.Today);
+
+        Patient BuildPatient(
+            string number, string name, string initials, DateOnly dob, Sex sex,
+            Center center, District district, City? city, string phone, int registrationOffset)
+        {
+            var patient = new Patient
+            {
+                PatientNumber = number,
+                FullName = name,
+                NameWithInitials = initials,
+                Dob = dob,
+                Sex = sex,
+                Employment = "Demo record",
+                Address1 = "Demo address — not a real patient",
+                ProvinceId = western.Id,
+                DistrictId = district.Id,
+                CityId = city?.Id,
+                Email = $"{number.ToLowerInvariant()}@example.com",
+                Nationality = "Sri Lankan",
+                Category = PatientCategory.Local,
+                IdentificationType = IdentificationType.NotApplicable,
+                IdentificationNumber = "N/A",
+                CenterId = center.Id,
+                ReferralSourceId = registrationOffset % 2 == 0 ? doctorReferral.Id : walkIn.Id,
+                AssignedClinicianName = "Demo Clinician",
+                RegistrationDate = today.AddDays(registrationOffset),
+                RegistrationProcessedBy = "Demo Data Seeder",
+                Remarks = "Fictional demonstration record. Do not use for clinical decisions.",
+                GuardianName = "Demo Guardian",
+                GuardianRelationship = "Family member",
+                GuardianMobile = phone,
+                CreatedBy = "demo-seeder"
+            };
+            patient.Contacts.Add(new PatientContact
+            {
+                TelephoneNo = phone,
+                DateConfirmed = today,
+                PersonChecked = "Demo Data Seeder",
+                CreatedBy = "demo-seeder"
+            });
+            return patient;
+        }
+
+        var patients = new[]
+        {
+            BuildPatient("DEMO-0001", "Nimali Perera", "N. Perera", new DateOnly(1988, 4, 12), Sex.Female, ragama, gampaha, ragamaCity, "0770001001", -45),
+            BuildPatient("DEMO-0002", "Kasun Fernando", "K. Fernando", new DateOnly(1976, 9, 3), Sex.Male, colombo, colomboDistrict, colomboCity, "0770001002", -30),
+            BuildPatient("DEMO-0003", "Ayesha Silva", "A. Silva", new DateOnly(1995, 1, 25), Sex.Female, ragama, gampaha, ragamaCity, "0770001003", -18),
+            BuildPatient("DEMO-0004", "Ruwan Jayasinghe", "R. Jayasinghe", new DateOnly(1964, 7, 16), Sex.Male, colombo, colomboDistrict, colomboCity, "0770001004", -8),
+            BuildPatient("DEMO-0005", "Samanthi De Alwis", "S. De Alwis", new DateOnly(2001, 11, 8), Sex.Female, ragama, gampaha, ragamaCity, "0770001005", -2)
+        };
+
+        for (var index = 0; index < patients.Length; index++)
+        {
+            var patient = patients[index];
+            var episode = new Episode
+            {
+                Patient = patient,
+                CenterId = patient.CenterId,
+                RecordDate = today.AddDays(-(index * 6 + 2)),
+                RecordTime = new TimeOnly(9 + index, 0),
+                Status = index == 1 ? RecordStatus.Completed : RecordStatus.Active,
+                Remarks = "Fictional demo clinical record.",
+                CreatedBy = "demo-seeder"
+            };
+            patient.Episodes.Add(episode);
+            patient.Appointments.Add(new Appointment
+            {
+                Patient = patient,
+                Episode = episode,
+                Type = index % 2 == 0 ? AppointmentType.Assessment : AppointmentType.Fitting,
+                AppointmentDate = today.AddDays(index - 2),
+                AppointmentTime = new TimeOnly(9 + index, 30),
+                Status = index < 2 ? AppointmentStatus.Completed : AppointmentStatus.Scheduled,
+                AssignedClinicianName = "Demo Clinician",
+                Notes = "Fictional appointment for UI demonstration.",
+                CreatedBy = "demo-seeder"
+            });
+        }
+
+        context.Patients.AddRange(patients);
+        await context.SaveChangesAsync();
+    }
+
     public static async Task SeedLocationsAsync(PomsDbContext context)
     {
         var provincesByCode = await context.Provinces

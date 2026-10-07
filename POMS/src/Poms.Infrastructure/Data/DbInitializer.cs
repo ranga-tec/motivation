@@ -7,7 +7,20 @@ namespace Poms.Infrastructure.Data;
 
 public static class DbInitializer
 {
-    public static async Task SeedUsersAndRolesAsync(IServiceProvider serviceProvider)
+    private static readonly SeedUser[] DemoUsers =
+    {
+        new("admin@poms.lk", "Admin@123", "ADMIN"),
+        new("clinician@poms.lk", "Clinic@123", "CLINICIAN"),
+        new("registrar@poms.lk", "Data@123", "DATA_ENTRY"),
+        new("viewer@poms.lk", "View@123", "VIEWER"),
+        new("management@poms.lk", "Manage@123", "MANAGEMENT")
+    };
+
+    public static async Task SeedUsersAndRolesAsync(
+        IServiceProvider serviceProvider,
+        bool seedDemoUsers = true,
+        string? bootstrapAdminEmail = null,
+        string? bootstrapAdminPassword = null)
     {
         var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
         var userManager = serviceProvider.GetRequiredService<UserManager<IdentityUser>>();
@@ -20,21 +33,26 @@ public static class DbInitializer
         {
             if (!await roleManager.RoleExistsAsync(roleName))
             {
-                await roleManager.CreateAsync(new IdentityRole(roleName));
+                var roleResult = await roleManager.CreateAsync(new IdentityRole(roleName));
+                if (!roleResult.Succeeded)
+                    throw new InvalidOperationException(FormatIdentityErrors($"Could not create role {roleName}", roleResult));
             }
         }
 
-        // Create Default Users
-        var defaultUsers = new[]
-        {
-            new { Email = "admin@poms.lk", Password = "Admin@123", Role = "ADMIN" },
-            new { Email = "clinician@poms.lk", Password = "Clinic@123", Role = "CLINICIAN" },
-            new { Email = "registrar@poms.lk", Password = "Data@123", Role = "DATA_ENTRY" },
-            new { Email = "viewer@poms.lk", Password = "View@123", Role = "VIEWER" },
-            new { Email = "management@poms.lk", Password = "Manage@123", Role = "MANAGEMENT" }
-        };
+        var usersToCreate = seedDemoUsers
+            ? DemoUsers
+            : BuildProductionBootstrapUsers(bootstrapAdminEmail, bootstrapAdminPassword);
 
-        foreach (var userData in defaultUsers)
+        if (!seedDemoUsers)
+            await RejectKnownDemoPasswordsAsync(userManager);
+
+        if (!seedDemoUsers && usersToCreate.Length == 0 && !await userManager.Users.AnyAsync())
+        {
+            throw new InvalidOperationException(
+                "A fresh production database requires BootstrapAdmin:Email and BootstrapAdmin:Password.");
+        }
+
+        foreach (var userData in usersToCreate)
         {
             var user = await userManager.FindByEmailAsync(userData.Email);
             if (user == null)
@@ -47,10 +65,16 @@ public static class DbInitializer
                 };
 
                 var result = await userManager.CreateAsync(user, userData.Password);
-                if (result.Succeeded)
-                {
-                    await userManager.AddToRoleAsync(user, userData.Role);
-                }
+                if (!result.Succeeded)
+                    throw new InvalidOperationException(FormatIdentityErrors("Could not create bootstrap user", result));
+
+            }
+
+            if (!await userManager.IsInRoleAsync(user, userData.Role))
+            {
+                var roleResult = await userManager.AddToRoleAsync(user, userData.Role);
+                if (!roleResult.Succeeded)
+                    throw new InvalidOperationException(FormatIdentityErrors("Could not assign bootstrap role", roleResult));
             }
         }
 
@@ -83,4 +107,38 @@ public static class DbInitializer
 
         await context.SaveChangesAsync();
     }
+
+    private static SeedUser[] BuildProductionBootstrapUsers(string? email, string? password)
+    {
+        var hasEmail = !string.IsNullOrWhiteSpace(email);
+        var hasPassword = !string.IsNullOrWhiteSpace(password);
+        if (hasEmail != hasPassword)
+        {
+            throw new InvalidOperationException(
+                "BootstrapAdmin:Email and BootstrapAdmin:Password must either both be configured or both be omitted.");
+        }
+
+        return hasEmail && hasPassword
+            ? new[] { new SeedUser(email!, password!, "ADMIN") }
+            : Array.Empty<SeedUser>();
+    }
+
+    private static async Task RejectKnownDemoPasswordsAsync(UserManager<IdentityUser> userManager)
+    {
+        foreach (var demoUser in DemoUsers)
+        {
+            var existingUser = await userManager.FindByEmailAsync(demoUser.Email);
+            if (existingUser is not null && await userManager.CheckPasswordAsync(existingUser, demoUser.Password))
+            {
+                throw new InvalidOperationException(
+                    $"Production account {demoUser.Email} still uses its public development password. " +
+                    "Reset or remove that account before deployment.");
+            }
+        }
+    }
+
+    private static string FormatIdentityErrors(string message, IdentityResult result) =>
+        $"{message}: {string.Join("; ", result.Errors.Select(error => error.Description))}";
+
+    private sealed record SeedUser(string Email, string Password, string Role);
 }

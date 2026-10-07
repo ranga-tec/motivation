@@ -9,7 +9,6 @@
     var submitLabel = isEdit ? "Save patient changes" : "Register patient";
     var cancelAction = isEdit ? "Folder" : "Index";
     var cancelRouteId = isEdit ? Model.Id : (Guid?)null;
-    var startStep = ViewBag.ShowDuplicateWarning == true ? 4 : 0;
     var dobValue = ViewData.ModelState[nameof(Model.Dob)]?.AttemptedValue
         ?? (Model.Dob == default ? "" : Model.Dob.ToString("yyyy-MM-dd"));
     var latestAllowedDob = DateTime.Today.AddDays(-3).ToString("yyyy-MM-dd");
@@ -19,12 +18,10 @@
       asp-route-id="@(isEdit ? Model.Id : null)"
       method="post"
       enctype="multipart/form-data"
-      class="modal-content workflow-wizard patient-wizard"
+      class="modal-content workflow-wizard patient-wizard patient-registration-form"
       id="patientForm"
-      data-workflow-wizard
       data-patient-form
       data-modal-form="@isModal.ToString().ToLowerInvariant()"
-      data-start-step="@startStep"
       novalidate>
     @Html.AntiForgeryToken()
     @if (isEdit)
@@ -48,7 +45,7 @@
         <div>
             <span class="workflow-eyebrow">@eyebrow</span>
             <h1 class="modal-title h5 mb-1" id="patientWizardTitle">@title</h1>
-            <p class="text-secondary small mb-0">Complete one short section at a time. You can go back without losing your entries.</p>
+            <p class="text-secondary small mb-0">Enter the patient’s identity, contact and registration information.</p>
         </div>
         @if (isModal)
         {
@@ -57,22 +54,15 @@
     </header>
 
     <div class="modal-body workflow-body">
-        <div class="workflow-progress" aria-label="Registration progress">
-            <div class="d-flex justify-content-between align-items-center gap-3 mb-2">
-                <p class="workflow-step-count mb-0" aria-live="polite">Step 1 of 5</p>
-                <span class="small text-secondary">Fields marked <span aria-hidden="true">*</span> are required</span>
+        <nav class="registration-section-nav" aria-label="Patient registration sections">
+            <span class="small text-secondary">Fields marked <span aria-hidden="true">*</span> are required</span>
+            <div class="registration-section-links">
+                <a href="#patientIdentitySection">Identity</a>
+                <a href="#patientContactSection">Contact</a>
+                <a href="#patientGuardianSection">Guardian</a>
+                <a href="#patientRegistrationSection">Registration</a>
             </div>
-            <div class="progress" role="progressbar" aria-label="Patient registration progress" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1">
-                <div class="progress-bar" style="width: 20%"></div>
-            </div>
-            <ol class="workflow-stepper list-unstyled mb-0">
-                <li data-step-indicator class="is-current" aria-current="step"><span>1</span><strong>Identity</strong></li>
-                <li data-step-indicator><span>2</span><strong>Contact</strong></li>
-                <li data-step-indicator><span>3</span><strong>Guardian</strong></li>
-                <li data-step-indicator><span>4</span><strong>Registration</strong></li>
-                <li data-step-indicator><span>5</span><strong>Review</strong></li>
-            </ol>
-        </div>
+        </nav>
 
         <div asp-validation-summary="All" class="alert alert-danger validation-summary-valid" role="alert" tabindex="-1"></div>
 
@@ -134,7 +124,7 @@
             </div>
         }
 
-        <section data-wizard-step class="workflow-step" aria-labelledby="patientStepIdentity">
+        <section id="patientIdentitySection" class="workflow-step registration-section" aria-labelledby="patientStepIdentity">
             <div class="workflow-section-heading">
                 <h2 id="patientStepIdentity">Patient identity</h2>
                 <p>Start with the details used to identify the patient and prevent duplicate records.</p>
@@ -243,7 +233,7 @@
             </div>
         </section>
 
-        <section data-wizard-step class="workflow-step" aria-labelledby="patientStepContact" hidden>
+        <section id="patientContactSection" class="workflow-step registration-section" aria-labelledby="patientStepContact">
             <div class="workflow-section-heading">
                 <h2 id="patientStepContact">Contact and location</h2>
                 <p>Record where the patient lives and the safest ways to contact them.</p>
@@ -374,7 +364,7 @@
             </fieldset>
         </section>
 
-        <section data-wizard-step class="workflow-step" aria-labelledby="patientStepGuardian" hidden>
+        <section id="patientGuardianSection" class="workflow-step registration-section" aria-labelledby="patientStepGuardian">
             <div class="workflow-section-heading">
                 <h2 id="patientStepGuardian">Guardian or carer</h2>
                 <p>Add the primary person supporting the patient.</p>
@@ -419,7 +409,7 @@
             </div>
         </section>
 
-        <section data-wizard-step class="workflow-step" aria-labelledby="patientStepRegistration" hidden>
+        <section id="patientRegistrationSection" class="workflow-step registration-section" aria-labelledby="patientStepRegistration">
             <div class="workflow-section-heading">
                 <h2 id="patientStepRegistration">Registration details</h2>
                 <p>Finish the administrative information for this registration.</p>
@@ -471,18 +461,10 @@
             </div>
         </section>
 
-        <section data-wizard-step class="workflow-step" aria-labelledby="patientStepReview" hidden>
-            <div class="workflow-section-heading">
-                <h2 id="patientStepReview">Review and confirm</h2>
-                <p>Check the key details before saving the patient record.</p>
-            </div>
-
-            <div class="review-panel" data-wizard-review aria-live="polite"></div>
-            <div class="alert alert-info mt-4 mb-0">
-                <i class="fa-solid fa-shield-halved me-2" aria-hidden="true"></i>
-                Patient information is sensitive. Confirm that it matches the source documents before saving.
-            </div>
-        </section>
+        <div class="registration-privacy-note alert alert-info">
+            <i class="fa-solid fa-shield-halved me-2" aria-hidden="true"></i>
+            Patient information is sensitive. Confirm that it matches the source documents before saving.
+        </div>
     </div>
 
     <footer class="modal-footer workflow-footer">
@@ -496,16 +478,8 @@
                 <a asp-action="@cancelAction" asp-route-id="@cancelRouteId" class="btn btn-link text-secondary">Cancel</a>
             }
         </div>
-        <p class="workflow-shortcut-hint small text-secondary mb-0 me-2 d-none d-lg-block">
-            <kbd>Enter</kbd> next field group · <kbd>Alt</kbd>+<kbd>&larr;</kbd>/<kbd>&rarr;</kbd> change step
-        </p>
-        <button type="button" class="btn btn-outline-secondary" data-wizard-back hidden>
-            <i class="fa-solid fa-arrow-left me-1" aria-hidden="true"></i> Back
-        </button>
-        <button type="button" class="btn btn-primary" data-wizard-next>
-            Continue <i class="fa-solid fa-arrow-right ms-1" aria-hidden="true"></i>
-        </button>
-        <button type="submit" class="btn btn-success" data-wizard-submit hidden>
+        <p class="small text-secondary mb-0 me-2 d-none d-lg-block">Review required fields before saving.</p>
+        <button type="submit" class="btn btn-success" data-form-submit>
             <i class="fa-solid fa-check me-1" aria-hidden="true"></i> @submitLabel
         </button>
     </footer>

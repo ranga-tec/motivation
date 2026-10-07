@@ -6,17 +6,18 @@
     var typeLabels = typeOptions.ToDictionary(option => int.Parse(option.Value), option => option.Text);
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>Appointments / Date-Based Actions</h1>
-    <a asp-action="Create" class="btn btn-primary">+ New Appointment</a>
-</div>
+<div class="content-page">
+<header class="page-header-professional">
+    <div><span class="page-eyebrow">Scheduling</span><h1>Appointments</h1><p>Review scheduled care, complete visits, or record schedule changes.</p></div>
+    <div class="page-actions"><a asp-action="Create" class="btn btn-primary"><i class="fa-regular fa-calendar-plus me-1" aria-hidden="true"></i> New appointment</a></div>
+</header>
 
 @if (ViewBag.Type == null)
 {
     <p class="text-muted small">Delivery appointments are not shown here by default — track deliveries via <a asp-controller="Reports" asp-action="Delivery">Delivery Report</a> or the patient folder. Select "Delivery" below to view them in this list.</p>
 }
 
-<form asp-action="Index" method="get" class="row g-3 mb-3">
+<form asp-action="Index" method="get" class="row g-3 mb-4 p-3 filter-panel">
     <div class="col-md-3">
         <input type="date" name="date" value="@ViewBag.Date" class="form-control" />
     </div>
@@ -43,6 +44,8 @@
     </div>
 </form>
 
+<section class="surface-card">
+<div class="surface-card-header"><h2>Appointment schedule</h2><span class="small text-secondary">@Model.Count() appointment(s)</span></div>
 <table class="table table-striped">
     <thead><tr><th>Date</th><th>Patient</th><th>Type</th><th>Handled by</th><th>Status</th><th>Notes</th><th>Actions</th></tr></thead>
     <tbody>
@@ -191,3 +194,5 @@
         }
     </tbody>
 </table>
+</section>
+</div>

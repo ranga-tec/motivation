@@ -5,13 +5,12 @@
     ViewData["Title"] = "Clinical Records";
 }
 
-<div class="row">
-    <div class="col-md-12">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2>Clinical Records</h2>
-        </div>
+<div class="content-page">
+        <header class="page-header-professional">
+            <div><span class="page-eyebrow">Clinical care</span><h1>Clinical records</h1><p>Find and continue active patient episodes.</p></div>
+        </header>
 
-        <div class="card">
+        <div class="surface-card">
             <div class="card-header">
                 <form asp-action="Index" method="get" class="row g-3">
                     <div class="col-md-5">
@@ -107,12 +106,8 @@
                 }
                 else
                 {
-                    <div class="text-center py-4">
-                        <h5 class="text-muted">No records found</h5>
-                        <p class="text-muted">Records are created from a patient's folder.</p>
-                    </div>
+                    <div class="empty-state"><i class="fa-solid fa-folder-open" aria-hidden="true"></i><strong class="d-block text-body mb-1">No records found</strong>Records are created from a patient’s folder.</div>
                 }
             </div>
         </div>
-    </div>
 </div>

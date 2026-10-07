@@ -78,7 +78,8 @@ builder.Services.AddDbContext<PomsDbContext>(options =>
 });
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks()
+    .AddCheck<PomsDatabaseHealthCheck>("database");
 builder.Services.Configure<VersionSwitchOptions>(builder.Configuration.GetSection("VersionSwitch"));
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
@@ -114,8 +115,13 @@ var maxFileSizeMB = fileStorageConfig.GetValue<long>("MaxFileSizeMB", 10);
 var allowedExtensions = fileStorageConfig.GetSection("AllowedExtensions").Get<string[]>();
 var dataProtectionKeysPath = builder.Configuration["DataProtection:KeysPath"]
     ?? (OperatingSystem.IsWindows() ? Path.Combine(rootPath, "data-protection-keys") : "/app/data-protection-keys");
+var allowEphemeralStorage = builder.Configuration.GetValue<bool>("Storage:AllowEphemeral");
 
-Directory.CreateDirectory(dataProtectionKeysPath);
+StoragePathValidator.Validate(
+    rootPath,
+    dataProtectionKeysPath,
+    builder.Environment.IsProduction(),
+    allowEphemeralStorage);
 
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
@@ -198,18 +204,27 @@ using (var scope = app.Services.CreateScope())
             await context.Database.MigrateAsync();
         }
 
-        await DbInitializer.SeedUsersAndRolesAsync(services);
+        await DbInitializer.SeedUsersAndRolesAsync(
+            services,
+            seedDemoUsers: app.Environment.IsDevelopment(),
+            bootstrapAdminEmail: builder.Configuration["BootstrapAdmin:Email"],
+            bootstrapAdminPassword: builder.Configuration["BootstrapAdmin:Password"]);
         await SampleDataSeeder.SeedLocationsAsync(context);
         await SampleDataSeeder.SeedReferralSourcesAsync(context);
         await SampleDataSeeder.SeedMainProblemTypesAsync(context);
         await SampleDataSeeder.SeedCauseReasonTypesAsync(context);
         await SampleDataSeeder.SeedNationalitiesAsync(context);
         await SampleDataSeeder.SeedDeviceCatalogAsync(context);
+        if (app.Environment.IsDevelopment())
+        {
+            await SampleDataSeeder.SeedDemoPatientsAsync(context);
+        }
         Log.Information("Database seeded successfully");
     }
     catch (Exception ex)
     {
-        Log.Error(ex, "An error occurred seeding the database");
+        Log.Fatal(ex, "Database initialization failed; application startup has been aborted");
+        throw;
     }
 }
 

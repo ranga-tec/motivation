@@ -57,6 +57,8 @@ DATABASE_URL=${{Postgres.DATABASE_URL}}
 UsePostgreSQL=true
 FileStorage__RootPath=/app/storage/uploads
 DataProtection__KeysPath=/app/storage/data-protection-keys
+BootstrapAdmin__Email=<initial administrator email; required only for a fresh database>
+BootstrapAdmin__Password=<strong deployment secret; required only for a fresh database>
 Security__ForceHttps=false
 DOTNET_USE_POLLING_FILE_WATCHER=1
 ```
@@ -72,6 +74,16 @@ in-app HTTPS redirection there causes a redirect loop. The public URL is still H
 There must be no `ConnectionStrings__DefaultConnection` variable. An earlier deployment carried
 `Data Source=/tmp/poms-local.db`, which put the whole system on an ephemeral SQLite file.
 
+Do not set `Storage__AllowEphemeral=true` on Railway. That escape hatch exists only for disposable
+demonstrations that intentionally use `/tmp`; production storage must remain on the mounted volume.
+
+Existing production databases do not need the bootstrap variables. Fresh databases fail startup
+without both values, preventing deployment with the source-controlled development passwords.
+
+Before deploying this hardening change to a database created by an older build, reset or remove
+all five development accounts from the Admin screen. Production startup intentionally fails if
+any account still accepts its public development password.
+
 ## Schema Creation
 
 `Program.cs` detects `DATABASE_URL`, converts it to an Npgsql connection string, then calls
@@ -85,7 +97,7 @@ schema change that renames or drops something.
 ## Smoke Checks
 
 ```bash
-curl https://poms-motivation-production.up.railway.app/health      # expects: Healthy
+curl https://poms-motivation-production.up.railway.app/health      # expects: Healthy, including database connectivity
 curl -I https://poms-motivation-production.up.railway.app/         # expects: 302 to /Identity/Account/Login
 railway logs --service poms-motivation | tail -20                  # expects: "Database seeded successfully"
 railway status                                                     # expects both services Online

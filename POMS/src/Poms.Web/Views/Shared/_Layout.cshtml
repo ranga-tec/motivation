@@ -1,4 +1,10 @@
 ﻿<!DOCTYPE html>
+@{
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    string NavClass(string controller) => string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase)
+        ? "nav-link active"
+        : "nav-link";
+}
 <html lang="en" data-bs-theme="light" data-poms-theme="classic">
 <head>
     <meta charset="utf-8" />
@@ -24,24 +30,24 @@
                 <div id="primaryNavigation" class="navbar-collapse collapse">
                     <ul class="navbar-nav me-auto">
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Home" asp-action="Index">Dashboard</a>
+                            <a class="@NavClass("Home")" asp-controller="Home" asp-action="Index" aria-current="@(currentController == "Home" ? "page" : null)">Dashboard</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Patients" asp-action="Index">Patient Folder</a>
+                            <a class="@NavClass("Patients")" asp-controller="Patients" asp-action="Index" aria-current="@(currentController == "Patients" ? "page" : null)">Patients</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Episodes" asp-action="Index">Clinical Records</a>
+                            <a class="@NavClass("Episodes")" asp-controller="Episodes" asp-action="Index" aria-current="@(currentController == "Episodes" ? "page" : null)">Clinical Records</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Appointments" asp-action="Index">Appointments</a>
+                            <a class="@NavClass("Appointments")" asp-controller="Appointments" asp-action="Index" aria-current="@(currentController == "Appointments" ? "page" : null)">Appointments</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Reports" asp-action="Index">Reports</a>
+                            <a class="@NavClass("Reports")" asp-controller="Reports" asp-action="Index" aria-current="@(currentController == "Reports" ? "page" : null)">Reports</a>
                         </li>
                         @if (User.IsInRole("ADMIN"))
                         {
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="Admin" asp-action="Index">Admin</a>
+                                <a class="@NavClass("Admin")" asp-controller="Admin" asp-action="Index" aria-current="@(currentController == "Admin" ? "page" : null)">Admin</a>
                             </li>
                         }
                     </ul>

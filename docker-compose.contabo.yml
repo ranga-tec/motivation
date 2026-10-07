@@ -33,6 +33,8 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-poms}:${POSTGRES_PASSWORD:-change-this-now}@poms-db:5432/${POSTGRES_DB:-poms}
       FileStorage__RootPath: /app/storage
       DataProtection__KeysPath: /app/data-protection-keys
+      BootstrapAdmin__Email: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BootstrapAdmin__Password: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       Security__ForceHttps: ${SECURITY_FORCE_HTTPS:-false}
     ports:
       - "${POMS_HOST_PORT:-8081}:8080"

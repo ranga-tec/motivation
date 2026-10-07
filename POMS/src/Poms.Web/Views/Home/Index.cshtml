@@ -4,58 +4,52 @@
     ViewData["Title"] = "Dashboard";
 }
 
-<h1 class="mb-4">Exceed Lanka Prosthetic &amp; Orthotic Data Management System</h1>
-
-<div class="row">
-    <div class="col-md-3">
-        <a asp-controller="Patients" asp-action="Index" class="text-decoration-none">
-            <div class="card text-white bg-primary mb-3">
-                <div class="card-body">
-                    <h5 class="card-title">Total Patients</h5>
-                    <h2 class="card-text">@ViewBag.TotalPatients</h2>
-                </div>
-            </div>
+<div class="content-page">
+<header class="page-header-professional">
+    <div>
+        <span class="page-eyebrow">Operations overview</span>
+        <h1>Dashboard</h1>
+        <p>Today’s appointments, active patient records, and frequently used actions.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-controller="Patients" asp-action="Create" class="btn btn-primary">
+            <i class="fa-solid fa-user-plus me-1" aria-hidden="true"></i> Register patient
         </a>
     </div>
-    <div class="col-md-3">
-        <a asp-controller="Home" asp-action="ActiveRecordsDrillDown" class="text-decoration-none">
-            <div class="card text-white bg-success mb-3">
-                <div class="card-body">
-                    <h5 class="card-title">Active Records</h5>
-                    <h2 class="card-text">@ViewBag.ActiveRecords</h2>
-                </div>
-            </div>
-        </a>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-secondary mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Active Patients</h5>
-                <h2 class="card-text">@ViewBag.ActivePatients</h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-info mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Today's Activities</h5>
-                <p class="mb-0">Assessments: @ViewBag.TodaysAssessments</p>
-                <p class="mb-0">Fittings: @ViewBag.TodaysFittings</p>
-                <p class="mb-0">Deliveries: @ViewBag.TodaysDeliveries</p>
-            </div>
-        </div>
-    </div>
-</div>
+</header>
 
-<div class="card mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Appointments / Date-Based Actions</h5>
+<section class="metric-grid mb-4" aria-label="Service overview">
+    <a asp-controller="Patients" asp-action="Index" class="metric-card">
+        <span class="metric-card-label"><i class="fa-solid fa-users" aria-hidden="true"></i> Total patients</span>
+        <strong class="metric-card-value">@ViewBag.TotalPatients</strong>
+        <span class="metric-card-detail">View patient directory</span>
+    </a>
+    <a asp-controller="Home" asp-action="ActiveRecordsDrillDown" class="metric-card">
+        <span class="metric-card-label"><i class="fa-solid fa-folder-open" aria-hidden="true"></i> Active records</span>
+        <strong class="metric-card-value">@ViewBag.ActiveRecords</strong>
+        <span class="metric-card-detail">Open clinical workload</span>
+    </a>
+    <div class="metric-card">
+        <span class="metric-card-label"><i class="fa-solid fa-user-check" aria-hidden="true"></i> Active patients</span>
+        <strong class="metric-card-value">@ViewBag.ActivePatients</strong>
+        <span class="metric-card-detail">Currently receiving care</span>
+    </div>
+    <div class="metric-card">
+        <span class="metric-card-label"><i class="fa-solid fa-calendar-day" aria-hidden="true"></i> Today’s activity</span>
+        <strong class="metric-card-value">@((int)ViewBag.TodaysAssessments + (int)ViewBag.TodaysFittings + (int)ViewBag.TodaysDeliveries)</strong>
+        <span class="metric-card-detail">@ViewBag.TodaysAssessments assessments · @ViewBag.TodaysFittings fittings · @ViewBag.TodaysDeliveries deliveries</span>
+    </div>
+</section>
+
+<section class="surface-card mb-4">
+    <div class="surface-card-header">
+        <div><span class="page-eyebrow">Today</span><h2>Appointments and scheduled actions</h2></div>
         <div>
             <a asp-controller="Appointments" asp-action="Index" class="btn btn-sm btn-outline-primary">View Appointments</a>
             <a asp-controller="Appointments" asp-action="Create" class="btn btn-sm btn-primary">+ New Appointment</a>
         </div>
     </div>
-    <div class="card-body">
+    <div class="p-0">
         @{
             var todaysAppointments = ViewBag.TodaysAppointments as IEnumerable<Poms.Domain.Entities.Appointment>;
         }
@@ -84,19 +78,17 @@
         }
         else
         {
-            <p class="text-muted mb-0">No appointments scheduled for today.</p>
+            <div class="empty-state"><i class="fa-regular fa-calendar-check" aria-hidden="true"></i>No appointments scheduled for today.</div>
         }
     </div>
-</div>
+</section>
 
-<div class="row mt-2">
-    <div class="col-md-6">
-        <div class="card mb-3">
-            <div class="card-header"><h5 class="mb-0">Quick Actions</h5></div>
-            <div class="card-body">
-                <a asp-controller="Patients" asp-action="Create" class="btn btn-primary mb-2 d-block">Register New Patient</a>
-                <a asp-controller="Episodes" asp-action="Create" class="btn btn-success mb-2 d-block">Create New Record / Assessment</a>
-                <a asp-controller="Appointments" asp-action="Create" class="btn btn-info mb-2 d-block">Create New Appointment</a>
+<div class="dashboard-layout">
+    <section class="surface-card">
+            <div class="surface-card-header"><h2>Quick actions</h2></div>
+            <div class="p-3 quick-action-list">
+                <a asp-controller="Episodes" asp-action="Create" class="quick-action-primary"><span><i class="fa-solid fa-notes-medical me-2" aria-hidden="true"></i>Create clinical record</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+                <a asp-controller="Appointments" asp-action="Create" class="quick-action-primary"><span><i class="fa-regular fa-calendar-plus me-2" aria-hidden="true"></i>Schedule appointment</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
 
                 @{
                     var quickActionPatients = ViewBag.Patients as SelectList;
@@ -144,12 +136,10 @@
                     <button type="submit" class="btn btn-outline-warning">Go</button>
                 </form>
             </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card mb-3">
-            <div class="card-header"><h5 class="mb-0">Recent Activities</h5></div>
-            <div class="card-body" style="max-height: 360px; overflow-y: auto;">
+    </section>
+    <section class="surface-card">
+            <div class="surface-card-header"><h2>Recent activity</h2></div>
+            <div style="max-height: 420px; overflow-y: auto;">
                 @{
                     var recent = ViewBag.RecentActivities as List<RecentActivityItem>;
                 }
@@ -173,11 +163,11 @@
                 }
                 else
                 {
-                    <p class="text-muted mb-0">No recent activity.</p>
+                    <div class="empty-state"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>No recent activity.</div>
                 }
             </div>
-        </div>
-    </div>
+    </section>
+</div>
 </div>
 
 @section Scripts {

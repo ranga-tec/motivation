@@ -25,5 +25,11 @@ services:
         value: /tmp/poms-storage
       - key: DataProtection__KeysPath
         value: /tmp/poms-data-protection-keys
+      - key: Storage__AllowEphemeral
+        value: "true"
+      - key: BootstrapAdmin__Email
+        value: admin@poms-demo.invalid
+      - key: BootstrapAdmin__Password
+        generateValue: true
       - key: Security__ForceHttps
         value: "false"
