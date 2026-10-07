@@ -68,6 +68,12 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("ManagementOrAdmin", policy => policy.RequireRole("MANAGEMENT", "ADMIN"));
     options.AddPolicy("ReportOrAdmin", policy => policy.RequireRole("VIEWER", "MANAGEMENT", "ADMIN"));
     options.AddPolicy("AnyAuthenticatedUser", policy => policy.RequireAuthenticatedUser());
+    options.AddPolicy("ApiWrite", policy => policy
+        .RequireAuthenticatedUser()
+        .RequireAssertion(context =>
+            context.Resource is HttpContext httpContext &&
+            httpContext.Request.Headers.Authorization.ToString()
+                .StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)));
 });
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
@@ -81,6 +87,9 @@ builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
 }));
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IRestrictedAccessService, RestrictedAccessService>();
+builder.Services.AddScoped<IPatientNumberService, PatientNumberService>();
+builder.Services.AddScoped<IDuplicateCheckService, DuplicateCheckService>();
+builder.Services.AddScoped<IAppointmentAssigneeService, AppointmentAssigneeService>();
 builder.Services.AddControllers();
 builder.Services.AddHealthChecks().AddCheck<PomsApiDatabaseHealthCheck>("database");
 

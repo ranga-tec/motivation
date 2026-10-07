@@ -1,6 +1,6 @@
 # Phase 1 API Boundary
 
-POMS now exposes a read-only, versioned API beside the existing ASP.NET Core MVC application.
+POMS exposes a versioned API beside the existing ASP.NET Core MVC application.
 Razor routes and forms remain the production UI while mobile, integration, and future React clients
 can be developed against stable DTO contracts.
 
@@ -10,6 +10,8 @@ can be developed against stable DTO contracts.
 | --- | --- | --- | --- |
 | `GET` | `/api/v1/patients` | `DataEntry` | Search and page patients |
 | `GET` | `/api/v1/patients/{id}` | `DataEntry` | Get one patient |
+| `GET` | `/api/v1/patients/registration-options` | `DataEntry` | Get active locations, centres, referrals, and assignees |
+| `POST` | `/api/v1/patients` | `DataEntry` + bearer-only `ApiWrite` | Register a patient |
 | `GET` | `/api/v1/appointments` | `AnyAuthenticatedUser` | Filter and page visible appointments |
 | `GET` | `/api/v1/appointments/{id}` | `AnyAuthenticatedUser` | Get one visible appointment |
 
@@ -40,6 +42,10 @@ audience values fails startup rather than accepting unverifiable tokens.
 The application does not issue access tokens. Before external use, configure mobile/SPA and
 machine-to-machine clients at the selected OIDC authority, map its role or scope claims to POMS
 authorization policies, add rate limits, and define an external integration audit policy.
+
+Write routes require an explicit bearer token even when hosted inside `Poms.Web`; Identity cookies
+cannot invoke them. Patient registration returns `201 Created`, `400` validation problems, or `409`
+duplicate-review problems. Photo and legacy OCR import remain in MVC until object storage is added.
 
 ## Compatibility rule
 

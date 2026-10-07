@@ -10,7 +10,7 @@ export function DashboardPage() {
   const appointments = useApi(() => api.appointments({ dateFrom: today, dateTo: today, pageSize: 5 }), `dashboard-appointments-${today}`)
   const retry = () => { patients.refresh(); appointments.refresh() }
   return <>
-    <PageHeader eyebrow="Wednesday, 7 October" title="Good morning" description="Here is what needs attention across your clinical services today." action={<Link className="button primary" to="/patients"><UserRoundPlus size={18} /> Register patient</Link>} />
+    <PageHeader eyebrow="Wednesday, 7 October" title="Good morning" description="Here is what needs attention across your clinical services today." action={<Link className="button primary" to="/patients/new"><UserRoundPlus size={18} /> Register patient</Link>} />
     <section className="metrics" aria-label="Daily summary">
       <article><span className="metric-icon blue"><CalendarCheck /></span><div><span>Today's appointments</span><strong>{appointments.data?.totalCount ?? '—'}</strong><small>Across all centres</small></div></article>
       <article><span className="metric-icon teal"><Clock3 /></span><div><span>Awaiting consultation</span><strong>{appointments.data?.items.filter((x) => x.status !== 'Completed').length ?? '—'}</strong><small>Requires attention</small></div></article>

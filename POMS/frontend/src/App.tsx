@@ -4,6 +4,7 @@ import { AuthCallback, ProtectedRoute, SignInPage } from './auth/AuthProvider'
 import { AppointmentsPage } from './pages/AppointmentsPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { PatientsPage } from './pages/PatientsPage'
+import { PatientRegistrationPage } from './pages/PatientRegistrationPage'
 import './App.css'
 
 export default function App() {
@@ -15,6 +16,7 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route index element={<DashboardPage />} />
           <Route path="patients" element={<PatientsPage />} />
+          <Route path="patients/new" element={<PatientRegistrationPage />} />
           <Route path="appointments" element={<AppointmentsPage />} />
         </Route>
       </Route>

@@ -9,7 +9,7 @@ const navigation = [
   { to: '/patients', label: 'Patients', icon: Users },
   { to: '/appointments', label: 'Appointments', icon: CalendarDays },
 ]
-const titles: Record<string, string> = { '/': 'Overview', '/patients': 'Patients', '/appointments': 'Appointments' }
+const titles: Record<string, string> = { '/': 'Overview', '/patients': 'Patients', '/patients/new': 'Register patient', '/appointments': 'Appointments' }
 
 export function AppShell() {
   const [open, setOpen] = useState(false)

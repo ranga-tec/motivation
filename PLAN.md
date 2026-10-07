@@ -87,3 +87,19 @@ Status: complete on 2026-10-07. Verification: frontend lint and production build
    - Prove: desktop and mobile layouts include loading, error, empty, search/filter, and pagination states; local demo mode is visibly identified and cannot activate implicitly in production.
 5. Verify, document, commit, and push the phase.
    - Prove: lint/build pass, Playwright browser checks cover desktop and mobile, deployment variables are documented, and the commit reaches `origin/main`.
+
+# Phase 5 React patient registration
+
+Status: complete on 2026-10-07. Verification: frontend lint/build passed; the separate API built; 83/83 .NET tests passed; Playwright verified required-field blocking, a complete registration, completion feedback, direct-route refresh, responsive mobile layout, and zero console warnings.
+
+1. Define versioned registration and reference-data API contracts.
+   - Prove: request DTO validation matches the existing patient rules, responses do not expose EF entities, and dropdown values come from the database.
+2. Add the secured patient creation endpoint.
+   - Prove: the DataEntry policy protects creation; location, assignee, duplicate, patient-number, contact, and audit fields use existing domain services and rules.
+3. Add focused API tests for successful and rejected registrations.
+   - Prove: tests cover persistence, exact duplicates, possible-duplicate confirmation, and invalid location relationships.
+   - Verification correction: adding registration dependencies changed the controller constructor and initially broke existing direct-controller tests. Route all patient API tests through one real-service factory before adding new scenarios.
+4. Replace the React placeholder with a professional registration workflow.
+   - Prove: the form loads reference data, validates required and conditional fields, handles duplicate confirmation, prevents double-submit, and shows the created patient number.
+5. Verify, document, commit, and push the phase.
+   - Prove: frontend lint/build, .NET tests, and Playwright desktop/mobile/invalid/submit flows pass; the commit reaches `origin/main`.

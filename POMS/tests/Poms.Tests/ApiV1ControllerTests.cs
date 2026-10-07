@@ -21,7 +21,7 @@ public sealed class ApiV1ControllerTests
     {
         await using var database = await CreateDatabaseAsync();
         var patient = await SeedPatientAsync(database.Context);
-        var controller = new PatientsApiController(database.Context);
+        var controller = CreatePatientsController(database.Context);
 
         var action = await controller.List(
             new PatientListQuery { Search = patient.PatientNumber, PageSize = 10 },
@@ -38,7 +38,7 @@ public sealed class ApiV1ControllerTests
     public async Task PatientsGet_ReturnsNotFoundForUnknownPatient()
     {
         await using var database = await CreateDatabaseAsync();
-        var controller = new PatientsApiController(database.Context);
+        var controller = CreatePatientsController(database.Context);
 
         var action = await controller.Get(Guid.NewGuid(), CancellationToken.None);
 
@@ -93,6 +93,130 @@ public sealed class ApiV1ControllerTests
         problem.Errors.Should().ContainKey(nameof(AppointmentListQuery.DateTo));
     }
 
+    [Fact]
+    public async Task PatientsCreate_PersistsPatientAndReturnsCreatedContract()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var existing = await SeedPatientAsync(database.Context);
+        var controller = SetUser(CreatePatientsController(database.Context));
+        var request = ValidCreateRequest(existing) with
+        {
+            FullName = "New API Patient",
+            NameWithInitials = "N. Patient",
+            IdentificationType = IdentificationType.NIC,
+            IdentificationNumber = "NEW-API-NIC"
+        };
+
+        var action = await controller.Create(request, CancellationToken.None);
+
+        var created = action.Result.Should().BeOfType<CreatedAtActionResult>();
+        var response = created.Which.Value.Should().BeOfType<PatientDetailResponse>().Subject;
+        response.PatientNumber.Should().MatchRegex(@"^2026/\d{4}$");
+        response.FullName.Should().Be("New API Patient");
+        var stored = await database.Context.Patients.SingleAsync(item => item.Id == response.Id);
+        stored.CreatedBy.Should().Be("clinician@poms.lk");
+        stored.AssignedClinicianName.Should().Be("Test Prosthetist");
+    }
+
+    [Fact]
+    public async Task PatientsCreate_RejectsExactIdentificationDuplicate()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var existing = await SeedPatientAsync(database.Context, IdentificationType.NIC, "EXISTING-NIC");
+        var controller = SetUser(CreatePatientsController(database.Context));
+        var request = ValidCreateRequest(existing) with
+        {
+            FullName = "Different Name",
+            IdentificationType = IdentificationType.NIC,
+            IdentificationNumber = "EXISTING-NIC"
+        };
+
+        var action = await controller.Create(request, CancellationToken.None);
+
+        var conflict = action.Result.Should().BeOfType<ConflictObjectResult>();
+        var problem = conflict.Which.Value.Should().BeOfType<ProblemDetails>().Subject;
+        problem.Extensions["duplicateType"].Should().Be("exact");
+    }
+
+    [Fact]
+    public async Task PatientsCreate_RequiresConfirmationForPossibleDuplicate()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var existing = await SeedPatientAsync(database.Context);
+        var controller = SetUser(CreatePatientsController(database.Context));
+        var request = ValidCreateRequest(existing) with
+        {
+            IdentificationType = IdentificationType.NIC,
+            IdentificationNumber = "UNIQUE-NIC"
+        };
+
+        var action = await controller.Create(request, CancellationToken.None);
+
+        var conflict = action.Result.Should().BeOfType<ConflictObjectResult>();
+        var problem = conflict.Which.Value.Should().BeOfType<ProblemDetails>().Subject;
+        problem.Extensions["duplicateType"].Should().Be("possible");
+    }
+
+    [Fact]
+    public async Task PatientsCreate_AllowsReviewedPossibleDuplicate()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var existing = await SeedPatientAsync(database.Context);
+        var controller = SetUser(CreatePatientsController(database.Context));
+        var request = ValidCreateRequest(existing) with
+        {
+            IdentificationType = IdentificationType.NIC,
+            IdentificationNumber = "REVIEWED-UNIQUE-NIC",
+            ConfirmPossibleDuplicate = true
+        };
+
+        var action = await controller.Create(request, CancellationToken.None);
+
+        action.Result.Should().BeOfType<CreatedAtActionResult>();
+        (await database.Context.Patients.CountAsync()).Should().Be(2);
+    }
+
+    [Fact]
+    public async Task PatientsCreate_RejectsDistrictFromAnotherProvince()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var existing = await SeedPatientAsync(database.Context);
+        var controller = SetUser(CreatePatientsController(database.Context));
+        var request = ValidCreateRequest(existing) with { ProvinceId = existing.ProvinceId + 999 };
+
+        var action = await controller.Create(request, CancellationToken.None);
+
+        var badRequest = action.Result.Should().BeOfType<BadRequestObjectResult>();
+        var problem = badRequest.Which.Value.Should().BeOfType<ValidationProblemDetails>().Subject;
+        problem.Errors.Should().ContainKey(nameof(CreatePatientRequest.DistrictId));
+    }
+
+    private static PatientsApiController CreatePatientsController(PomsDbContext context) => new(
+        context,
+        new PatientNumberService(context),
+        new DuplicateCheckService(context),
+        new AppointmentAssigneeService(context));
+
+    private static CreatePatientRequest ValidCreateRequest(Patient reference) => new()
+    {
+        FullName = reference.FullName,
+        NameWithInitials = reference.NameWithInitials,
+        DateOfBirth = reference.Dob,
+        Sex = reference.Sex,
+        Category = reference.Category,
+        IdentificationType = IdentificationType.NotApplicable,
+        Address1 = "New API address",
+        ProvinceId = reference.ProvinceId,
+        DistrictId = reference.DistrictId,
+        CityOther = "Test City",
+        CenterId = reference.CenterId,
+        RegistrationDate = new DateOnly(2026, 10, 7),
+        AssignedClinicianEntry = "Test Prosthetist",
+        GuardianName = "Test Guardian",
+        GuardianRelationship = "Parent",
+        Contacts = [new CreatePatientContactRequest("0771234567", null, null)]
+    };
+
     private static TController SetUser<TController>(TController controller)
         where TController : ControllerBase
     {
@@ -128,7 +252,10 @@ public sealed class ApiV1ControllerTests
         AppointmentDate = new DateOnly(2026, 10, 8)
     };
 
-    private static async Task<Patient> SeedPatientAsync(PomsDbContext context)
+    private static async Task<Patient> SeedPatientAsync(
+        PomsDbContext context,
+        IdentificationType identificationType = IdentificationType.NotApplicable,
+        string identificationNumber = "")
     {
         var province = new Province { Id = 100, Code = "T", Name = "Test Province" };
         var district = new District
@@ -156,8 +283,8 @@ public sealed class ApiV1ControllerTests
             Dob = new DateOnly(1990, 1, 1),
             Sex = Sex.Other,
             Category = PatientCategory.Local,
-            IdentificationType = IdentificationType.NotApplicable,
-            IdentificationNumber = string.Empty,
+            IdentificationType = identificationType,
+            IdentificationNumber = identificationNumber,
             Address1 = "Test address",
             ProvinceId = province.Id,
             Province = province,

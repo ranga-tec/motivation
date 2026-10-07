@@ -229,6 +229,12 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("ManagementOrAdmin", policy => policy.RequireRole("MANAGEMENT", "ADMIN"));
     options.AddPolicy("ReportOrAdmin", policy => policy.RequireRole("VIEWER", "MANAGEMENT", "ADMIN"));
     options.AddPolicy("AnyAuthenticatedUser", policy => policy.RequireAuthenticatedUser());
+    options.AddPolicy("ApiWrite", policy => policy
+        .RequireAuthenticatedUser()
+        .RequireAssertion(context =>
+            context.Resource is HttpContext httpContext &&
+            httpContext.Request.Headers.Authorization.ToString()
+                .StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)));
 });
 
 var app = builder.Build();

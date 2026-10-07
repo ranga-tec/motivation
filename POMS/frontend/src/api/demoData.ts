@@ -1,4 +1,4 @@
-import type { Appointment, PagedResponse, PatientSummary } from './types'
+import type { Appointment, CreatePatientRequest, PagedResponse, PatientDetail, PatientRegistrationOptions, PatientSummary } from './types'
 
 const patients: PatientSummary[] = [
   { id: '1', patientNumber: 'POM-2026-0042', fullName: 'Nimali Perera', nameWithInitials: 'N. Perera', dateOfBirth: '1987-04-18', sex: 'Female', category: 'Adult', centerId: 1, centerName: 'Colombo Central Clinic', registrationDate: '2026-09-28' },
@@ -15,3 +15,21 @@ const appointments: Appointment[] = [
 ]
 const page = <T,>(items: T[], pageNumber = 1, pageSize = 20): PagedResponse<T> => ({ items, page: pageNumber, pageSize, totalCount: items.length, totalPages: 1 })
 export const demoApi = { patients: (search?: string) => page(search ? patients.filter((p) => `${p.fullName} ${p.patientNumber}`.toLowerCase().includes(search.toLowerCase())) : patients), appointments: () => page(appointments) }
+
+export const demoRegistrationOptions: PatientRegistrationOptions = {
+  provinces: [{ id: 1, name: 'Western' }, { id: 2, name: 'Central' }, { id: 3, name: 'Southern' }],
+  districts: [{ id: 1, name: 'Colombo', parentId: 1 }, { id: 2, name: 'Gampaha', parentId: 1 }, { id: 3, name: 'Kandy', parentId: 2 }, { id: 4, name: 'Galle', parentId: 3 }],
+  cities: [{ id: 1, name: 'Colombo', parentId: 1 }, { id: 2, name: 'Dehiwala', parentId: 1 }, { id: 3, name: 'Ragama', parentId: 2 }, { id: 4, name: 'Kandy', parentId: 3 }],
+  centers: [{ id: 1, name: 'Colombo Central Clinic', parentId: 1 }, { id: 2, name: 'Kandy Outreach Centre', parentId: 3 }, { id: 3, name: 'Galle Community Clinic', parentId: 4 }],
+  referralSources: [{ id: 1, name: 'Hospital referral' }, { id: 2, name: 'Self referral' }],
+  assignees: [{ userId: 'demo-clinician', displayName: 'Dr. A. Fernando - Prosthetist (P001)', fullName: 'Dr. A. Fernando', isPreferred: true }],
+}
+
+export const createDemoPatient = (request: CreatePatientRequest): PatientDetail => ({
+  id: crypto.randomUUID(), patientNumber: '2026/0043', fullName: request.fullName, nameWithInitials: request.nameWithInitials,
+  dateOfBirth: request.dateOfBirth, sex: request.sex, category: request.category, centerId: request.centerId,
+  centerName: demoRegistrationOptions.centers.find((item) => item.id === request.centerId)?.name ?? '', registrationDate: request.registrationDate,
+  identificationType: request.identificationType, identificationNumber: request.identificationNumber ?? '', address1: request.address1,
+  province: demoRegistrationOptions.provinces.find((item) => item.id === request.provinceId)?.name ?? '',
+  district: demoRegistrationOptions.districts.find((item) => item.id === request.districtId)?.name ?? '', center: demoRegistrationOptions.centers.find((item) => item.id === request.centerId)?.name ?? '', contacts: [],
+})

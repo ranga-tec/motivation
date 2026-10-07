@@ -46,8 +46,8 @@ Run from the `POMS` directory:
 docker build -f src/Poms.Api/Dockerfile -t poms-api .
 ```
 
-The API host does not need persistent file storage yet because Phase 3 exposes read-only patient and
-appointment contracts. Add object-storage integration before moving document upload endpoints.
+The API host does not need persistent file storage for the current JSON patient-registration and
+read contracts. Add object-storage integration before moving patient photos or document uploads.
 
 ## Migration ownership
 

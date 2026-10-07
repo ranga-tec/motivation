@@ -1,5 +1,6 @@
 import { Search, UserRoundPlus, Users } from 'lucide-react'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import { EmptyState, ErrorPanel, LoadingRows, PageHeader } from '../components/Ui'
 import { useApi } from '../hooks/useApi'
@@ -11,7 +12,7 @@ export function PatientsPage() {
   const result = useApi(() => api.patients({ search, page, pageSize: 20 }), `${search}-${page}`)
   const submit = (event: React.FormEvent) => { event.preventDefault(); setPage(1); setSearch(query.trim()) }
   return <>
-    <PageHeader eyebrow="Patient administration" title="Patients" description="Find and manage patient records across all treatment centres." action={<button className="button primary"><UserRoundPlus size={18} /> Register patient</button>} />
+    <PageHeader eyebrow="Patient administration" title="Patients" description="Find and manage patient records across all treatment centres." action={<Link to="/patients/new" className="button primary"><UserRoundPlus size={18} /> Register patient</Link>} />
     <section className="panel list-panel">
       <form className="filters" onSubmit={submit}><label className="search-field"><Search size={18} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or patient number" aria-label="Search patients" /></label><button className="button secondary" type="submit">Search</button></form>
       {result.error ? <ErrorPanel message={result.error} retry={result.refresh} /> : result.loading ? <LoadingRows /> : !result.data?.items.length ? <EmptyState><Users size={34} /><h2>No patients found</h2><p>Try a different name or patient number.</p></EmptyState> : <>
