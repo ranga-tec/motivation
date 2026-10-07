@@ -26,3 +26,19 @@ Status: complete on 2026-10-07. Release verification: 71 tests passed; local `/h
 5. Verify the hardened application.
    - Prove: Release solution build and automated tests pass; local startup and `/health` return successfully with the development database.
    - Verification correction: Debug output is locked by the already-running local POMS process and the sandbox cannot stop its owner process. Use Release output for build/tests instead of retrying Debug.
+
+# Phase 1 API extraction (MVC remains operational)
+
+Status: complete on 2026-10-07. Verification: 4 focused API tests and 75 full-suite tests passed; HTTP smoke tests returned API 401 without redirect, authenticated API 200, MVC 302 to login, and health 200.
+
+1. Define the versioned API boundary and response contracts.
+   - Prove: `/api/v1` uses API controllers, stable DTOs, bounded pagination, and ProblemDetails-compatible errors without exposing EF entities.
+2. Add authenticated patient read endpoints.
+   - Prove: authorized callers can search/page patients and fetch one patient; missing records return 404 and invalid filters return 400.
+3. Add authenticated appointment read endpoints.
+   - Prove: authorized callers can filter/page appointments and fetch one appointment using the existing authorization policy.
+4. Make cookie authentication API-safe and document the contract.
+   - Prove: unauthenticated `/api` requests return 401/403 instead of HTML login redirects; the migration boundary and authentication limitation are documented.
+5. Verify API and MVC compatibility.
+   - Prove: focused API tests and the full Release suite pass; existing MVC routes remain mapped and compile unchanged.
+   - Verification correction: direct controller tests do not run MVC's result executor, so `ValidationProblem()` leaves status metadata unset. Return an explicit 400 `ValidationProblemDetails` contract and verify that instead.
