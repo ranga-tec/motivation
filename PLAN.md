@@ -72,3 +72,18 @@ Status: complete on 2026-10-07. Verification: independent API host built and ran
    - Prove: the API can be published/deployed without Razor assets or the MVC process.
 5. Verify independent and combined builds.
    - Prove: API host tests/smoke checks and the full solution Release suite pass while MVC remains operational.
+
+# Phase 4 separate React frontend
+
+Status: complete on 2026-10-07. Verification: frontend lint and production build passed; Playwright inspected desktop dashboard/patients, mobile appointments, direct-route fallback, and production auth guard; the full .NET Release suite passed 78/78 tests.
+
+1. Scaffold a React, TypeScript, and Vite application with the POMS design shell.
+   - Prove: the frontend installs and builds independently from both ASP.NET Core hosts.
+2. Add a typed client for the versioned patient and appointment APIs.
+   - Prove: requests use the configured API base URL, bearer token, bounded query parameters, and typed error handling.
+3. Add provider-neutral OIDC authorization-code-with-PKCE authentication.
+   - Prove: sign-in, callback, silent session restoration, sign-out, and protected routes are configurable without provider-specific code.
+4. Build professional responsive patient and appointment screens.
+   - Prove: desktop and mobile layouts include loading, error, empty, search/filter, and pagination states; local demo mode is visibly identified and cannot activate implicitly in production.
+5. Verify, document, commit, and push the phase.
+   - Prove: lint/build pass, Playwright browser checks cover desktop and mobile, deployment variables are documented, and the commit reaches `origin/main`.

@@ -6,6 +6,8 @@
 
 **POMS** is an enterprise-grade Patient & Episode Management System designed specifically for prosthetic and orthotic clinics. Built with ASP.NET Core 8.0, it provides comprehensive patient tracking, clinical workflow management, and multi-location support.
 
+> Current migration architecture: the independently deployable React client is in [`frontend`](frontend/README.md), and the bearer-token API host is documented in [`API_HOST.md`](API_HOST.md). The existing MVC application remains operational while features move to the new client incrementally.
+
 ---
 
 ## 📋 Table of Contents
