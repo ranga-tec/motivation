@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
@@ -7,6 +8,7 @@ using Poms.Infrastructure.Data;
 using Poms.Infrastructure.Services;
 using Poms.Reporting.Services;
 using Poms.Web.Models;
+using Poms.Web.Api;
 using Poms.Web.Services;
 using Serilog;
 
@@ -107,6 +109,34 @@ builder.Services.AddDefaultIdentity<IdentityUser>(options =>
 })
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<PomsDbContext>();
+
+var apiAuthentication = builder.Configuration.GetSection("ApiAuthentication");
+var bearerAuthenticationEnabled = apiAuthentication.GetValue<bool>("Enabled");
+var bearerAuthority = apiAuthentication["Authority"];
+var bearerAudience = apiAuthentication["Audience"];
+if (bearerAuthenticationEnabled &&
+    (string.IsNullOrWhiteSpace(bearerAuthority) || string.IsNullOrWhiteSpace(bearerAudience)))
+{
+    throw new InvalidOperationException(
+        "ApiAuthentication:Authority and ApiAuthentication:Audience are required when bearer authentication is enabled.");
+}
+
+var apiAuthenticationBuilder = builder.Services.AddAuthentication()
+    .AddPolicyScheme(
+        ApiAuthenticationDefaults.Scheme,
+        ApiAuthenticationDefaults.Scheme,
+        options => options.ForwardDefaultSelector = context =>
+            ApiAuthenticationSchemeSelector.Select(context, bearerAuthenticationEnabled));
+if (bearerAuthenticationEnabled)
+{
+    apiAuthenticationBuilder.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+    {
+        options.Authority = bearerAuthority;
+        options.Audience = bearerAudience;
+        options.RequireHttpsMetadata = apiAuthentication.GetValue("RequireHttpsMetadata", true);
+        options.MapInboundClaims = false;
+    });
+}
 
 builder.Services.ConfigureApplicationCookie(options =>
 {

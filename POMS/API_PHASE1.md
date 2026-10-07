@@ -22,10 +22,24 @@ Phase 1 deliberately reuses the existing ASP.NET Core Identity cookie while API 
 authorization are extracted. API requests return HTTP 401/403 rather than redirecting to HTML login
 or access-denied pages.
 
-Cookie authentication is suitable for the same-origin Razor UI and early internal API testing. It
-is not the final authentication mechanism for mobile applications or external organizations.
-Before exposing the API externally, add a standards-based OAuth 2.0/OpenID Connect authority,
-scoped access tokens, client registration, rate limits, and an external integration audit policy.
+Cookie authentication remains available for the same-origin Razor UI and internal API testing.
+The API also supports JWT bearer tokens issued by a standards-based OAuth 2.0/OpenID Connect
+authority when the following production settings are supplied:
+
+```text
+ApiAuthentication__Enabled=true
+ApiAuthentication__Authority=https://identity.example.com
+ApiAuthentication__Audience=poms-api
+ApiAuthentication__RequireHttpsMetadata=true
+```
+
+Requests with an `Authorization: Bearer ...` header use JWT validation. Requests without that
+header use the existing Identity cookie. Enabling bearer authentication without both authority and
+audience values fails startup rather than accepting unverifiable tokens.
+
+The application does not issue access tokens. Before external use, configure mobile/SPA and
+machine-to-machine clients at the selected OIDC authority, map its role or scope claims to POMS
+authorization policies, add rate limits, and define an external integration audit policy.
 
 ## Compatibility rule
 

@@ -2,13 +2,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Poms.Infrastructure.Data;
+using Poms.Web.Api;
 using Poms.Web.Api.V1.Contracts;
 
 namespace Poms.Web.Api.V1.Controllers;
 
 [ApiController]
 [Route("api/v1/patients")]
-[Authorize(Policy = "DataEntry")]
+[Authorize(AuthenticationSchemes = ApiAuthenticationDefaults.Scheme, Policy = "DataEntry")]
 public sealed class PatientsApiController(PomsDbContext context) : ControllerBase
 {
     [HttpGet]

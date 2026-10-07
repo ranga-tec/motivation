@@ -42,3 +42,18 @@ Status: complete on 2026-10-07. Verification: 4 focused API tests and 75 full-su
 5. Verify API and MVC compatibility.
    - Prove: focused API tests and the full Release suite pass; existing MVC routes remain mapped and compile unchanged.
    - Verification correction: direct controller tests do not run MVC's result executor, so `ValidationProblem()` leaves status metadata unset. Return an explicit 400 `ValidationProblemDetails` contract and verify that instead.
+
+# Phase 2 API authentication boundary
+
+Status: complete on 2026-10-07. Verification: bearer/cookie scheme-selection tests and the full 78-test Release suite passed. Bearer mode remains disabled until an OIDC authority is configured.
+
+1. Add a configurable OIDC bearer-token handler without replacing MVC cookies.
+   - Prove: API authentication selects bearer tokens when an Authorization header is present and retains cookies for current same-origin users.
+2. Require the combined API authentication policy on `/api/v1` controllers.
+   - Prove: existing role/policy checks still apply after authentication scheme selection.
+3. Validate OIDC configuration early.
+   - Prove: production cannot enable bearer authentication without authority and audience values; development can run cookie-only.
+4. Document provider-neutral mobile and external-client configuration.
+   - Prove: configuration keys, token expectations, and remaining OAuth client-registration work are explicit.
+5. Verify both authentication paths and regression safety.
+   - Prove: API auth-selection tests and the full Release suite pass; unauthenticated API stays 401 and MVC login redirect stays intact.

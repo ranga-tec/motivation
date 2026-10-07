@@ -4,13 +4,14 @@ using Microsoft.EntityFrameworkCore;
 using Poms.Domain.Entities;
 using Poms.Infrastructure.Data;
 using Poms.Infrastructure.Services;
+using Poms.Web.Api;
 using Poms.Web.Api.V1.Contracts;
 
 namespace Poms.Web.Api.V1.Controllers;
 
 [ApiController]
 [Route("api/v1/appointments")]
-[Authorize(Policy = "AnyAuthenticatedUser")]
+[Authorize(AuthenticationSchemes = ApiAuthenticationDefaults.Scheme, Policy = "AnyAuthenticatedUser")]
 public sealed class AppointmentsApiController(
     PomsDbContext context,
     IRestrictedAccessService restrictedAccess) : ControllerBase
