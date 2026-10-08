@@ -14,6 +14,11 @@ can be developed against stable DTO contracts.
 | `POST` | `/api/v1/patients` | `DataEntry` + bearer-only `ApiWrite` | Register a patient |
 | `GET` | `/api/v1/appointments` | `AnyAuthenticatedUser` | Filter and page visible appointments |
 | `GET` | `/api/v1/appointments/{id}` | `AnyAuthenticatedUser` | Get one visible appointment |
+| `GET` | `/api/v1/appointments/options` | `AnyAuthenticatedUser` | Get appointment types and active assignees |
+| `POST` | `/api/v1/appointments` | `DataEntry` + bearer-only `ApiWrite` | Schedule an appointment |
+| `POST` | `/api/v1/appointments/{id}/complete` | `DataEntry` + bearer-only `ApiWrite` | Complete a scheduled appointment |
+| `POST` | `/api/v1/appointments/{id}/cancel` | `DataEntry` + bearer-only `ApiWrite` | Cancel a scheduled appointment with a reason |
+| `POST` | `/api/v1/appointments/{id}/reschedule` | `DataEntry` + bearer-only `ApiWrite` | Move a scheduled appointment and preserve its previous schedule |
 
 List routes return `items`, `page`, `pageSize`, `totalCount`, and `totalPages`. Page size is limited
 to 100. API contracts use strings for enum values and do not serialize EF Core entities.
@@ -44,8 +49,10 @@ machine-to-machine clients at the selected OIDC authority, map its role or scope
 authorization policies, add rate limits, and define an external integration audit policy.
 
 Write routes require an explicit bearer token even when hosted inside `Poms.Web`; Identity cookies
-cannot invoke them. Patient registration returns `201 Created`, `400` validation problems, or `409`
-duplicate-review problems. Photo and legacy OCR import remain in MVC until object storage is added.
+cannot invoke them. Patient and appointment writes return ProblemDetails-compatible validation and
+state-conflict responses. Patient registration returns `201 Created`; appointment scheduling returns
+`201 Created`, while state transitions return the updated appointment. Photo and legacy OCR import
+remain in MVC until object storage is added.
 
 ## Compatibility rule
 

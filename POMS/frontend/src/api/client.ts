@@ -1,6 +1,6 @@
 import { config } from '../config'
-import { createDemoPatient, demoApi, demoRegistrationOptions } from './demoData'
-import type { Appointment, CreatePatientRequest, ListOptions, PagedResponse, PatientDetail, PatientRegistrationOptions, PatientSummary } from './types'
+import { createDemoPatient, demoApi, demoAppointmentActions, demoRegistrationOptions } from './demoData'
+import type { Appointment, AppointmentOptions, CreateAppointmentRequest, CreatePatientRequest, ListOptions, PagedResponse, PatientDetail, PatientRegistrationOptions, PatientSummary } from './types'
 
 export interface ApiProblem { title?: string; detail?: string; duplicateType?: string; existingPatientNumber?: string; existingPatientName?: string; errors?: Record<string, string[]> }
 export class ApiError extends Error {
@@ -28,4 +28,9 @@ export const api = {
   appointments: async (options: ListOptions = {}): Promise<PagedResponse<Appointment>> => config.demoMode ? demoApi.appointments() : get(`/api/v1/appointments?${queryString(options)}`),
   registrationOptions: async (): Promise<PatientRegistrationOptions> => config.demoMode ? demoRegistrationOptions : get('/api/v1/patients/registration-options'),
   createPatient: async (request: CreatePatientRequest): Promise<PatientDetail> => config.demoMode ? createDemoPatient(request) : post('/api/v1/patients', request),
+  appointmentOptions: async (): Promise<AppointmentOptions> => config.demoMode ? { assignees: demoRegistrationOptions.assignees } : get('/api/v1/appointments/options'),
+  createAppointment: async (request: CreateAppointmentRequest): Promise<Appointment> => config.demoMode ? demoAppointmentActions.create(request) : post('/api/v1/appointments', request),
+  completeAppointment: async (id: string): Promise<Appointment> => config.demoMode ? demoAppointmentActions.complete(id) : post(`/api/v1/appointments/${id}/complete`, {}),
+  cancelAppointment: async (id: string, reason: string): Promise<Appointment> => config.demoMode ? demoAppointmentActions.cancel(id) : post(`/api/v1/appointments/${id}/cancel`, { reason }),
+  rescheduleAppointment: async (id: string, appointmentDate: string, appointmentTime: string | undefined, reason: string): Promise<Appointment> => config.demoMode ? demoAppointmentActions.reschedule(id, appointmentDate, appointmentTime) : post(`/api/v1/appointments/${id}/reschedule`, { appointmentDate, appointmentTime: appointmentTime || null, reason }),
 }

@@ -103,3 +103,18 @@ Status: complete on 2026-10-07. Verification: frontend lint/build passed; the se
    - Prove: the form loads reference data, validates required and conditional fields, handles duplicate confirmation, prevents double-submit, and shows the created patient number.
 5. Verify, document, commit, and push the phase.
    - Prove: frontend lint/build, .NET tests, and Playwright desktop/mobile/invalid/submit flows pass; the commit reaches `origin/main`.
+
+# Phase 6 React appointment management
+
+Status: complete on 2026-10-08. Verification: frontend lint/build and the separate API build passed; 87/87 .NET tests passed; Playwright verified required-field blocking, create/reschedule/cancel feedback, responsive mobile cards, and zero console errors or warnings.
+
+1. Document the existing appointment workflow and define stable write contracts.
+   - Prove: create, reschedule, cancel, and completion rules are mapped without carrying legacy-data compatibility requirements.
+2. Add bearer-only appointment write endpoints and reference data.
+   - Prove: patient selection, assignee validation, status transitions, audit fields, and ProblemDetails responses use existing domain rules.
+3. Add API tests for successful and rejected state transitions.
+   - Prove: tests cover create, reschedule, cancel, invalid patient, and invalid transition cases.
+4. Add responsive React appointment actions.
+   - Prove: users can create, reschedule, and cancel from the schedule with validation, double-submit protection, and clear success/error feedback.
+5. Verify, document, commit, and push the phase.
+   - Prove: frontend lint/build, API build, full .NET tests, and Playwright desktop/mobile workflows pass; the commit reaches `origin/main`.

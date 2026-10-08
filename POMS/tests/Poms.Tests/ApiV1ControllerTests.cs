@@ -62,7 +62,7 @@ public sealed class ApiV1ControllerTests
         restrictedAccess
             .Setup(service => service.GetScopeAsync(It.IsAny<ClaimsPrincipal>()))
             .ReturnsAsync(new RestrictedAccessScope("user-id", "clinician@poms.lk", false));
-        var controller = SetUser(new AppointmentsApiController(database.Context, restrictedAccess.Object));
+        var controller = SetUser(CreateAppointmentsController(database.Context, restrictedAccess.Object));
 
         var action = await controller.List(new AppointmentListQuery(), CancellationToken.None);
 
@@ -77,7 +77,7 @@ public sealed class ApiV1ControllerTests
     {
         await using var database = await CreateDatabaseAsync();
         var restrictedAccess = new Mock<IRestrictedAccessService>();
-        var controller = SetUser(new AppointmentsApiController(database.Context, restrictedAccess.Object));
+        var controller = SetUser(CreateAppointmentsController(database.Context, restrictedAccess.Object));
 
         var action = await controller.List(
             new AppointmentListQuery
@@ -91,6 +91,82 @@ public sealed class ApiV1ControllerTests
             .Which.Value.Should().BeOfType<ValidationProblemDetails>().Subject;
         problem.Status.Should().Be(StatusCodes.Status400BadRequest);
         problem.Errors.Should().ContainKey(nameof(AppointmentListQuery.DateTo));
+    }
+
+    [Fact]
+    public async Task AppointmentsCreate_PersistsScheduledAppointment()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var patient = await SeedPatientAsync(database.Context);
+        var controller = SetUser(CreateAppointmentsController(database.Context, Mock.Of<IRestrictedAccessService>()));
+
+        var action = await controller.Create(new CreateAppointmentRequest
+        {
+            PatientId = patient.Id,
+            Type = AppointmentType.Assessment,
+            AppointmentDate = new DateOnly(2026, 10, 12),
+            AppointmentTime = new TimeOnly(9, 30),
+            AssignedClinicianEntry = "Test Prosthetist"
+        }, CancellationToken.None);
+
+        var response = action.Result.Should().BeOfType<CreatedAtActionResult>()
+            .Which.Value.Should().BeOfType<AppointmentResponse>().Subject;
+        response.Status.Should().Be("Scheduled");
+        (await database.Context.Appointments.FindAsync(response.Id))!.CreatedBy.Should().Be("clinician@poms.lk");
+    }
+
+    [Fact]
+    public async Task AppointmentsCreate_RejectsUnknownPatient()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var controller = SetUser(CreateAppointmentsController(database.Context, Mock.Of<IRestrictedAccessService>()));
+
+        var action = await controller.Create(new CreateAppointmentRequest
+        {
+            PatientId = Guid.NewGuid(), AppointmentDate = new DateOnly(2026, 10, 12),
+            AssignedClinicianEntry = "Test Prosthetist"
+        }, CancellationToken.None);
+
+        var problem = action.Result.Should().BeOfType<BadRequestObjectResult>()
+            .Which.Value.Should().BeOfType<ValidationProblemDetails>().Subject;
+        problem.Errors.Should().ContainKey(nameof(CreateAppointmentRequest.PatientId));
+    }
+
+    [Fact]
+    public async Task AppointmentsReschedule_PreservesPreviousSchedule()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var patient = await SeedPatientAsync(database.Context);
+        var appointment = CreateAppointment(patient, null);
+        database.Context.Appointments.Add(appointment);
+        await database.Context.SaveChangesAsync();
+        var controller = SetUser(CreateAppointmentsController(database.Context, Mock.Of<IRestrictedAccessService>()));
+
+        var action = await controller.Reschedule(appointment.Id, new RescheduleAppointmentRequest
+        {
+            AppointmentDate = new DateOnly(2026, 10, 15), AppointmentTime = new TimeOnly(14, 0), Reason = "Patient requested a later date"
+        }, CancellationToken.None);
+
+        action.Result.Should().BeOfType<OkObjectResult>();
+        appointment.PreviousAppointmentDate.Should().Be(new DateOnly(2026, 10, 8));
+        appointment.AppointmentDate.Should().Be(new DateOnly(2026, 10, 15));
+    }
+
+    [Fact]
+    public async Task AppointmentsCancel_RejectsCompletedAppointment()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var patient = await SeedPatientAsync(database.Context);
+        var appointment = CreateAppointment(patient, null);
+        appointment.Status = AppointmentStatus.Completed;
+        database.Context.Appointments.Add(appointment);
+        await database.Context.SaveChangesAsync();
+        var controller = SetUser(CreateAppointmentsController(database.Context, Mock.Of<IRestrictedAccessService>()));
+
+        var action = await controller.Cancel(appointment.Id, new CancelAppointmentRequest { Reason = "No longer required" }, CancellationToken.None);
+
+        action.Result.Should().BeOfType<ConflictObjectResult>();
+        appointment.Status.Should().Be(AppointmentStatus.Completed);
     }
 
     [Fact]
@@ -197,6 +273,13 @@ public sealed class ApiV1ControllerTests
         new DuplicateCheckService(context),
         new AppointmentAssigneeService(context));
 
+    private static AppointmentsApiController CreateAppointmentsController(
+        PomsDbContext context,
+        IRestrictedAccessService restrictedAccess) => new(
+            context,
+            restrictedAccess,
+            new AppointmentAssigneeService(context));
+
     private static CreatePatientRequest ValidCreateRequest(Patient reference) => new()
     {
         FullName = reference.FullName,
@@ -242,12 +325,12 @@ public sealed class ApiV1ControllerTests
         CreatedBy = createdBy
     };
 
-    private static Appointment CreateAppointment(Patient patient, Episode episode) => new()
+    private static Appointment CreateAppointment(Patient patient, Episode? episode) => new()
     {
         Patient = patient,
         PatientId = patient.Id,
         Episode = episode,
-        EpisodeId = episode.Id,
+        EpisodeId = episode?.Id,
         Type = AppointmentType.Assessment,
         AppointmentDate = new DateOnly(2026, 10, 8)
     };

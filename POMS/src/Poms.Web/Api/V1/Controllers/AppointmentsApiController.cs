@@ -14,8 +14,18 @@ namespace Poms.Web.Api.V1.Controllers;
 [Authorize(AuthenticationSchemes = ApiAuthenticationDefaults.Scheme, Policy = "AnyAuthenticatedUser")]
 public sealed class AppointmentsApiController(
     PomsDbContext context,
-    IRestrictedAccessService restrictedAccess) : ControllerBase
+    IRestrictedAccessService restrictedAccess,
+    IAppointmentAssigneeService appointmentAssignees) : ControllerBase
 {
+    [HttpGet("options")]
+    public async Task<ActionResult<AppointmentOptionsResponse>> Options()
+    {
+        var assignees = (await appointmentAssignees.GetOptionsAsync())
+            .Select(item => new AssigneeOption(item.UserId, item.DisplayText, item.FullName, item.IsPreferred))
+            .ToList();
+        return Ok(new AppointmentOptionsResponse(assignees));
+    }
+
     [HttpGet]
     [ProducesResponseType<PagedResponse<AppointmentResponse>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<PagedResponse<AppointmentResponse>>> List(
@@ -112,6 +122,104 @@ public sealed class AppointmentsApiController(
 
         return allowed ? Ok(Map(appointment)) : NotFound();
     }
+
+    [HttpPost]
+    [Authorize(Policy = "ApiWrite")]
+    public async Task<ActionResult<AppointmentResponse>> Create(
+        CreateAppointmentRequest request,
+        CancellationToken cancellationToken)
+    {
+        var patient = await context.Patients.SingleOrDefaultAsync(item => item.Id == request.PatientId, cancellationToken);
+        if (patient is null) return Validation(nameof(request.PatientId), "Select an existing patient.");
+        Episode? episode = null;
+        if (request.EpisodeId.HasValue)
+        {
+            episode = await context.Episodes.SingleOrDefaultAsync(item => item.Id == request.EpisodeId, cancellationToken);
+            if (episode is null || episode.PatientId != request.PatientId) return NotFound();
+            if (!await CanAccessAsync(episode, "ApiCreateAppointment")) return NotFound();
+        }
+        if (request.AppointmentDate == default)
+            return Validation(nameof(request.AppointmentDate), "Select an appointment date.");
+        var assignee = await appointmentAssignees.ResolveAsync(request.AssignedClinicianEntry, request.AssignedClinicianUserId);
+        if (!assignee.IsValid) return Validation(nameof(request.AssignedClinicianEntry), assignee.Error!);
+        var actor = Actor();
+        var appointment = new Appointment
+        {
+            PatientId = patient.Id, Patient = patient, EpisodeId = episode?.Id, Episode = episode,
+            Type = request.Type, AppointmentDate = request.AppointmentDate, AppointmentTime = request.AppointmentTime,
+            Status = Poms.Domain.Enums.AppointmentStatus.Scheduled,
+            AssignedClinicianUserId = assignee.UserId, AssignedClinicianName = assignee.FullName,
+            Notes = request.Notes?.Trim(), CreatedBy = actor
+        };
+        context.Appointments.Add(appointment);
+        await context.SaveChangesAsync(cancellationToken);
+        return CreatedAtAction(nameof(Get), new { id = appointment.Id }, Map(appointment));
+    }
+
+    [HttpPost("{id:guid}/complete")]
+    [Authorize(Policy = "ApiWrite")]
+    public async Task<ActionResult<AppointmentResponse>> Complete(Guid id, CancellationToken cancellationToken)
+    {
+        var appointment = await FindForWriteAsync(id, cancellationToken);
+        if (appointment is null || !await CanAccessAppointmentAsync(appointment, "ApiCompleteAppointment")) return NotFound();
+        if (appointment.Status != Poms.Domain.Enums.AppointmentStatus.Scheduled)
+            return ConflictState("Only scheduled appointments can be completed.");
+        appointment.Status = Poms.Domain.Enums.AppointmentStatus.Completed;
+        appointment.UpdatedBy = Actor(); appointment.UpdatedAt = DateTime.UtcNow;
+        await context.SaveChangesAsync(cancellationToken);
+        return Ok(Map(appointment));
+    }
+
+    [HttpPost("{id:guid}/cancel")]
+    [Authorize(Policy = "ApiWrite")]
+    public async Task<ActionResult<AppointmentResponse>> Cancel(Guid id, CancelAppointmentRequest request, CancellationToken cancellationToken)
+    {
+        var appointment = await FindForWriteAsync(id, cancellationToken);
+        if (appointment is null || !await CanAccessAppointmentAsync(appointment, "ApiCancelAppointment")) return NotFound();
+        if (appointment.Status != Poms.Domain.Enums.AppointmentStatus.Scheduled)
+            return ConflictState("Only scheduled appointments can be cancelled.");
+        try { appointment.Cancel(request.Reason, Actor()); }
+        catch (ArgumentException exception) { return Validation(nameof(request.Reason), exception.Message); }
+        await context.SaveChangesAsync(cancellationToken);
+        return Ok(Map(appointment));
+    }
+
+    [HttpPost("{id:guid}/reschedule")]
+    [Authorize(Policy = "ApiWrite")]
+    public async Task<ActionResult<AppointmentResponse>> Reschedule(Guid id, RescheduleAppointmentRequest request, CancellationToken cancellationToken)
+    {
+        var appointment = await FindForWriteAsync(id, cancellationToken);
+        if (appointment is null || !await CanAccessAppointmentAsync(appointment, "ApiRescheduleAppointment")) return NotFound();
+        try { appointment.Reschedule(request.AppointmentDate, request.AppointmentTime, request.Reason, Actor()); }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
+        { return exception is InvalidOperationException ? ConflictState(exception.Message) : Validation(nameof(request.Reason), exception.Message); }
+        await context.SaveChangesAsync(cancellationToken);
+        return Ok(Map(appointment));
+    }
+
+    private async Task<Appointment?> FindForWriteAsync(Guid id, CancellationToken cancellationToken) =>
+        await context.Appointments.Include(item => item.Patient).Include(item => item.Episode)
+            .SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
+
+    private async Task<bool> CanAccessAppointmentAsync(Appointment appointment, string action) =>
+        appointment.Episode is null || await CanAccessAsync(appointment.Episode, action);
+
+    private async Task<bool> CanAccessAsync(Episode episode, string action)
+    {
+        var access = await restrictedAccess.GetScopeAsync(User);
+        var allowed = access.CanAccess(episode.IsRestricted, episode.CreatedBy);
+        await restrictedAccess.AuditAsync(access, allowed ? action : $"{action}Denied", nameof(Episode), episode.Id, episode.IsRestricted, allowed);
+        return allowed;
+    }
+
+    private BadRequestObjectResult Validation(string field, string message) =>
+        BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]> { [field] = [message] })
+        { Status = StatusCodes.Status400BadRequest });
+
+    private ConflictObjectResult ConflictState(string detail) => Conflict(new ProblemDetails
+    { Status = StatusCodes.Status409Conflict, Title = "Invalid appointment state", Detail = detail });
+
+    private string Actor() => User.Identity?.Name ?? User.FindFirst("sub")?.Value ?? "API user";
 
     private static AppointmentResponse Map(Appointment item) => new(
         item.Id,

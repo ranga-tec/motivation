@@ -3,6 +3,8 @@ export interface PatientSummary { id: string; patientNumber: string; fullName: s
 export interface PatientDetail extends PatientSummary { identificationType: string; identificationNumber: string; address1: string; address2?: string; province: string; district: string; city?: string; cityOther?: string; email?: string; nationality?: string; center: string; assignedClinicianName?: string; contacts: PatientContact[] }
 export interface PatientContact { id: string; telephoneNumber: string; dateConfirmed?: string; personChecked?: string }
 export interface Appointment { id: string; patientId: string; patientNumber: string; patientName: string; episodeId?: string; type: string; appointmentDate: string; appointmentTime?: string; status: string; assignedClinicianUserId?: string; assignedClinicianName?: string; notes?: string }
+export interface AppointmentOptions { assignees: AssigneeOption[] }
+export interface CreateAppointmentRequest { patientId: string; type: string; appointmentDate: string; appointmentTime?: string; assignedClinicianEntry: string; assignedClinicianUserId?: string; notes?: string }
 export interface ListOptions { page?: number; pageSize?: number; search?: string; dateFrom?: string; dateTo?: string; status?: string }
 export interface RegistrationOption { id: number; name: string; parentId?: number }
 export interface AssigneeOption { userId: string; displayName: string; fullName: string; isPreferred: boolean }
