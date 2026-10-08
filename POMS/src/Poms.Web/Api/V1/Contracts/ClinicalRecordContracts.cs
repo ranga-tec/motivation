@@ -23,9 +23,9 @@ public sealed record EpisodeClinicalRecordsResponse(IReadOnlyList<AssessmentResp
 
 public sealed record PrescriptionRequest(
     [property: JsonConverter(typeof(JsonStringEnumConverter))] Side Side,
-    [property: Required, StringLength(100)] string Code,
-    [property: StringLength(100)] string? SubType,
-    [property: StringLength(500)] string? OtherText);
+    [param: Required, StringLength(100)] string Code,
+    [param: StringLength(100)] string? SubType,
+    [param: StringLength(500)] string? OtherText);
 
 public sealed record SaveAssessmentRequest : IValidatableObject
 {
@@ -60,8 +60,8 @@ public sealed record SaveAssessmentRequest : IValidatableObject
     }
 }
 
-public sealed record SaveFittingRequest(Guid EpisodeId, DateOnly FittingDate, [property: StringLength(2000)] string? Notes, bool IsRestricted);
-public sealed record SaveDeliveryRequest(Guid EpisodeId, DateOnly DeliveryDate, TimeOnly? DeliveryTime, [property: StringLength(2000)] string? Notes, int? DeviceId, bool IsRestricted);
+public sealed record SaveFittingRequest(Guid EpisodeId, DateOnly FittingDate, [param: StringLength(2000)] string? Notes, bool IsRestricted);
+public sealed record SaveDeliveryRequest(Guid EpisodeId, DateOnly DeliveryDate, TimeOnly? DeliveryTime, [param: StringLength(2000)] string? Notes, int? DeviceId, bool IsRestricted);
 public sealed record SaveFollowUpRequest : IValidatableObject
 {
     public Guid EpisodeId { get; init; }

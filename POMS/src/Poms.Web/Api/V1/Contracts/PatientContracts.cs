@@ -124,9 +124,9 @@ public sealed record CreatePatientRequest : IValidatableObject
 }
 
 public sealed record CreatePatientContactRequest(
-    [property: Required, StringLength(30)] string TelephoneNumber,
+    [param: Required, StringLength(30)] string TelephoneNumber,
     DateOnly? DateConfirmed,
-    [property: StringLength(100)] string? PersonChecked);
+    [param: StringLength(100)] string? PersonChecked);
 
 public sealed record RegistrationOption(int Id, string Name, int? ParentId = null);
 public sealed record AssigneeOption(string UserId, string DisplayName, string FullName, bool IsPreferred);
