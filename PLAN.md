@@ -169,7 +169,10 @@ API tests and Playwright desktop/mobile upload/delete/download checks passed wit
 
 ## Phase 10 administration
 
-Status: queued.
+Status: complete on 2026-10-08. Verification: geography, centres, clinical lookups, device catalog,
+and staff account/profile/role/lock/password APIs are admin-only; current/last administrator
+safeguards remain; focused tests, full suite, frontend lint/build, and Playwright desktop/mobile
+CRUD and account-dialog checks passed.
 
 1. Extract locations, geography, lookups, devices, and device types.
 2. Extract user/profile/role/lock/password-reset administration while preserving admin login.

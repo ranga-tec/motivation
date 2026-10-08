@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Poms.Infrastructure.Data;
@@ -89,6 +90,10 @@ builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
         policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
 }));
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddIdentityCore<IdentityUser>()
+    .AddRoles<IdentityRole>()
+    .AddEntityFrameworkStores<PomsDbContext>()
+    .AddDefaultTokenProviders();
 builder.Services.AddScoped<IRestrictedAccessService, RestrictedAccessService>();
 builder.Services.AddScoped<IPatientNumberService, PatientNumberService>();
 builder.Services.AddScoped<IDuplicateCheckService, DuplicateCheckService>();

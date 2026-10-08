@@ -1,6 +1,6 @@
 import { config } from '../config'
 import { createDemoPatient, demoApi, demoAppointmentActions, demoClinicalActions, demoClinicalOptions, demoEpisodeActions, demoRegistrationOptions } from './demoData'
-import type { Appointment, AppointmentOptions, Assessment, ClinicalOptions, CreateAppointmentRequest, CreatePatientRequest, Delivery, DocumentOptions, Episode, EpisodeClinicalRecords, EpisodeOptions, Fitting, FollowUp, ListOptions, PagedResponse, PatientDetail, PatientRegistrationOptions, PatientSummary, PrescriptionOption, SaveAssessmentRequest, SaveDeliveryRequest, SaveEpisodeRequest, SaveFittingRequest, SaveFollowUpRequest, StoredDocument } from './types'
+import type { AdminCatalog, AdminCenter, AdminDevice, AdminItem, AdminUsers, AdminUser, Appointment, AppointmentOptions, Assessment, ClinicalOptions, CreateAppointmentRequest, CreatePatientRequest, Delivery, DocumentOptions, Episode, EpisodeClinicalRecords, EpisodeOptions, Fitting, FollowUp, ListOptions, PagedResponse, PatientDetail, PatientRegistrationOptions, PatientSummary, PrescriptionOption, SaveAssessmentRequest, SaveDeliveryRequest, SaveEpisodeRequest, SaveFittingRequest, SaveFollowUpRequest, StoredDocument } from './types'
 
 export interface ApiProblem { title?: string; detail?: string; duplicateType?: string; existingPatientNumber?: string; existingPatientName?: string; errors?: Record<string, string[]> }
 export class ApiError extends Error {
@@ -29,6 +29,7 @@ async function put<T>(path: string, body: unknown): Promise<T> {
   if (!response.ok) { const problem = await response.json().catch(() => undefined) as ApiProblem | undefined; throw new ApiError(response.status, problem?.detail ?? problem?.title ?? `Request failed (${response.status})`, problem) }
   return response.json() as Promise<T>
 }
+async function putVoid(path: string, body: unknown): Promise<void> { const token = await accessToken?.(); const response = await fetch(`${config.apiUrl}${path}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body) }); if (!response.ok) { const problem = await response.json().catch(() => undefined) as ApiProblem | undefined; throw new ApiError(response.status, problem?.detail ?? problem?.title ?? `Request failed (${response.status})`, problem) } }
 async function upload<T>(path: string, body: FormData): Promise<T> {
   const token = await accessToken?.(); const response = await fetch(`${config.apiUrl}${path}`, { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : {}, body })
   if (!response.ok) { const problem = await response.json().catch(() => undefined) as ApiProblem | undefined; throw new ApiError(response.status, problem?.detail ?? problem?.title ?? `Request failed (${response.status})`, problem) }
@@ -73,4 +74,12 @@ export const api = {
   printPrescription: async (id: string) => config.demoMode ? { blob: new Blob(['Demo prescription form'], { type: 'application/pdf' }), fileName: 'PrescriptionForm.pdf' } : download(`/api/v1/print/assessments/${id}/prescription`),
   printDelivery: async (id: string) => config.demoMode ? { blob: new Blob(['Demo delivery note'], { type: 'application/pdf' }), fileName: 'DeliveryNote.pdf' } : download(`/api/v1/print/deliveries/${id}`),
   printFollowUp: async (id: string) => config.demoMode ? { blob: new Blob(['Demo follow-up note'], { type: 'application/pdf' }), fileName: 'FollowUpNote.pdf' } : download(`/api/v1/print/follow-ups/${id}`),
+  adminCatalog: async (): Promise<AdminCatalog> => config.demoMode ? demoApi.adminCatalog() : get('/api/v1/admin/catalog'),
+  adminUsers: async (): Promise<AdminUsers> => config.demoMode ? demoApi.adminUsers() : get('/api/v1/admin/users'),
+  saveAdminItem: async (resource: string, item: Record<string, unknown>, id?: number): Promise<AdminItem | AdminCenter | AdminDevice> => { if (config.demoMode) return demoApi.saveAdminItem(resource, item, id); return id ? put(`/api/v1/admin/${resource}/${id}`, item) : post(`/api/v1/admin/${resource}`, item) },
+  createAdminUser: async (request: Record<string, unknown>): Promise<AdminUser> => config.demoMode ? demoApi.createAdminUser(request) : post('/api/v1/admin/users', request),
+  updateAdminProfile: async (id: string, request: Record<string, unknown>): Promise<AdminUser> => config.demoMode ? demoApi.updateAdminProfile(id, request) : put(`/api/v1/admin/users/${id}/profile`, request),
+  updateAdminRoles: async (id: string, roles: string[]): Promise<void> => config.demoMode ? demoApi.updateAdminRoles(id, roles) : putVoid(`/api/v1/admin/users/${id}/roles`, { roles }),
+  setAdminLock: async (id: string, locked: boolean): Promise<void> => config.demoMode ? demoApi.setAdminLock(id, locked) : putVoid(`/api/v1/admin/users/${id}/lock`, { locked }),
+  resetAdminPassword: async (id: string, newPassword: string): Promise<void> => config.demoMode ? undefined : putVoid(`/api/v1/admin/users/${id}/password`, { newPassword }),
 }

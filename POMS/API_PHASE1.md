@@ -41,6 +41,11 @@ can be developed against stable DTO contracts.
 | `GET` | `/api/v1/print/assessments/{id}/prescription` | `AnyAuthenticatedUser` | Generate the prescription PDF |
 | `GET` | `/api/v1/print/deliveries/{id}` | `AnyAuthenticatedUser` | Generate the delivery-note PDF |
 | `GET` | `/api/v1/print/follow-ups/{id}` | `AnyAuthenticatedUser` | Generate the follow-up PDF |
+| `GET` | `/api/v1/admin/catalog` | `AdminOnly` | Get geography, centres, lookups, device types, and devices |
+| `POST/PUT` | `/api/v1/admin/{provinces|districts|cities|centers|device-types|devices}[/{id}]` | `AdminOnly` + bearer-only `ApiWrite` | Create or update administrative reference data |
+| `POST/PUT` | `/api/v1/admin/lookups/{type}[/{id}]` | `AdminOnly` + bearer-only `ApiWrite` | Create or update supported clinical and registration lookups |
+| `GET/POST` | `/api/v1/admin/users` | `AdminOnly` (`POST` also requires `ApiWrite`) | List roles/staff or create an internal staff account |
+| `PUT` | `/api/v1/admin/users/{id}/{profile|roles|lock|password}` | `AdminOnly` + bearer-only `ApiWrite` | Maintain staff profile, access, lock state, or password |
 
 List routes return `items`, `page`, `pageSize`, `totalCount`, and `totalPages`. Page size is limited
 to 100. API contracts use strings for enum values and do not serialize EF Core entities.
@@ -76,6 +81,11 @@ state-conflict responses. Patient registration returns `201 Created`; appointmen
 `201 Created`, while state transitions return the updated appointment. Document APIs depend on
 `IFileStorageService`, so the local file implementation can be replaced by object storage without
 changing the API contract. Legacy OCR import remains in MVC.
+
+Administrator account APIs retain the existing ASP.NET Core Identity store. They prevent the
+current or final active administrator from losing administrator access or being locked. OIDC role
+claims still protect the standalone API boundary; the subject claim should map to the retained
+Identity user ID when self-service safeguards must identify the signed-in administrator.
 
 ## Compatibility rule
 

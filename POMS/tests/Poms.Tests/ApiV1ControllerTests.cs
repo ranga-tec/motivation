@@ -2,6 +2,7 @@ using System.Security.Claims;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -454,6 +455,40 @@ public sealed class ApiV1ControllerTests
         pdf.FileDownloadName.Should().Contain(patient.PatientNumber);
     }
 
+    [Fact]
+    public async Task AdminCatalog_ReturnsLocationsLookupsAndDevices()
+    {
+        await using var database = await CreateDatabaseAsync();
+        await SeedPatientAsync(database.Context);
+        database.Context.AddRange(
+            new ReferralSource { Name = "Hospital", IsActive = true },
+            new MainProblemType { Name = "Mobility", IsActive = true },
+            new CauseReasonType { Name = "Trauma", IsActive = true });
+        await database.Context.SaveChangesAsync();
+        var controller = CreateAdminController(database.Context);
+
+        var result = await controller.Catalog(CancellationToken.None);
+
+        result.Provinces.Should().ContainSingle();
+        result.Centers.Should().ContainSingle();
+        result.Lookups["referral-sources"].Should().ContainSingle();
+        result.Lookups["main-problem-types"].Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task AdminLookupCreateAndUpdate_PersistsValidatedReferenceData()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var controller = SetUser(CreateAdminController(database.Context));
+
+        var created = await controller.CreateLookup("nationalities", new SaveNamedItemRequest { Name = "Sri Lankan" }, CancellationToken.None);
+        var item = created.Result.Should().BeOfType<CreatedResult>().Which.Value.Should().BeOfType<AdminItem>().Subject;
+        var updated = await controller.UpdateLookup("nationalities", item.Id, new SaveNamedItemRequest { Name = "Sri Lankan citizen", IsActive = false }, CancellationToken.None);
+
+        updated.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<AdminItem>().Which.IsActive.Should().BeFalse();
+        (await database.Context.Nationalities.SingleAsync()).Name.Should().Be("Sri Lankan citizen");
+    }
+
     private static PatientsApiController CreatePatientsController(PomsDbContext context) => new(
         context,
         new PatientNumberService(context),
@@ -480,6 +515,15 @@ public sealed class ApiV1ControllerTests
                 ["FileStorage:AllowedExtensions:0"] = ".pdf",
                 ["FileStorage:AllowedExtensions:1"] = ".jpg"
             }).Build());
+
+    private static AdminApiController CreateAdminController(PomsDbContext context) => new(
+        context,
+        new Mock<UserManager<IdentityUser>>(
+            Mock.Of<IUserStore<IdentityUser>>(),
+            null!, null!, null!, null!, null!, null!, null!, null!).Object,
+        new Mock<RoleManager<IdentityRole>>(
+            Mock.Of<IRoleStore<IdentityRole>>(),
+            null!, null!, null!, null!).Object);
 
     private static IRestrictedAccessService AllowedRestrictedAccess()
     {

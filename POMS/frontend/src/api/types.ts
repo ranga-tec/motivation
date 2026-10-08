@@ -20,6 +20,12 @@ export interface SaveDeliveryRequest { episodeId: string; deliveryDate: string; 
 export interface SaveFollowUpRequest { episodeId: string; followUpDate: string; startTime: string; endTime: string; notes?: string; isRestricted: boolean }
 export interface DocumentOptions { documentTypes: string[]; maxFileSizeMb: number; allowedExtensions: string[] }
 export interface StoredDocument { id: string; scope: 'patient' | 'episode'; ownerId: string; documentType: string; fileName: string; contentType: string; fileSize?: number; notes?: string; uploadedBy: string; uploadedAt: string; isRestricted: boolean }
+export interface AdminItem { id: number; code: string; name: string; isActive: boolean; parentId?: number; parentName?: string }
+export interface AdminCenter { id: number; districtId: number; districtName: string; code: string; name: string; address?: string; phone?: string; isActive: boolean; requiresPatientNumberFlag: boolean; patientNumberFlagCode?: string }
+export interface AdminDevice { id: number; deviceTypeId: number; deviceTypeName: string; code: string; name: string; isActive: boolean }
+export interface AdminCatalog { provinces: AdminItem[]; districts: AdminItem[]; cities: AdminItem[]; centers: AdminCenter[]; lookups: Record<string, AdminItem[]>; deviceTypes: AdminItem[]; devices: AdminDevice[] }
+export interface AdminUser { id: string; email: string; fullName: string; employeeNumber: string; designation: string; department?: string; mobileNumber: string; workPhoneNumber?: string; canAccessRestrictedClinicalData: boolean; roles: string[]; isLocked: boolean; isCurrentUser: boolean }
+export interface AdminUsers { availableRoles: string[]; users: AdminUser[] }
 export interface Appointment { id: string; patientId: string; patientNumber: string; patientName: string; episodeId?: string; type: string; appointmentDate: string; appointmentTime?: string; status: string; assignedClinicianUserId?: string; assignedClinicianName?: string; notes?: string }
 export interface AppointmentOptions { assignees: AssigneeOption[] }
 export interface CreateAppointmentRequest { patientId: string; type: string; appointmentDate: string; appointmentTime?: string; assignedClinicianEntry: string; assignedClinicianUserId?: string; notes?: string }
