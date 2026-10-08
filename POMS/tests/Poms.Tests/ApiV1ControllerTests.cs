@@ -267,6 +267,61 @@ public sealed class ApiV1ControllerTests
         problem.Errors.Should().ContainKey(nameof(CreatePatientRequest.DistrictId));
     }
 
+    [Fact]
+    public async Task EpisodesCreate_PersistsPatientRecord()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var patient = await SeedPatientAsync(database.Context);
+        var controller = SetUser(new EpisodesApiController(database.Context, AllowedRestrictedAccess()));
+
+        var action = await controller.Create(new SaveEpisodeRequest
+        {
+            PatientId = patient.Id, CenterId = patient.CenterId, Status = RecordStatus.Active,
+            RecordDate = new DateOnly(2026, 10, 8), RecordTime = new TimeOnly(9, 15), Remarks = "API record"
+        }, CancellationToken.None);
+
+        var response = action.Result.Should().BeOfType<CreatedAtActionResult>()
+            .Which.Value.Should().BeOfType<EpisodeResponse>().Subject;
+        response.PatientId.Should().Be(patient.Id);
+        response.CenterName.Should().Be("Test Center");
+        (await database.Context.Episodes.SingleAsync()).CreatedBy.Should().Be("clinician@poms.lk");
+    }
+
+    [Fact]
+    public async Task EpisodesList_HidesRestrictedRecordsOutsideScope()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var patient = await SeedPatientAsync(database.Context);
+        database.Context.Episodes.AddRange(CreateEpisode(patient, false, "other@poms.lk"), CreateEpisode(patient, true, "other@poms.lk"));
+        await database.Context.SaveChangesAsync();
+        var controller = SetUser(new EpisodesApiController(database.Context, AllowedRestrictedAccess()));
+
+        var action = await controller.List(patient.Id, CancellationToken.None);
+
+        action.Result.Should().BeOfType<OkObjectResult>().Which.Value
+            .Should().BeAssignableTo<IReadOnlyList<EpisodeResponse>>().Which.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task EpisodesUpdate_RejectsChangingPatient()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var patient = await SeedPatientAsync(database.Context);
+        var episode = CreateEpisode(patient, false, "clinician@poms.lk");
+        database.Context.Episodes.Add(episode); await database.Context.SaveChangesAsync();
+        var controller = SetUser(new EpisodesApiController(database.Context, AllowedRestrictedAccess()));
+
+        var action = await controller.Update(episode.Id, new SaveEpisodeRequest
+        {
+            PatientId = Guid.NewGuid(), CenterId = patient.CenterId, RecordDate = episode.RecordDate,
+            RecordTime = new TimeOnly(10, 0)
+        }, CancellationToken.None);
+
+        var problem = action.Result.Should().BeOfType<BadRequestObjectResult>()
+            .Which.Value.Should().BeOfType<ValidationProblemDetails>().Subject;
+        problem.Errors.Should().ContainKey(nameof(SaveEpisodeRequest.PatientId));
+    }
+
     private static PatientsApiController CreatePatientsController(PomsDbContext context) => new(
         context,
         new PatientNumberService(context),
@@ -279,6 +334,16 @@ public sealed class ApiV1ControllerTests
             context,
             restrictedAccess,
             new AppointmentAssigneeService(context));
+
+    private static IRestrictedAccessService AllowedRestrictedAccess()
+    {
+        var service = new Mock<IRestrictedAccessService>();
+        service.Setup(item => item.GetScopeAsync(It.IsAny<ClaimsPrincipal>()))
+            .ReturnsAsync(new RestrictedAccessScope("user-id", "clinician@poms.lk", false));
+        service.Setup(item => item.AuditAsync(It.IsAny<RestrictedAccessScope>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<object?>()))
+            .Returns(Task.CompletedTask);
+        return service.Object;
+    }
 
     private static CreatePatientRequest ValidCreateRequest(Patient reference) => new()
     {

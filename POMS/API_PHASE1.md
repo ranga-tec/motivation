@@ -19,6 +19,11 @@ can be developed against stable DTO contracts.
 | `POST` | `/api/v1/appointments/{id}/complete` | `DataEntry` + bearer-only `ApiWrite` | Complete a scheduled appointment |
 | `POST` | `/api/v1/appointments/{id}/cancel` | `DataEntry` + bearer-only `ApiWrite` | Cancel a scheduled appointment with a reason |
 | `POST` | `/api/v1/appointments/{id}/reschedule` | `DataEntry` + bearer-only `ApiWrite` | Move a scheduled appointment and preserve its previous schedule |
+| `GET` | `/api/v1/episodes/options` | `ClinicianOrAdmin` | Get active centres and record statuses |
+| `GET` | `/api/v1/episodes?patientId={id}` | `ClinicianOrAdmin` | List visible records for one patient |
+| `GET` | `/api/v1/episodes/{id}` | `ClinicianOrAdmin` | Get one accessible patient record |
+| `POST` | `/api/v1/episodes` | `ClinicianOrAdmin` + bearer-only `ApiWrite` | Create a patient record |
+| `PUT` | `/api/v1/episodes/{id}` | `ClinicianOrAdmin` + bearer-only `ApiWrite` | Update a patient record without changing its patient |
 
 List routes return `items`, `page`, `pageSize`, `totalCount`, and `totalPages`. Page size is limited
 to 100. API contracts use strings for enum values and do not serialize EF Core entities.

@@ -2,6 +2,9 @@ export interface PagedResponse<T> { items: T[]; page: number; pageSize: number; 
 export interface PatientSummary { id: string; patientNumber: string; fullName: string; nameWithInitials: string; dateOfBirth: string; sex: string; category: string; centerId: number; centerName: string; registrationDate: string }
 export interface PatientDetail extends PatientSummary { identificationType: string; identificationNumber: string; address1: string; address2?: string; province: string; district: string; city?: string; cityOther?: string; email?: string; nationality?: string; center: string; assignedClinicianName?: string; contacts: PatientContact[] }
 export interface PatientContact { id: string; telephoneNumber: string; dateConfirmed?: string; personChecked?: string }
+export interface Episode { id: string; patientId: string; patientNumber: string; patientName: string; centerId: number; centerName: string; status: string; recordDate: string; recordTime?: string; remarks?: string; isRestricted: boolean; assessmentCount: number; fittingCount: number; deliveryCount: number; followUpCount: number; documentCount: number }
+export interface EpisodeOptions { centers: RegistrationOption[]; statuses: string[] }
+export interface SaveEpisodeRequest { patientId: string; centerId: number; status: string; recordDate: string; recordTime: string; remarks?: string; isRestricted: boolean }
 export interface Appointment { id: string; patientId: string; patientNumber: string; patientName: string; episodeId?: string; type: string; appointmentDate: string; appointmentTime?: string; status: string; assignedClinicianUserId?: string; assignedClinicianName?: string; notes?: string }
 export interface AppointmentOptions { assignees: AssigneeOption[] }
 export interface CreateAppointmentRequest { patientId: string; type: string; appointmentDate: string; appointmentTime?: string; assignedClinicianEntry: string; assignedClinicianUserId?: string; notes?: string }

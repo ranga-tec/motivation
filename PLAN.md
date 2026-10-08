@@ -118,3 +118,76 @@ Status: complete on 2026-10-08. Verification: frontend lint/build and the separa
    - Prove: users can create, reschedule, and cancel from the schedule with validation, double-submit protection, and clear success/error feedback.
 5. Verify, document, commit, and push the phase.
    - Prove: frontend lint/build, API build, full .NET tests, and Playwright desktop/mobile workflows pass; the commit reaches `origin/main`.
+
+# Full React/API migration completion
+
+Scope confirmed on 2026-10-08: migrate every production workflow currently exposed by MVC to the
+standalone versioned API and React frontend. Preserve only administrator login data at cutover;
+legacy business data compatibility and import are out of scope.
+
+## Phase 7 patient workspace and episodes
+
+Status: complete on 2026-10-08. Verification: patient list-to-detail, record creation/editing,
+restricted-record feedback, required browser fields, direct routing, and responsive mobile layout
+passed; frontend lint/build, standalone API build, and the full .NET suite passed.
+
+1. Define patient-detail and episode API contracts from current domain rules.
+   - Prove: contracts expose contacts, episode summaries, clinical activity, and reference options without serializing EF entities.
+2. Add bearer-secured episode create/edit/detail endpoints.
+   - Prove: location, centre, patient, status, audit, and restricted-access rules are enforced with ProblemDetails responses.
+3. Add focused patient-workspace and episode API tests.
+   - Prove: tests cover reads, creation, invalid relationships, editing, and authorization-sensitive visibility.
+4. Build responsive React patient detail and episode workflows.
+   - Prove: list-to-detail navigation, episode create/edit dialogs, empty/error/loading states, and mobile layouts work without legacy pages.
+5. Verify, document, commit, and push.
+   - Prove: lint/build, API build, full tests, and Playwright patient-to-episode flows pass.
+
+## Phase 8 clinical records
+
+Status: queued.
+
+1. Extract assessment and prescription contracts/options.
+2. Extract fitting, delivery, and follow-up contracts/options.
+3. Implement secured APIs and state/audit validation.
+4. Build responsive React create/edit clinical workflows.
+5. Verify all clinical chains, commit, and push.
+
+## Phase 9 documents and printable records
+
+Status: queued.
+
+1. Introduce storage-neutral patient/episode document APIs.
+2. Add upload, download, delete, and patient-photo authorization.
+3. Expose registration, assessment, prescription, delivery, and follow-up print outputs.
+4. Build React document and print actions.
+5. Verify file security and print rendering, commit, and push.
+
+## Phase 10 administration
+
+Status: queued.
+
+1. Extract locations, geography, lookups, devices, and device types.
+2. Extract user/profile/role/lock/password-reset administration while preserving admin login.
+3. Build role-protected admin APIs.
+4. Build responsive React administration screens.
+5. Verify authorization and CRUD workflows, commit, and push.
+
+## Phase 11 reports and dashboard
+
+Status: queued.
+
+1. Define dashboard metrics and drill-down APIs.
+2. Define all report filters, row contracts, summaries, and exports.
+3. Implement the thirteen existing report families against current query rules.
+4. Build responsive React report/dashboard screens and export controls.
+5. Verify report totals/exports against controlled fixtures, commit, and push.
+
+## Phase 12 production cutover
+
+Status: queued.
+
+1. Remove legacy-data/import dependencies and seed production-safe reference data.
+2. Retire migrated Razor routes while retaining administrator authentication/recovery.
+3. Harden dependencies, CORS, rate limits, health checks, logs, and deployment configuration.
+4. Run full automated, browser, accessibility, security, and clean-database acceptance checks.
+5. Publish final deployment/runbook documentation, commit, push, and tag the release candidate.

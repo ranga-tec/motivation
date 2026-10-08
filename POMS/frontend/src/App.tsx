@@ -5,6 +5,7 @@ import { AppointmentsPage } from './pages/AppointmentsPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { PatientsPage } from './pages/PatientsPage'
 import { PatientRegistrationPage } from './pages/PatientRegistrationPage'
+import { PatientDetailPage } from './pages/PatientDetailPage'
 import './App.css'
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
           <Route index element={<DashboardPage />} />
           <Route path="patients" element={<PatientsPage />} />
           <Route path="patients/new" element={<PatientRegistrationPage />} />
+          <Route path="patients/:id" element={<PatientDetailPage />} />
           <Route path="appointments" element={<AppointmentsPage />} />
         </Route>
       </Route>
