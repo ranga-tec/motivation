@@ -182,7 +182,10 @@ CRUD and account-dialog checks passed.
 
 ## Phase 11 reports and dashboard
 
-Status: queued.
+Status: complete on 2026-10-08. All thirteen report contracts, shared filters, PDF export,
+restricted-data scoping, responsive React reports, and authenticated dashboard metrics are
+implemented. Controlled-fixture tests, full suite, frontend lint/build, and Playwright desktop/mobile
+report/filter/export checks passed.
 
 1. Define dashboard metrics and drill-down APIs.
 2. Define all report filters, row contracts, summaries, and exports.

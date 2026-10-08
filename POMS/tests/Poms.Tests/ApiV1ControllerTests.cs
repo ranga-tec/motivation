@@ -489,6 +489,35 @@ public sealed class ApiV1ControllerTests
         (await database.Context.Nationalities.SingleAsync()).Name.Should().Be("Sri Lankan citizen");
     }
 
+    [Fact]
+    public async Task ReportsPatientRegistration_ReturnsControlledFixtureTotal()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var patient = await SeedPatientAsync(database.Context);
+        var controller = SetUser(new ReportsApiController(database.Context, new ReportQueryService(database.Context), AllowedRestrictedAccess(), new PrintFormService()));
+
+        var action = await controller.Get("patient-registration", new ReportFilter { DateFrom = new DateOnly(2026, 1, 1), DateTo = new DateOnly(2026, 12, 31) }, CancellationToken.None);
+
+        var result = action.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<ReportResultResponse>().Subject;
+        result.TotalCount.Should().Be(1);
+        result.Rows.Single()[0].Should().Be(patient.PatientNumber);
+    }
+
+    [Fact]
+    public async Task ReportsDashboard_CountsCurrentOperationalState()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var patient = await SeedPatientAsync(database.Context);
+        database.Context.Episodes.Add(CreateEpisode(patient, false, "clinician@poms.lk"));
+        database.Context.Appointments.Add(new Appointment { PatientId = patient.Id, Patient = patient, Type = AppointmentType.Assessment, AppointmentDate = DateOnly.FromDateTime(DateTime.Today), Status = AppointmentStatus.Scheduled });
+        await database.Context.SaveChangesAsync();
+        var controller = SetUser(new DashboardApiController(database.Context, AllowedRestrictedAccess()));
+
+        var result = await controller.Get(CancellationToken.None);
+
+        result.TotalPatients.Should().Be(1); result.TodayAppointments.Should().Be(1); result.AwaitingAppointments.Should().Be(1); result.ActiveRecords.Should().Be(1);
+    }
+
     private static PatientsApiController CreatePatientsController(PomsDbContext context) => new(
         context,
         new PatientNumberService(context),

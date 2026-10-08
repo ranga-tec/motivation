@@ -26,6 +26,11 @@ export interface AdminDevice { id: number; deviceTypeId: number; deviceTypeName:
 export interface AdminCatalog { provinces: AdminItem[]; districts: AdminItem[]; cities: AdminItem[]; centers: AdminCenter[]; lookups: Record<string, AdminItem[]>; deviceTypes: AdminItem[]; devices: AdminDevice[] }
 export interface AdminUser { id: string; email: string; fullName: string; employeeNumber: string; designation: string; department?: string; mobileNumber: string; workPhoneNumber?: string; canAccessRestrictedClinicalData: boolean; roles: string[]; isLocked: boolean; isCurrentUser: boolean }
 export interface AdminUsers { availableRoles: string[]; users: AdminUser[] }
+export interface ReportDefinition { key: string; title: string }
+export interface ReportOptions { reports: ReportDefinition[]; centers: AdminItem[]; provinces: AdminItem[] }
+export interface ReportResult { key: string; title: string; headers: string[]; rows: string[][]; totalCount: number }
+export interface ReportFilter { centerId?: number; provinceId?: number; dateFrom?: string; dateTo?: string; patientNumber?: string; year?: number }
+export interface DashboardMetrics { totalPatients: number; todayAppointments: number; awaitingAppointments: number; activeRecords: number; assessmentsThisMonth: number; deliveriesThisMonth: number }
 export interface Appointment { id: string; patientId: string; patientNumber: string; patientName: string; episodeId?: string; type: string; appointmentDate: string; appointmentTime?: string; status: string; assignedClinicianUserId?: string; assignedClinicianName?: string; notes?: string }
 export interface AppointmentOptions { assignees: AssigneeOption[] }
 export interface CreateAppointmentRequest { patientId: string; type: string; appointmentDate: string; appointmentTime?: string; assignedClinicianEntry: string; assignedClinicianUserId?: string; notes?: string }

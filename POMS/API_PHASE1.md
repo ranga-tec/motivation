@@ -46,6 +46,10 @@ can be developed against stable DTO contracts.
 | `POST/PUT` | `/api/v1/admin/lookups/{type}[/{id}]` | `AdminOnly` + bearer-only `ApiWrite` | Create or update supported clinical and registration lookups |
 | `GET/POST` | `/api/v1/admin/users` | `AdminOnly` (`POST` also requires `ApiWrite`) | List roles/staff or create an internal staff account |
 | `PUT` | `/api/v1/admin/users/{id}/{profile|roles|lock|password}` | `AdminOnly` + bearer-only `ApiWrite` | Maintain staff profile, access, lock state, or password |
+| `GET` | `/api/v1/dashboard` | `AnyAuthenticatedUser` | Get operational dashboard totals scoped to accessible clinical data |
+| `GET` | `/api/v1/reports/options` | `ReportOrAdmin` | Get all thirteen report definitions and shared filter options |
+| `GET` | `/api/v1/reports/{key}` | `ReportOrAdmin` | Run a report with centre, province, date, patient, and year filters |
+| `GET` | `/api/v1/reports/{key}/pdf` | `ReportOrAdmin` | Export the filtered report as a PDF |
 
 List routes return `items`, `page`, `pageSize`, `totalCount`, and `totalPages`. Page size is limited
 to 100. API contracts use strings for enum values and do not serialize EF Core entities.

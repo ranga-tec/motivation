@@ -98,6 +98,7 @@ builder.Services.AddScoped<IRestrictedAccessService, RestrictedAccessService>();
 builder.Services.AddScoped<IPatientNumberService, PatientNumberService>();
 builder.Services.AddScoped<IDuplicateCheckService, DuplicateCheckService>();
 builder.Services.AddScoped<IAppointmentAssigneeService, AppointmentAssigneeService>();
+builder.Services.AddScoped<IReportQueryService, ReportQueryService>();
 var fileStorage = builder.Configuration.GetSection("FileStorage");
 var storageRoot = fileStorage["RootPath"] ?? (OperatingSystem.IsWindows() ? @"C:\PomsStorage\api" : "/app/storage");
 var maxFileSizeMb = fileStorage.GetValue<long>("MaxFileSizeMB", 10);

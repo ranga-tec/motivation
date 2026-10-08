@@ -1,6 +1,6 @@
 import { config } from '../config'
 import { createDemoPatient, demoApi, demoAppointmentActions, demoClinicalActions, demoClinicalOptions, demoEpisodeActions, demoRegistrationOptions } from './demoData'
-import type { AdminCatalog, AdminCenter, AdminDevice, AdminItem, AdminUsers, AdminUser, Appointment, AppointmentOptions, Assessment, ClinicalOptions, CreateAppointmentRequest, CreatePatientRequest, Delivery, DocumentOptions, Episode, EpisodeClinicalRecords, EpisodeOptions, Fitting, FollowUp, ListOptions, PagedResponse, PatientDetail, PatientRegistrationOptions, PatientSummary, PrescriptionOption, SaveAssessmentRequest, SaveDeliveryRequest, SaveEpisodeRequest, SaveFittingRequest, SaveFollowUpRequest, StoredDocument } from './types'
+import type { AdminCatalog, AdminCenter, AdminDevice, AdminItem, AdminUsers, AdminUser, Appointment, AppointmentOptions, Assessment, ClinicalOptions, CreateAppointmentRequest, CreatePatientRequest, DashboardMetrics, Delivery, DocumentOptions, Episode, EpisodeClinicalRecords, EpisodeOptions, Fitting, FollowUp, ListOptions, PagedResponse, PatientDetail, PatientRegistrationOptions, PatientSummary, PrescriptionOption, ReportFilter, ReportOptions, ReportResult, SaveAssessmentRequest, SaveDeliveryRequest, SaveEpisodeRequest, SaveFittingRequest, SaveFollowUpRequest, StoredDocument } from './types'
 
 export interface ApiProblem { title?: string; detail?: string; duplicateType?: string; existingPatientNumber?: string; existingPatientName?: string; errors?: Record<string, string[]> }
 export class ApiError extends Error {
@@ -82,4 +82,8 @@ export const api = {
   updateAdminRoles: async (id: string, roles: string[]): Promise<void> => config.demoMode ? demoApi.updateAdminRoles(id, roles) : putVoid(`/api/v1/admin/users/${id}/roles`, { roles }),
   setAdminLock: async (id: string, locked: boolean): Promise<void> => config.demoMode ? demoApi.setAdminLock(id, locked) : putVoid(`/api/v1/admin/users/${id}/lock`, { locked }),
   resetAdminPassword: async (id: string, newPassword: string): Promise<void> => config.demoMode ? undefined : putVoid(`/api/v1/admin/users/${id}/password`, { newPassword }),
+  dashboardMetrics: async (): Promise<DashboardMetrics> => config.demoMode ? demoApi.dashboardMetrics() : get('/api/v1/dashboard'),
+  reportOptions: async (): Promise<ReportOptions> => config.demoMode ? demoApi.reportOptions() : get('/api/v1/reports/options'),
+  report: async (key: string, filter: ReportFilter): Promise<ReportResult> => config.demoMode ? demoApi.report(key) : get(`/api/v1/reports/${key}?${queryString(filter)}`),
+  reportPdf: async (key: string, filter: ReportFilter) => config.demoMode ? { blob: new Blob(['Demo report'], { type: 'application/pdf' }), fileName: `${key}.pdf` } : download(`/api/v1/reports/${key}/pdf?${queryString(filter)}`),
 }
