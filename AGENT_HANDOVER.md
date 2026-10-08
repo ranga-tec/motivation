@@ -28,11 +28,10 @@ If you are picking this up cold, read this file, then `DEPLOY_RAILWAY.md`. Treat
 | Workspace | `X:\Developments\motivation` |
 | Repository | <https://github.com/ranga-tec/motivation> |
 | Branch | `main` |
-| HEAD and `origin/main` | `3f3ad71` |
+| HEAD and `origin/main` | `d8aef25` |
 | Other branch | `production-backup` — backs no live service |
 
-`main` and `origin/main` are level. The working tree is clean apart from a stray `image.png` at
-the repository root (a Kamatera pricing screenshot) that was deliberately left untracked.
+`main` and `origin/main` are level. The working tree is clean.
 
 ## 4. Application overview
 
