@@ -44,11 +44,13 @@ export function ProtectedRoute() {
 
 export function SignInPage() {
   const { user, signIn } = useAuth()
+  const [error, setError] = useState('')
   if (user || config.demoMode) return <Navigate to="/" replace />
   return <main className="signin-page"><section className="signin-card">
     <div className="brand-mark large">P</div><p className="eyebrow">POMS clinical workspace</p>
     <h1>Secure staff sign in</h1><p>Access patient records, appointments, and operational tools through your organisation's identity provider.</p>
-    {isOidcConfigured ? <button className="button primary full" onClick={() => void signIn()}><LockKeyhole size={18} /> Continue securely</button> : <div className="config-warning"><strong>Identity provider not configured</strong><span>Add the VITE_OIDC_AUTHORITY and VITE_OIDC_CLIENT_ID deployment variables.</span></div>}
+    {isOidcConfigured ? <button className="button primary full" onClick={() => { setError(''); void signIn().catch(() => setError('The identity provider is unavailable. Contact your system administrator.')) }}><LockKeyhole size={18} /> Continue securely</button> : <div className="config-warning"><strong>Identity provider not configured</strong><span>Add the VITE_OIDC_AUTHORITY and VITE_OIDC_CLIENT_ID deployment variables.</span></div>}
+    {error && <div className="error-panel" role="alert">{error}</div>}
     <small>Protected healthcare information. Authorised personnel only.</small>
   </section></main>
 }

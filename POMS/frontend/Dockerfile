@@ -1,9 +1,17 @@
-FROM node:22-alpine AS build
+FROM node:22-alpine AS dependencies
 WORKDIR /app
 
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+
+FROM dependencies AS demo
+ENV VITE_API_URL=http://localhost:8081 \
+    VITE_DEMO_MODE=true
+EXPOSE 5173
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+
+FROM dependencies AS build
 
 ARG VITE_API_URL
 ARG VITE_OIDC_AUTHORITY
