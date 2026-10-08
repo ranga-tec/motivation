@@ -4,11 +4,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Moq;
 using Poms.Domain.Entities;
 using Poms.Domain.Enums;
 using Poms.Infrastructure.Data;
 using Poms.Infrastructure.Services;
+using Poms.Reporting.Services;
 using Poms.Web.Api.V1.Contracts;
 using Poms.Web.Api.V1.Controllers;
 
@@ -16,6 +18,9 @@ namespace Poms.Tests;
 
 public sealed class ApiV1ControllerTests
 {
+    static ApiV1ControllerTests() =>
+        QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
     [Fact]
     public async Task PatientsList_ReturnsStablePagedContract()
     {
@@ -372,6 +377,83 @@ public sealed class ApiV1ControllerTests
         (await database.Context.Fittings.CountAsync()).Should().Be(1); (await database.Context.Deliveries.CountAsync()).Should().Be(1); (await database.Context.FollowUps.CountAsync()).Should().Be(1);
     }
 
+    [Fact]
+    public async Task DocumentsUploadDownloadDelete_CompletesPatientDocumentLifecycle()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var patient = await SeedPatientAsync(database.Context);
+        var storage = new MemoryFileStorage();
+        var controller = SetUser(CreateDocumentsController(database.Context, storage, AllowedRestrictedAccess()));
+        var bytes = "test document"u8.ToArray();
+        var file = new FormFile(new MemoryStream(bytes), 0, bytes.Length, "file", "assessment.pdf")
+        {
+            Headers = new HeaderDictionary(),
+            ContentType = "application/pdf"
+        };
+
+        var uploaded = await controller.Upload(new UploadDocumentRequest
+        {
+            PatientId = patient.Id,
+            DocumentType = DocumentType.MedicalDocuments,
+            Notes = "Clinical attachment",
+            File = file
+        }, CancellationToken.None);
+
+        var created = uploaded.Result.Should().BeOfType<CreatedResult>().Which.Value
+            .Should().BeOfType<DocumentResponse>().Subject;
+        created.FileName.Should().Be("assessment.pdf");
+
+        var downloaded = await controller.Download(created.Id, "patient", CancellationToken.None);
+        downloaded.Should().BeOfType<FileContentResult>().Which.FileContents.Should().Equal(bytes);
+
+        (await controller.Delete(created.Id, "patient", CancellationToken.None))
+            .Should().BeOfType<NoContentResult>();
+        (await database.Context.PatientDocuments.CountAsync()).Should().Be(0);
+        (await database.Context.PatientDocuments.IgnoreQueryFilters().SingleAsync()).IsDeleted.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task PatientPhoto_ReturnsLatestAuthorizedPhotoWithoutCaching()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var patient = await SeedPatientAsync(database.Context);
+        var storage = new MemoryFileStorage();
+        var saved = storage.Add("photo.jpg", [1, 2, 3]);
+        database.Context.PatientDocuments.Add(new PatientDocument
+        {
+            PatientId = patient.Id,
+            DocumentType = DocumentType.PatientPhoto,
+            FileName = "photo.jpg",
+            StoragePath = saved,
+            ContentType = "image/jpeg",
+            UploadedBy = "clinician@poms.lk",
+            UploadedAt = DateTime.UtcNow,
+            CreatedBy = "clinician@poms.lk"
+        });
+        await database.Context.SaveChangesAsync();
+        var controller = SetUser(CreateDocumentsController(database.Context, storage, AllowedRestrictedAccess()));
+
+        var result = await controller.PatientPhoto(patient.Id, CancellationToken.None);
+
+        result.Should().BeOfType<FileContentResult>().Which.FileContents.Should().Equal(1, 2, 3);
+        controller.Response.Headers.CacheControl.ToString().Should().Be("no-store, private");
+    }
+
+    [Fact]
+    public async Task PrintRegistration_ReturnsPdfDocument()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var patient = await SeedPatientAsync(database.Context);
+        var controller = SetUser(new PrintApiController(database.Context, new PrintFormService(), AllowedRestrictedAccess()));
+
+        var result = await controller.Registration(patient.Id, CancellationToken.None);
+
+        var pdf = result.Should().BeOfType<FileContentResult>().Subject;
+        pdf.ContentType.Should().Be("application/pdf");
+        pdf.FileContents.Take(4).Should().Equal("%PDF"u8.ToArray());
+        pdf.FileDownloadName.Should().Contain(patient.PatientNumber);
+    }
+
     private static PatientsApiController CreatePatientsController(PomsDbContext context) => new(
         context,
         new PatientNumberService(context),
@@ -384,6 +466,20 @@ public sealed class ApiV1ControllerTests
             context,
             restrictedAccess,
             new AppointmentAssigneeService(context));
+
+    private static DocumentsApiController CreateDocumentsController(
+        PomsDbContext context,
+        IFileStorageService storage,
+        IRestrictedAccessService restrictedAccess) => new(
+            context,
+            storage,
+            restrictedAccess,
+            new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["FileStorage:MaxFileSizeMB"] = "10",
+                ["FileStorage:AllowedExtensions:0"] = ".pdf",
+                ["FileStorage:AllowedExtensions:1"] = ".jpg"
+            }).Build());
 
     private static IRestrictedAccessService AllowedRestrictedAccess()
     {
@@ -524,5 +620,36 @@ public sealed class ApiV1ControllerTests
             await Context.DisposeAsync();
             await connection.DisposeAsync();
         }
+    }
+
+    private sealed class MemoryFileStorage : IFileStorageService
+    {
+        private readonly Dictionary<string, byte[]> _files = new(StringComparer.OrdinalIgnoreCase);
+
+        public string Add(string path, byte[] bytes)
+        {
+            _files[path] = bytes;
+            return path;
+        }
+
+        public async Task<(string StoragePath, string FileName)> SaveFileAsync(IFormFile file, string patientNumber)
+        {
+            var path = $"patients/{patientNumber}/{Guid.NewGuid():N}{Path.GetExtension(file.FileName)}";
+            await using var stream = new MemoryStream();
+            await file.CopyToAsync(stream);
+            _files[path] = stream.ToArray();
+            return (path, Path.GetFileName(file.FileName));
+        }
+
+        public Task<byte[]> GetFileAsync(string storagePath) =>
+            Task.FromResult(_files.TryGetValue(storagePath, out var bytes)
+                ? bytes
+                : throw new FileNotFoundException("File not found", storagePath));
+
+        public Task DeleteFileAsync(string storagePath) { _files.Remove(storagePath); return Task.CompletedTask; }
+        public Task<StagedOcrImport> StageOcrImportAsync(IFormFile file, string contentType, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<StoredOcrImport> MaterializeOcrImportAsync(string token, string patientNumber, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task DeleteStagedOcrImportAsync(string token) => Task.CompletedTask;
+        public Task CleanupExpiredOcrImportsAsync() => Task.CompletedTask;
     }
 }

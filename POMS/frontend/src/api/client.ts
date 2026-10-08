@@ -1,6 +1,6 @@
 import { config } from '../config'
 import { createDemoPatient, demoApi, demoAppointmentActions, demoClinicalActions, demoClinicalOptions, demoEpisodeActions, demoRegistrationOptions } from './demoData'
-import type { Appointment, AppointmentOptions, Assessment, ClinicalOptions, CreateAppointmentRequest, CreatePatientRequest, Delivery, Episode, EpisodeClinicalRecords, EpisodeOptions, Fitting, FollowUp, ListOptions, PagedResponse, PatientDetail, PatientRegistrationOptions, PatientSummary, PrescriptionOption, SaveAssessmentRequest, SaveDeliveryRequest, SaveEpisodeRequest, SaveFittingRequest, SaveFollowUpRequest } from './types'
+import type { Appointment, AppointmentOptions, Assessment, ClinicalOptions, CreateAppointmentRequest, CreatePatientRequest, Delivery, DocumentOptions, Episode, EpisodeClinicalRecords, EpisodeOptions, Fitting, FollowUp, ListOptions, PagedResponse, PatientDetail, PatientRegistrationOptions, PatientSummary, PrescriptionOption, SaveAssessmentRequest, SaveDeliveryRequest, SaveEpisodeRequest, SaveFittingRequest, SaveFollowUpRequest, StoredDocument } from './types'
 
 export interface ApiProblem { title?: string; detail?: string; duplicateType?: string; existingPatientNumber?: string; existingPatientName?: string; errors?: Record<string, string[]> }
 export class ApiError extends Error {
@@ -29,6 +29,13 @@ async function put<T>(path: string, body: unknown): Promise<T> {
   if (!response.ok) { const problem = await response.json().catch(() => undefined) as ApiProblem | undefined; throw new ApiError(response.status, problem?.detail ?? problem?.title ?? `Request failed (${response.status})`, problem) }
   return response.json() as Promise<T>
 }
+async function upload<T>(path: string, body: FormData): Promise<T> {
+  const token = await accessToken?.(); const response = await fetch(`${config.apiUrl}${path}`, { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : {}, body })
+  if (!response.ok) { const problem = await response.json().catch(() => undefined) as ApiProblem | undefined; throw new ApiError(response.status, problem?.detail ?? problem?.title ?? `Request failed (${response.status})`, problem) }
+  return response.json() as Promise<T>
+}
+async function remove(path: string): Promise<void> { const token = await accessToken?.(); const response = await fetch(`${config.apiUrl}${path}`, { method: 'DELETE', headers: token ? { Authorization: `Bearer ${token}` } : {} }); if (!response.ok) throw new ApiError(response.status, `Request failed (${response.status})`) }
+async function download(path: string): Promise<{ blob: Blob; fileName: string }> { const token = await accessToken?.(); const response = await fetch(`${config.apiUrl}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} }); if (!response.ok) throw new ApiError(response.status, `Request failed (${response.status})`); const disposition = response.headers.get('content-disposition') ?? ''; const fileName = /filename\*?=(?:UTF-8'')?"?([^";]+)/i.exec(disposition)?.[1] ?? 'document'; return { blob: await response.blob(), fileName: decodeURIComponent(fileName) } }
 export const api = {
   patients: async (options: ListOptions = {}): Promise<PagedResponse<PatientSummary>> => config.demoMode ? demoApi.patients(options.search) : get(`/api/v1/patients?${queryString(options)}`),
   patient: async (id: string): Promise<PatientDetail> => config.demoMode ? demoApi.patient(id) : get(`/api/v1/patients/${id}`),
@@ -56,4 +63,14 @@ export const api = {
   updateDelivery: async (id: string, request: SaveDeliveryRequest): Promise<Delivery> => config.demoMode ? demoClinicalActions.saveDelivery(request, id) : put(`/api/v1/clinical-records/deliveries/${id}`, request),
   createFollowUp: async (request: SaveFollowUpRequest): Promise<FollowUp> => config.demoMode ? demoClinicalActions.saveFollowUp(request) : post('/api/v1/clinical-records/follow-ups', request),
   updateFollowUp: async (id: string, request: SaveFollowUpRequest): Promise<FollowUp> => config.demoMode ? demoClinicalActions.saveFollowUp(request, id) : put(`/api/v1/clinical-records/follow-ups/${id}`, request),
+  documentOptions: async (): Promise<DocumentOptions> => config.demoMode ? { documentTypes: ['PatientPhoto', 'IdentityDocument', 'MedicalReport', 'AssessmentDocuments', 'PrescriptionDocuments', 'DeliveryDocuments', 'FollowUpDocuments', 'Other'], maxFileSizeMb: 10, allowedExtensions: ['.pdf', '.jpg', '.jpeg', '.png', '.docx'] } : get('/api/v1/documents/options'),
+  documents: async (scope: 'patient' | 'episode', ownerId: string): Promise<StoredDocument[]> => config.demoMode ? demoApi.documents(scope, ownerId) : get(`/api/v1/documents?${scope}Id=${encodeURIComponent(ownerId)}`),
+  uploadDocument: async (scope: 'patient' | 'episode', ownerId: string, documentType: string, notes: string, restricted: boolean, file: File): Promise<StoredDocument> => { if (config.demoMode) return demoApi.uploadDocument(scope, ownerId, documentType, notes, restricted, file); const body = new FormData(); body.set(`${scope}Id`, ownerId); body.set('documentType', documentType); body.set('notes', notes); body.set('isRestricted', String(restricted)); body.set('file', file); return upload('/api/v1/documents', body) },
+  deleteDocument: async (document: StoredDocument): Promise<void> => config.demoMode ? demoApi.deleteDocument(document.id) : remove(`/api/v1/documents/${document.id}?scope=${document.scope}`),
+  downloadDocument: async (document: StoredDocument): Promise<{ blob: Blob; fileName: string }> => config.demoMode ? { blob: new Blob(['Demo document'], { type: document.contentType }), fileName: document.fileName } : download(`/api/v1/documents/${document.id}?scope=${document.scope}`),
+  printRegistration: async (patientId: string) => config.demoMode ? { blob: new Blob(['Demo registration form'], { type: 'application/pdf' }), fileName: 'RegistrationForm.pdf' } : download(`/api/v1/print/patients/${patientId}/registration`),
+  printAssessment: async (id: string) => config.demoMode ? { blob: new Blob(['Demo assessment form'], { type: 'application/pdf' }), fileName: 'AssessmentForm.pdf' } : download(`/api/v1/print/assessments/${id}`),
+  printPrescription: async (id: string) => config.demoMode ? { blob: new Blob(['Demo prescription form'], { type: 'application/pdf' }), fileName: 'PrescriptionForm.pdf' } : download(`/api/v1/print/assessments/${id}/prescription`),
+  printDelivery: async (id: string) => config.demoMode ? { blob: new Blob(['Demo delivery note'], { type: 'application/pdf' }), fileName: 'DeliveryNote.pdf' } : download(`/api/v1/print/deliveries/${id}`),
+  printFollowUp: async (id: string) => config.demoMode ? { blob: new Blob(['Demo follow-up note'], { type: 'application/pdf' }), fileName: 'FollowUpNote.pdf' } : download(`/api/v1/print/follow-ups/${id}`),
 }

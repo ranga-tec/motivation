@@ -4,8 +4,11 @@ using Microsoft.IdentityModel.Tokens;
 using Poms.Infrastructure.Data;
 using Poms.Infrastructure.Services;
 using Poms.Web.Api;
+using Poms.Reporting.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 var useSqlite = builder.Configuration.GetValue<bool>("UseSQLite");
@@ -90,6 +93,12 @@ builder.Services.AddScoped<IRestrictedAccessService, RestrictedAccessService>();
 builder.Services.AddScoped<IPatientNumberService, PatientNumberService>();
 builder.Services.AddScoped<IDuplicateCheckService, DuplicateCheckService>();
 builder.Services.AddScoped<IAppointmentAssigneeService, AppointmentAssigneeService>();
+var fileStorage = builder.Configuration.GetSection("FileStorage");
+var storageRoot = fileStorage["RootPath"] ?? (OperatingSystem.IsWindows() ? @"C:\PomsStorage\api" : "/app/storage");
+var maxFileSizeMb = fileStorage.GetValue<long>("MaxFileSizeMB", 10);
+var allowedExtensions = fileStorage.GetSection("AllowedExtensions").Get<string[]>();
+builder.Services.AddScoped<IFileStorageService>(_ => new FileStorageService(storageRoot, maxFileSizeMb, allowedExtensions));
+builder.Services.AddScoped<IPrintFormService, PrintFormService>();
 builder.Services.AddControllers();
 builder.Services.AddHealthChecks().AddCheck<PomsApiDatabaseHealthCheck>("database");
 

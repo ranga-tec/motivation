@@ -18,6 +18,8 @@ export interface SaveAssessmentRequest { episodeId: string; assessmentType: stri
 export interface SaveFittingRequest { episodeId: string; fittingDate: string; notes?: string; isRestricted: boolean }
 export interface SaveDeliveryRequest { episodeId: string; deliveryDate: string; deliveryTime: string; notes?: string; deviceId?: number; isRestricted: boolean }
 export interface SaveFollowUpRequest { episodeId: string; followUpDate: string; startTime: string; endTime: string; notes?: string; isRestricted: boolean }
+export interface DocumentOptions { documentTypes: string[]; maxFileSizeMb: number; allowedExtensions: string[] }
+export interface StoredDocument { id: string; scope: 'patient' | 'episode'; ownerId: string; documentType: string; fileName: string; contentType: string; fileSize?: number; notes?: string; uploadedBy: string; uploadedAt: string; isRestricted: boolean }
 export interface Appointment { id: string; patientId: string; patientNumber: string; patientName: string; episodeId?: string; type: string; appointmentDate: string; appointmentTime?: string; status: string; assignedClinicianUserId?: string; assignedClinicianName?: string; notes?: string }
 export interface AppointmentOptions { assignees: AssigneeOption[] }
 export interface CreateAppointmentRequest { patientId: string; type: string; appointmentDate: string; appointmentTime?: string; assignedClinicianEntry: string; assignedClinicianUserId?: string; notes?: string }

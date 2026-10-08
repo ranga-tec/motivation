@@ -31,6 +31,16 @@ can be developed against stable DTO contracts.
 | `POST/PUT` | `/api/v1/clinical-records/fittings[/{id}]` | `ClinicianOrAdmin` + bearer-only `ApiWrite` | Create or update fittings |
 | `POST/PUT` | `/api/v1/clinical-records/deliveries[/{id}]` | `ClinicianOrAdmin` + bearer-only `ApiWrite` | Create or update deliveries |
 | `POST/PUT` | `/api/v1/clinical-records/follow-ups[/{id}]` | `ClinicianOrAdmin` + bearer-only `ApiWrite` | Create or update follow-ups |
+| `GET` | `/api/v1/documents/options` | `AnyAuthenticatedUser` | Get document types and upload limits |
+| `GET` | `/api/v1/documents?patientId={id}` or `?episodeId={id}` | `AnyAuthenticatedUser` | List accessible patient or record documents |
+| `POST` | `/api/v1/documents` | `AnyAuthenticatedUser` + bearer-only `ApiWrite` | Upload a patient or record document |
+| `GET/DELETE` | `/api/v1/documents/{id}?scope=patient|episode` | `AnyAuthenticatedUser` (`DELETE` also requires `ApiWrite`) | Download or soft-delete an accessible document |
+| `GET` | `/api/v1/documents/patient-photo/{patientId}` | `AnyAuthenticatedUser` | Download the latest accessible patient photo without caching |
+| `GET` | `/api/v1/print/patients/{id}/registration` | `AnyAuthenticatedUser` | Generate the patient registration PDF |
+| `GET` | `/api/v1/print/assessments/{id}` | `AnyAuthenticatedUser` | Generate the assessment PDF |
+| `GET` | `/api/v1/print/assessments/{id}/prescription` | `AnyAuthenticatedUser` | Generate the prescription PDF |
+| `GET` | `/api/v1/print/deliveries/{id}` | `AnyAuthenticatedUser` | Generate the delivery-note PDF |
+| `GET` | `/api/v1/print/follow-ups/{id}` | `AnyAuthenticatedUser` | Generate the follow-up PDF |
 
 List routes return `items`, `page`, `pageSize`, `totalCount`, and `totalPages`. Page size is limited
 to 100. API contracts use strings for enum values and do not serialize EF Core entities.
@@ -63,8 +73,9 @@ authorization policies, add rate limits, and define an external integration audi
 Write routes require an explicit bearer token even when hosted inside `Poms.Web`; Identity cookies
 cannot invoke them. Patient and appointment writes return ProblemDetails-compatible validation and
 state-conflict responses. Patient registration returns `201 Created`; appointment scheduling returns
-`201 Created`, while state transitions return the updated appointment. Photo and legacy OCR import
-remain in MVC until object storage is added.
+`201 Created`, while state transitions return the updated appointment. Document APIs depend on
+`IFileStorageService`, so the local file implementation can be replaced by object storage without
+changing the API contract. Legacy OCR import remains in MVC.
 
 ## Compatibility rule
 

@@ -157,7 +157,9 @@ validation were exercised; frontend lint/build, standalone API build, and the fu
 
 ## Phase 9 documents and printable records
 
-Status: queued.
+Status: complete on 2026-10-08. Verification: patient and record upload/list/download/delete flows,
+restricted access, latest patient-photo delivery, and all five PDF outputs are implemented; focused
+API tests and Playwright desktop/mobile upload/delete/download checks passed with no console errors.
 
 1. Introduce storage-neutral patient/episode document APIs.
 2. Add upload, download, delete, and patient-photo authorization.
