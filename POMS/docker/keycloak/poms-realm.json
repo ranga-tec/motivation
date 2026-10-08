@@ -1,6 +1,7 @@
 {
   "realm": "poms",
   "enabled": true,
+  "sslRequired": "none",
   "displayName": "POMS",
   "registrationAllowed": false,
   "resetPasswordAllowed": true,
