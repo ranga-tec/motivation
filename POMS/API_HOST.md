@@ -50,7 +50,21 @@ Run from the `POMS` directory:
 
 ```powershell
 docker build -f src/Poms.Api/Dockerfile -t poms-api .
+docker build -f frontend/Dockerfile -t poms-frontend frontend `
+  --build-arg VITE_API_URL=https://api.example.com `
+  --build-arg VITE_OIDC_AUTHORITY=https://identity.example.com `
+  --build-arg VITE_OIDC_CLIENT_ID=poms-web `
+  --build-arg VITE_OIDC_REDIRECT_URI=https://app.example.com/auth/callback `
+  --build-arg VITE_OIDC_POST_LOGOUT_REDIRECT_URI=https://app.example.com/signin
 ```
+
+For the complete PostgreSQL/API/frontend stack, copy `.env.example` to `.env`, replace every
+placeholder, and run `docker compose up -d --build`. Do not commit `.env`. The frontend image uses
+Nginx with SPA route fallback and immutable caching only for fingerprinted assets.
+
+Both application images run as non-root users. Compose persists PostgreSQL data, uploaded files,
+and ASP.NET Core data-protection keys in separate named volumes. Back up all three volumes before
+an infrastructure move or restore.
 
 Mount `/app/storage` as persistent storage. Patient photos and documents are lost if this path is
 ephemeral. The API applies a global limit of 120 requests per minute per authenticated name or IP.

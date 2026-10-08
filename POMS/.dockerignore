@@ -1,0 +1,16 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/.vite/
+**/.vs/
+**/.playwright-cli/
+**/PomsStorage/
+**/*.db
+**/*.db-shm
+**/*.db-wal
+tests/
+.git/
+.gitignore
+output/
+

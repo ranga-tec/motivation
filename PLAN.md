@@ -207,3 +207,17 @@ authorization checks passed.
 3. Harden dependencies, CORS, rate limits, health checks, logs, and deployment configuration.
 4. Run full automated, browser, accessibility, security, and clean-database acceptance checks.
 5. Publish final deployment/runbook documentation, commit, push, and tag the release candidate.
+
+## Phase 13 Docker delivery
+
+Status: complete on 2026-10-08. The standalone API and React frontend have production multi-stage
+images, minimal build contexts, non-root runtime users, Nginx SPA routing and security headers, and
+a validated PostgreSQL Compose stack with persistent database, document, and data-protection-key
+volumes. Local container checks returned API health 200, anonymous API 401, frontend 200, and deep
+route 200.
+
+1. Build and run the standalone API image.
+2. Add and verify the production React/Nginx image.
+3. Add a secret-driven PostgreSQL/API/frontend Compose definition.
+4. Verify persistence, non-root execution, security headers, health, and direct routes.
+5. Document, test, commit, and push the Docker delivery.
