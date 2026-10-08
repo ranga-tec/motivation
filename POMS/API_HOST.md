@@ -31,7 +31,7 @@ ApiAuthentication__Authority=https://identity.example.com
 ApiAuthentication__Audience=poms-api
 ApiAuthentication__RequireHttpsMetadata=true
 ApiAuthentication__NameClaimType=name
-ApiAuthentication__RoleClaimType=role
+ApiAuthentication__RoleClaimType=poms_role
 Cors__AllowedOrigins__0=https://app.example.com
 FileStorage__RootPath=/app/storage
 SeedDemoUsers=false
@@ -66,9 +66,15 @@ Both application images run as non-root users. Compose persists PostgreSQL data,
 and ASP.NET Core data-protection keys in separate named volumes. Back up all three volumes before
 an infrastructure move or restore.
 
-For a local visual demo that requires no OIDC provider, run
-`docker compose -f compose.demo.yaml up -d --build`. This explicitly selects the Vite development
-target and displays the demo-data banner; it is not a production deployment configuration.
+For the complete local production-development stack, run
+`docker compose -f compose.development.yaml up -d --build`, then open `http://localhost:8080`.
+It uses PostgreSQL, Keycloak OIDC with authorization-code/PKCE, the bearer API, and the production
+Nginx frontend. Sign in as `admin@poms.local` with `Admin@123!`; these credentials are local-only.
+Keycloak administration is at `http://localhost:8082/admin` using `keycloak-admin` and
+`Keycloak-Local-8374!`.
+
+Production staff credentials remain owned by the configured identity provider. POMS stores the
+matching staff profile and authorization roles by email; it does not create or reset OIDC passwords.
 
 Mount `/app/storage` as persistent storage. Patient photos and documents are lost if this path is
 ephemeral. The API applies a global limit of 120 requests per minute per authenticated name or IP.

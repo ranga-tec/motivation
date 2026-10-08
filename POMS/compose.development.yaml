@@ -1,0 +1,87 @@
+services:
+  database:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: poms
+      POSTGRES_PASSWORD: Poms-Local-Database-8374!
+      POSTGRES_DB: poms
+    volumes:
+      - poms_development_database:/var/lib/postgresql/data
+      - ./docker/postgres/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U poms -d poms"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  identity:
+    image: quay.io/keycloak/keycloak:26.3.5
+    command: start-dev --import-realm
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://database:5432/keycloak
+      KC_DB_USERNAME: poms
+      KC_DB_PASSWORD: Poms-Local-Database-8374!
+      KC_HOSTNAME: http://localhost:8082
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_BOOTSTRAP_ADMIN_USERNAME: keycloak-admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: Keycloak-Local-8374!
+    volumes:
+      - ./docker/keycloak/poms-realm.json:/opt/keycloak/data/import/poms-realm.json:ro
+    ports:
+      - "8082:8080"
+
+  api:
+    build:
+      context: .
+      dockerfile: src/Poms.Api/Dockerfile
+    depends_on:
+      database:
+        condition: service_healthy
+      identity:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      DATABASE_URL: postgresql://poms:Poms-Local-Database-8374!@database:5432/poms
+      ApiAuthentication__Authority: http://localhost:8082/realms/poms
+      ApiAuthentication__MetadataAddress: http://identity:8080/realms/poms/.well-known/openid-configuration
+      ApiAuthentication__Audience: poms-api
+      ApiAuthentication__RequireHttpsMetadata: "false"
+      ApiAuthentication__NameClaimType: preferred_username
+      ApiAuthentication__RoleClaimType: poms_role
+      Cors__AllowedOrigins__0: http://localhost:8080
+      FileStorage__RootPath: /app/storage
+      SeedDemoUsers: "false"
+      BootstrapAdmin__Email: admin@poms.local
+      BootstrapAdmin__Password: Local-Identity-8374!
+    volumes:
+      - poms_development_files:/app/storage
+      - poms_development_keys:/home/app/.aspnet/DataProtection-Keys
+    ports:
+      - "8081:8080"
+
+  frontend:
+    build:
+      context: frontend
+      args:
+        VITE_API_URL: http://localhost:8081
+        VITE_OIDC_AUTHORITY: http://localhost:8082/realms/poms
+        VITE_OIDC_CLIENT_ID: poms-web
+        VITE_OIDC_SCOPE: openid profile email
+        VITE_OIDC_REDIRECT_URI: http://localhost:8080/auth/callback
+        VITE_OIDC_POST_LOGOUT_REDIRECT_URI: http://localhost:8080/signin
+    depends_on:
+      - api
+      - identity
+    ports:
+      - "8080:8080"
+
+volumes:
+  poms_development_database:
+  poms_development_files:
+  poms_development_keys:

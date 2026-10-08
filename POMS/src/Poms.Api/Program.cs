@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,8 @@ using Poms.Infrastructure.Data;
 using Poms.Infrastructure.Services;
 using Poms.Web.Api;
 using Poms.Reporting.Services;
+using Poms.Api;
+using System.Security.Claims;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -45,6 +48,7 @@ builder.Services.AddDbContext<PomsDbContext>(options =>
 var authentication = builder.Configuration.GetSection("ApiAuthentication");
 var authority = authentication["Authority"];
 var audience = authentication["Audience"];
+var metadataAddress = authentication["MetadataAddress"];
 if (string.IsNullOrWhiteSpace(authority) || string.IsNullOrWhiteSpace(audience))
 {
     throw new InvalidOperationException(
@@ -56,13 +60,16 @@ builder.Services
     .AddJwtBearer(ApiAuthenticationDefaults.Scheme, options =>
     {
         options.Authority = authority;
+        if (!string.IsNullOrWhiteSpace(metadataAddress))
+            options.MetadataAddress = metadataAddress;
         options.Audience = audience;
         options.RequireHttpsMetadata = authentication.GetValue("RequireHttpsMetadata", true);
         options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
+            ValidIssuer = authentication["Issuer"] ?? authority.TrimEnd('/'),
             NameClaimType = authentication["NameClaimType"] ?? "name",
-            RoleClaimType = authentication["RoleClaimType"] ?? "role"
+            RoleClaimType = authentication["RoleClaimType"] ?? "poms_role"
         };
     });
 
@@ -73,9 +80,12 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("DataEntry", policy => policy.RequireRole("DATA_ENTRY", "ADMIN"));
     options.AddPolicy("ManagementOrAdmin", policy => policy.RequireRole("MANAGEMENT", "ADMIN"));
     options.AddPolicy("ReportOrAdmin", policy => policy.RequireRole("VIEWER", "MANAGEMENT", "ADMIN"));
-    options.AddPolicy("AnyAuthenticatedUser", policy => policy.RequireAuthenticatedUser());
+    options.AddPolicy("AnyAuthenticatedUser", policy => policy
+        .RequireAuthenticatedUser()
+        .RequireClaim(ClaimTypes.NameIdentifier));
     options.AddPolicy("ApiWrite", policy => policy
         .RequireAuthenticatedUser()
+        .RequireClaim(ClaimTypes.NameIdentifier)
         .RequireAssertion(context =>
             context.Resource is HttpContext httpContext &&
             httpContext.Request.Headers.Authorization.ToString()
@@ -112,6 +122,7 @@ builder.Services.AddIdentityCore<IdentityUser>()
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<PomsDbContext>()
     .AddDefaultTokenProviders();
+builder.Services.AddScoped<IClaimsTransformation, LocalIdentityClaimsTransformation>();
 builder.Services.AddScoped<IRestrictedAccessService, RestrictedAccessService>();
 builder.Services.AddScoped<IPatientNumberService, PatientNumberService>();
 builder.Services.AddScoped<IDuplicateCheckService, DuplicateCheckService>();

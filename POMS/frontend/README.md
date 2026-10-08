@@ -18,10 +18,6 @@ Configure the OIDC values in `.env.local`. The provider must register these brow
 
 Set the API host's `Cors__AllowedOrigins__0=http://localhost:5173`. The browser client never receives the database connection string or API secrets.
 
-## Visual demo mode
-
-For local UI review only, set `VITE_DEMO_MODE=true`. Vite exposes this mode only during development; production builds always require OIDC and the real API.
-
 ## Production build
 
 ```powershell
