@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Poms.Infrastructure.Data;
 using Poms.Infrastructure.Services;
 using Poms.Web.Api;
 using Poms.Reporting.Services;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -89,6 +91,22 @@ builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
     if (allowedOrigins.Length > 0)
         policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
 }));
+builder.Services.AddProblemDetails();
+builder.Services.AddResponseCompression();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.User.Identity?.Name ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 120,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+});
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddIdentityCore<IdentityUser>()
     .AddRoles<IdentityRole>()
@@ -100,7 +118,10 @@ builder.Services.AddScoped<IDuplicateCheckService, DuplicateCheckService>();
 builder.Services.AddScoped<IAppointmentAssigneeService, AppointmentAssigneeService>();
 builder.Services.AddScoped<IReportQueryService, ReportQueryService>();
 var fileStorage = builder.Configuration.GetSection("FileStorage");
-var storageRoot = fileStorage["RootPath"] ?? (OperatingSystem.IsWindows() ? @"C:\PomsStorage\api" : "/app/storage");
+var storageRoot = fileStorage["RootPath"];
+if (builder.Environment.IsProduction() && string.IsNullOrWhiteSpace(storageRoot))
+    throw new InvalidOperationException("FileStorage:RootPath must be a persistent production path.");
+storageRoot ??= OperatingSystem.IsWindows() ? @"C:\PomsStorage\api" : "/app/storage";
 var maxFileSizeMb = fileStorage.GetValue<long>("MaxFileSizeMB", 10);
 var allowedExtensions = fileStorage.GetSection("AllowedExtensions").Get<string[]>();
 builder.Services.AddScoped<IFileStorageService>(_ => new FileStorageService(storageRoot, maxFileSizeMb, allowedExtensions));
@@ -109,10 +130,50 @@ builder.Services.AddControllers();
 builder.Services.AddHealthChecks().AddCheck<PomsApiDatabaseHealthCheck>("database");
 
 var app = builder.Build();
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var context = services.GetRequiredService<PomsDbContext>();
+    var providerName = context.Database.ProviderName ?? string.Empty;
+    if (providerName.Contains("Sqlite", StringComparison.OrdinalIgnoreCase))
+    {
+        await context.Database.EnsureCreatedAsync();
+        await SqliteSchemaUpgrader.ApplyAsync(context);
+    }
+    else if (providerName.Contains("Npgsql", StringComparison.OrdinalIgnoreCase))
+    {
+        await context.Database.EnsureCreatedAsync();
+        await PostgresSchemaUpgrader.ApplyAsync(context);
+    }
+    else
+    {
+        await context.Database.MigrateAsync();
+    }
+
+    await DbInitializer.SeedUsersAndRolesAsync(
+        services,
+        seedDemoUsers: builder.Configuration.GetValue("SeedDemoUsers", app.Environment.IsDevelopment()),
+        bootstrapAdminEmail: builder.Configuration["BootstrapAdmin:Email"],
+        bootstrapAdminPassword: builder.Configuration["BootstrapAdmin:Password"]);
+    await SampleDataSeeder.SeedLocationsAsync(context);
+    await SampleDataSeeder.SeedReferralSourcesAsync(context);
+    await SampleDataSeeder.SeedMainProblemTypesAsync(context);
+    await SampleDataSeeder.SeedCauseReasonTypesAsync(context);
+    await SampleDataSeeder.SeedNationalitiesAsync(context);
+    await SampleDataSeeder.SeedDeviceCatalogAsync(context);
+}
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler();
+    app.UseHsts();
+}
 app.UseHttpsRedirection();
+app.UseResponseCompression();
 app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.MapHealthChecks("/health");
 app.MapControllers();
 app.Run();

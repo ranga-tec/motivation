@@ -214,9 +214,6 @@ builder.Services.AddTransient<IPatientFormOcrEngine>(services =>
     services.GetRequiredService<TesseractPatientFormOcrService>());
 builder.Services.AddScoped<IPatientFormOcrService, PatientFormOcrService>();
 
-// Add AutoMapper
-builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
-
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 

@@ -1,11 +1,11 @@
 # Separate POMS API Host
 
-`Poms.Api` is the independently runnable backend for future React, mobile, and external clients.
-The existing `Poms.Web` MVC application remains operational during migration.
+`Poms.Api` is the production backend for the React, mobile, and external clients. `Poms.Web` is a
+rollback-only legacy host and must not be deployed for the React/API production cutover.
 
 ## Local run
 
-The API does not create or upgrade databases. Point it at an existing POMS development database:
+The API creates or upgrades its database and seeds local demo accounts in Development:
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = "Development"
@@ -33,10 +33,16 @@ ApiAuthentication__RequireHttpsMetadata=true
 ApiAuthentication__NameClaimType=name
 ApiAuthentication__RoleClaimType=role
 Cors__AllowedOrigins__0=https://app.example.com
+FileStorage__RootPath=/app/storage
+SeedDemoUsers=false
+BootstrapAdmin__Email=admin@example.com
+BootstrapAdmin__Password=USE_A_SECRET_VALUE
 ```
 
-Production startup fails when the OIDC authority, audience, or allowed frontend origins are absent.
-The host accepts bearer tokens only; it has no Razor UI, login page, or Identity-cookie fallback.
+Production startup fails when OIDC, CORS, persistent storage, database, or bootstrap-administrator
+configuration is absent. The host accepts bearer tokens only; it has no Razor UI or cookie fallback.
+The OIDC `sub` for the administrator must match the local Identity user ID used by administration
+safeguards. Never commit any value shown as a secret.
 
 ## Container build
 
@@ -46,12 +52,26 @@ Run from the `POMS` directory:
 docker build -f src/Poms.Api/Dockerfile -t poms-api .
 ```
 
-The API host does not need persistent file storage for the current JSON patient-registration and
-read contracts. Add object-storage integration before moving patient photos or document uploads.
+Mount `/app/storage` as persistent storage. Patient photos and documents are lost if this path is
+ephemeral. The API applies a global limit of 120 requests per minute per authenticated name or IP.
 
 ## Migration ownership
 
-During migration, `Poms.Api.csproj` links the versioned API source under `Poms.Web/Api`. This keeps
-one contract/controller implementation while both hosts run. The next extraction step is to move
-those files into a shared API feature library after write commands and file endpoints establish the
-final dependency boundary.
+`Poms.Api.csproj` links the versioned API source under `Poms.Web/Api`; this is a source-sharing
+boundary only and does not make the production API depend on the MVC process.
+
+## Release checks
+
+```powershell
+dotnet restore Poms.sln
+dotnet build Poms.sln -c Release --no-restore
+dotnet test Poms.sln -c Release --no-build
+cd frontend
+npm ci
+npm run lint
+npm run build
+```
+
+Deploy the API image, verify `/health`, then deploy `frontend/dist` with its production OIDC and API
+environment variables. Keep the previous API image available for rollback; never roll back the
+database by deleting it.

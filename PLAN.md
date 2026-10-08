@@ -195,7 +195,12 @@ report/filter/export checks passed.
 
 ## Phase 12 production cutover
 
-Status: queued.
+Status: complete on 2026-10-08. Production startup now validates OIDC, CORS, persistent storage,
+database, and bootstrap administrator configuration; creates a clean schema; seeds only reference
+catalogs plus the administrator; and applies centralized errors, compression, HSTS, health checks,
+and rate limiting. The vulnerable unused AutoMapper dependency was removed. Release build,
+100/100 tests, frontend lint/build, clean-database/admin-only smoke checks, health, and anonymous
+authorization checks passed.
 
 1. Remove legacy-data/import dependencies and seed production-safe reference data.
 2. Retire migrated Razor routes while retaining administrator authentication/recovery.
