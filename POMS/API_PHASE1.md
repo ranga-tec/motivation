@@ -24,6 +24,13 @@ can be developed against stable DTO contracts.
 | `GET` | `/api/v1/episodes/{id}` | `ClinicianOrAdmin` | Get one accessible patient record |
 | `POST` | `/api/v1/episodes` | `ClinicianOrAdmin` + bearer-only `ApiWrite` | Create a patient record |
 | `PUT` | `/api/v1/episodes/{id}` | `ClinicianOrAdmin` + bearer-only `ApiWrite` | Update a patient record without changing its patient |
+| `GET` | `/api/v1/clinical-records/options` | `ClinicianOrAdmin` | Get active clinical lookups and enum options |
+| `GET` | `/api/v1/clinical-records/prescription-options` | `ClinicianOrAdmin` | Get prescriptions for an assessment type and limb category |
+| `GET` | `/api/v1/clinical-records/episodes/{id}` | `ClinicianOrAdmin` | Get the accessible clinical timeline for one patient record |
+| `POST/PUT` | `/api/v1/clinical-records/assessments[/{id}]` | `ClinicianOrAdmin` + bearer-only `ApiWrite` | Create or update assessments and prescriptions |
+| `POST/PUT` | `/api/v1/clinical-records/fittings[/{id}]` | `ClinicianOrAdmin` + bearer-only `ApiWrite` | Create or update fittings |
+| `POST/PUT` | `/api/v1/clinical-records/deliveries[/{id}]` | `ClinicianOrAdmin` + bearer-only `ApiWrite` | Create or update deliveries |
+| `POST/PUT` | `/api/v1/clinical-records/follow-ups[/{id}]` | `ClinicianOrAdmin` + bearer-only `ApiWrite` | Create or update follow-ups |
 
 List routes return `items`, `page`, `pageSize`, `totalCount`, and `totalPages`. Page size is limited
 to 100. API contracts use strings for enum values and do not serialize EF Core entities.

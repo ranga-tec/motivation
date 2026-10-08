@@ -322,6 +322,56 @@ public sealed class ApiV1ControllerTests
         problem.Errors.Should().ContainKey(nameof(SaveEpisodeRequest.PatientId));
     }
 
+    [Fact]
+    public async Task ClinicalAssessmentCreate_PersistsPrescriptionLabel()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var patient = await SeedPatientAsync(database.Context);
+        var episode = CreateEpisode(patient, false, "clinician@poms.lk");
+        var problemType = new MainProblemType { Id = 501, Name = "Mobility" };
+        var causeType = new CauseReasonType { Id = 501, Name = "Trauma" };
+        database.Context.AddRange(episode, problemType, causeType); await database.Context.SaveChangesAsync();
+        var controller = SetUser(new ClinicalRecordsApiController(database.Context, AllowedRestrictedAccess()));
+
+        var action = await controller.CreateAssessment(new SaveAssessmentRequest
+        {
+            EpisodeId = episode.Id, AssessmentType = AssessmentType.Prosthetic, LimbCategory = LimbCategory.LowerLimb,
+            AssessedOn = new DateOnly(2026, 10, 8), StartTime = new TimeOnly(9, 0), EndTime = new TimeOnly(10, 0),
+            MainProblemTypeId = problemType.Id, Side = Side.Left, CauseReasonTypeId = causeType.Id,
+            Prescriptions = [new PrescriptionRequest(Side.Left, "TRANS_TIBIAL_PROSTHESIS", null, null)]
+        }, CancellationToken.None);
+
+        var response = action.Result.Should().BeOfType<CreatedResult>().Which.Value.Should().BeOfType<AssessmentResponse>().Subject;
+        response.Prescriptions.Should().ContainSingle().Which.Label.Should().Be("Trans-Tibial Prosthesis");
+        (await database.Context.Prescriptions.CountAsync()).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ClinicalAssessmentCreate_RejectsPrescriptionFromWrongCatalog()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var patient = await SeedPatientAsync(database.Context); var episode = CreateEpisode(patient, false, "clinician@poms.lk");
+        database.Context.AddRange(episode, new MainProblemType { Id = 502, Name = "Mobility" }, new CauseReasonType { Id = 502, Name = "Trauma" }); await database.Context.SaveChangesAsync();
+        var controller = SetUser(new ClinicalRecordsApiController(database.Context, AllowedRestrictedAccess()));
+
+        var action = await controller.CreateAssessment(new SaveAssessmentRequest { EpisodeId = episode.Id, AssessmentType = AssessmentType.Prosthetic, LimbCategory = LimbCategory.LowerLimb, AssessedOn = new DateOnly(2026, 10, 8), StartTime = new TimeOnly(9, 0), EndTime = new TimeOnly(10, 0), MainProblemTypeId = 502, Side = Side.Left, CauseReasonTypeId = 502, Prescriptions = [new PrescriptionRequest(Side.Left, "AFO", null, null)] }, CancellationToken.None);
+
+        action.Result.Should().BeOfType<BadRequestObjectResult>().Which.Value.Should().BeOfType<ValidationProblemDetails>().Which.Errors.Should().ContainKey(nameof(SaveAssessmentRequest.Prescriptions));
+    }
+
+    [Fact]
+    public async Task ClinicalRecordsCreate_AllSimpleRecordTypes()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var patient = await SeedPatientAsync(database.Context); var episode = CreateEpisode(patient, false, "clinician@poms.lk"); database.Context.Add(episode); await database.Context.SaveChangesAsync();
+        var controller = SetUser(new ClinicalRecordsApiController(database.Context, AllowedRestrictedAccess()));
+
+        (await controller.CreateFitting(new SaveFittingRequest(episode.Id, new DateOnly(2026, 10, 8), "Fit", false), CancellationToken.None)).Result.Should().BeOfType<CreatedResult>();
+        (await controller.CreateDelivery(new SaveDeliveryRequest(episode.Id, new DateOnly(2026, 10, 8), new TimeOnly(11, 0), "Delivered", null, false), CancellationToken.None)).Result.Should().BeOfType<CreatedResult>();
+        (await controller.CreateFollowUp(new SaveFollowUpRequest { EpisodeId = episode.Id, FollowUpDate = new DateOnly(2026, 10, 9), StartTime = new TimeOnly(9, 0), EndTime = new TimeOnly(9, 30), Notes = "Review" }, CancellationToken.None)).Result.Should().BeOfType<CreatedResult>();
+        (await database.Context.Fittings.CountAsync()).Should().Be(1); (await database.Context.Deliveries.CountAsync()).Should().Be(1); (await database.Context.FollowUps.CountAsync()).Should().Be(1);
+    }
+
     private static PatientsApiController CreatePatientsController(PomsDbContext context) => new(
         context,
         new PatientNumberService(context),

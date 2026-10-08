@@ -5,6 +5,19 @@ export interface PatientContact { id: string; telephoneNumber: string; dateConfi
 export interface Episode { id: string; patientId: string; patientNumber: string; patientName: string; centerId: number; centerName: string; status: string; recordDate: string; recordTime?: string; remarks?: string; isRestricted: boolean; assessmentCount: number; fittingCount: number; deliveryCount: number; followUpCount: number; documentCount: number }
 export interface EpisodeOptions { centers: RegistrationOption[]; statuses: string[] }
 export interface SaveEpisodeRequest { patientId: string; centerId: number; status: string; recordDate: string; recordTime: string; remarks?: string; isRestricted: boolean }
+export interface ClinicalOption { id: number; name: string }
+export interface ClinicalOptions { mainProblemTypes: ClinicalOption[]; causeReasonTypes: ClinicalOption[]; devices: ClinicalOption[]; assessmentTypes: string[]; limbCategories: string[]; sides: string[] }
+export interface PrescriptionOption { code: string; label: string; subTypes: string[] }
+export interface Prescription { id: string; side: string; code: string; label: string; subType?: string; otherText?: string }
+export interface Assessment { id: string; episodeId: string; assessmentType: string; limbCategory: string; assessedOn: string; startTime?: string; endTime?: string; mainProblemTypeId: number; mainProblemType: string; side: string; causeReasonTypeId: number; causeReasonType: string; causeReasonOther?: string; additionalInformation?: string; isRestricted: boolean; prescriptions: Prescription[] }
+export interface Fitting { id: string; episodeId: string; fittingDate: string; notes?: string; isRestricted: boolean }
+export interface Delivery { id: string; episodeId: string; deliveryDate: string; deliveryTime?: string; notes?: string; deviceId?: number; deviceName?: string; isRestricted: boolean }
+export interface FollowUp { id: string; episodeId: string; followUpDate: string; startTime?: string; endTime?: string; notes?: string; isRestricted: boolean }
+export interface EpisodeClinicalRecords { assessments: Assessment[]; fittings: Fitting[]; deliveries: Delivery[]; followUps: FollowUp[] }
+export interface SaveAssessmentRequest { episodeId: string; assessmentType: string; limbCategory: string; assessedOn: string; startTime: string; endTime: string; mainProblemTypeId: number; side: string; causeReasonTypeId: number; causeReasonOther?: string; additionalInformation?: string; isRestricted: boolean; prescriptions: { side: string; code: string; subType?: string; otherText?: string }[] }
+export interface SaveFittingRequest { episodeId: string; fittingDate: string; notes?: string; isRestricted: boolean }
+export interface SaveDeliveryRequest { episodeId: string; deliveryDate: string; deliveryTime: string; notes?: string; deviceId?: number; isRestricted: boolean }
+export interface SaveFollowUpRequest { episodeId: string; followUpDate: string; startTime: string; endTime: string; notes?: string; isRestricted: boolean }
 export interface Appointment { id: string; patientId: string; patientNumber: string; patientName: string; episodeId?: string; type: string; appointmentDate: string; appointmentTime?: string; status: string; assignedClinicianUserId?: string; assignedClinicianName?: string; notes?: string }
 export interface AppointmentOptions { assignees: AssigneeOption[] }
 export interface CreateAppointmentRequest { patientId: string; type: string; appointmentDate: string; appointmentTime?: string; assignedClinicianEntry: string; assignedClinicianUserId?: string; notes?: string }

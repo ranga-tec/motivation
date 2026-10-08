@@ -1,4 +1,4 @@
-import type { Appointment, CreateAppointmentRequest, CreatePatientRequest, Episode, PagedResponse, PatientDetail, PatientRegistrationOptions, PatientSummary, SaveEpisodeRequest } from './types'
+import type { Appointment, Assessment, ClinicalOptions, CreateAppointmentRequest, CreatePatientRequest, Delivery, Episode, EpisodeClinicalRecords, Fitting, FollowUp, PagedResponse, PatientDetail, PatientRegistrationOptions, PatientSummary, SaveAssessmentRequest, SaveDeliveryRequest, SaveEpisodeRequest, SaveFittingRequest, SaveFollowUpRequest } from './types'
 
 const patients: PatientSummary[] = [
   { id: '1', patientNumber: 'POM-2026-0042', fullName: 'Nimali Perera', nameWithInitials: 'N. Perera', dateOfBirth: '1987-04-18', sex: 'Female', category: 'Adult', centerId: 1, centerName: 'Colombo Central Clinic', registrationDate: '2026-09-28' },
@@ -16,7 +16,7 @@ let appointments: Appointment[] = [
 const page = <T,>(items: T[], pageNumber = 1, pageSize = 20): PagedResponse<T> => ({ items, page: pageNumber, pageSize, totalCount: items.length, totalPages: 1 })
 const patientDetail = (patient: PatientSummary): PatientDetail => ({ ...patient, identificationType: 'NationalId', identificationNumber: `NIC-${patient.id.padStart(4, '0')}`, address1: '12 Example Road', province: 'Western', district: 'Colombo', city: 'Colombo', email: `${patient.fullName.toLowerCase().replaceAll(' ', '.')}@example.test`, center: patient.centerName, assignedClinicianName: 'Dr. A. Fernando', contacts: [{ id: `c-${patient.id}`, telephoneNumber: '0771234567' }] })
 let episodes: Episode[] = [{ id: 'e1', patientId: '1', patientNumber: patients[0].patientNumber, patientName: patients[0].fullName, centerId: 1, centerName: 'Colombo Central Clinic', status: 'Active', recordDate: '2026-09-28', recordTime: '09:30:00', remarks: 'Initial prosthetic assessment pathway.', isRestricted: false, assessmentCount: 1, fittingCount: 0, deliveryCount: 0, followUpCount: 0, documentCount: 1 }]
-export const demoApi = { patients: (search?: string) => page(search ? patients.filter((p) => `${p.fullName} ${p.patientNumber}`.toLowerCase().includes(search.toLowerCase())) : patients), patient: (id: string) => patientDetail(patients.find((item) => item.id === id)!), appointments: () => page(appointments), episodes: (patientId: string) => episodes.filter((item) => item.patientId === patientId) }
+export const demoApi = { patients: (search?: string) => page(search ? patients.filter((p) => `${p.fullName} ${p.patientNumber}`.toLowerCase().includes(search.toLowerCase())) : patients), patient: (id: string) => patientDetail(patients.find((item) => item.id === id)!), appointments: () => page(appointments), episodes: (patientId: string) => episodes.filter((item) => item.patientId === patientId), episode: (id: string) => episodes.find((item) => item.id === id)! }
 
 export const demoRegistrationOptions: PatientRegistrationOptions = {
   provinces: [{ id: 1, name: 'Western' }, { id: 2, name: 'Central' }, { id: 3, name: 'Southern' }],
@@ -51,4 +51,15 @@ function updateAppointment(id: string, changes: Partial<Appointment>) { const it
 export const demoEpisodeActions = {
   create: (request: SaveEpisodeRequest) => { const patient = patients.find((item) => item.id === request.patientId)!; const item: Episode = { id: crypto.randomUUID(), patientId: patient.id, patientNumber: patient.patientNumber, patientName: patient.fullName, centerId: request.centerId, centerName: demoRegistrationOptions.centers.find((center) => center.id === request.centerId)?.name ?? '', status: request.status, recordDate: request.recordDate, recordTime: request.recordTime, remarks: request.remarks, isRestricted: request.isRestricted, assessmentCount: 0, fittingCount: 0, deliveryCount: 0, followUpCount: 0, documentCount: 0 }; episodes = [item, ...episodes]; return item },
   update: (id: string, request: SaveEpisodeRequest) => { const item = episodes.find((episode) => episode.id === id)!; Object.assign(item, request, { centerName: demoRegistrationOptions.centers.find((center) => center.id === request.centerId)?.name ?? '' }); return item },
+}
+
+export const demoClinicalOptions: ClinicalOptions = { mainProblemTypes: [{ id: 1, name: 'Mobility limitation' }], causeReasonTypes: [{ id: 1, name: 'Trauma' }], devices: [{ id: 1, name: 'Below-knee prosthesis' }], assessmentTypes: ['Prosthetic', 'Orthotic'], limbCategories: ['UpperLimb', 'LowerLimb', 'Spinal'], sides: ['Left', 'Right', 'Bilateral'] }
+let clinicalRecords: EpisodeClinicalRecords = { assessments: [], fittings: [], deliveries: [], followUps: [] }
+const saveItem = <T extends { id: string }>(items: T[], id: string | undefined, item: Omit<T, 'id'>): T => { const existing = id ? items.find((value) => value.id === id) : undefined; if (existing) { Object.assign(existing, item); return existing } const created = { ...item, id: crypto.randomUUID() } as T; items.unshift(created); return created }
+export const demoClinicalActions = {
+  records: (_episodeId: string) => clinicalRecords,
+  saveAssessment: (request: SaveAssessmentRequest, id?: string): Assessment => saveItem(clinicalRecords.assessments, id, { ...request, mainProblemType: demoClinicalOptions.mainProblemTypes.find((x) => x.id === request.mainProblemTypeId)?.name ?? '', causeReasonType: demoClinicalOptions.causeReasonTypes.find((x) => x.id === request.causeReasonTypeId)?.name ?? '', prescriptions: request.prescriptions.map((x) => ({ ...x, id: crypto.randomUUID(), label: x.code })) }),
+  saveFitting: (request: SaveFittingRequest, id?: string): Fitting => saveItem(clinicalRecords.fittings, id, request),
+  saveDelivery: (request: SaveDeliveryRequest, id?: string): Delivery => saveItem(clinicalRecords.deliveries, id, { ...request, deviceName: demoClinicalOptions.devices.find((x) => x.id === request.deviceId)?.name }),
+  saveFollowUp: (request: SaveFollowUpRequest, id?: string): FollowUp => saveItem(clinicalRecords.followUps, id, request),
 }

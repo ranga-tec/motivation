@@ -144,7 +144,10 @@ passed; frontend lint/build, standalone API build, and the full .NET suite passe
 
 ## Phase 8 clinical records
 
-Status: queued.
+Status: complete on 2026-10-08. Verification: assessment/prescription, fitting, delivery, and
+follow-up create/edit workflows passed focused API tests and Playwright desktop/mobile checks;
+bilateral prescription requirements, restricted entries, invalid follow-up times, and catalog
+validation were exercised; frontend lint/build, standalone API build, and the full suite passed.
 
 1. Extract assessment and prescription contracts/options.
 2. Extract fitting, delivery, and follow-up contracts/options.
