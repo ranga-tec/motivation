@@ -56,6 +56,18 @@ If Render assigns a different hostname, update `KC_HOSTNAME` and
 
 ## 3. Verify Keycloak
 
+### Free-plan first deployment
+
+Render's free 512 MB instance cannot reliably run Keycloak's initial Liquibase migration and
+realm import. Initialize the empty `poms-identity` Neon database once from a machine with Docker,
+using `POMS/docker/keycloak/Dockerfile.render`, the same `KC_DB_*` values, and
+`--import-realm`. Stop and remove that temporary container after the log reports both
+`Realm 'poms' imported` and `Keycloak ... started`. Normal Render starts intentionally omit
+`--import-realm`; the imported realm remains in Neon.
+
+The production Render service uses a local cache, a five-connection database pool, and a capped
+JVM heap. These values are declared in the root `render.yaml` and are required for the free plan.
+
 Wait for `poms-identity` to show **Live**, then open:
 
 ```text

@@ -20,6 +20,20 @@ services:
         sync: false
       - key: KC_HOSTNAME_STRICT
         value: "true"
+      - key: KC_CACHE
+        value: local
+      - key: KC_DB_POOL_MIN_SIZE
+        value: "1"
+      - key: KC_DB_POOL_MAX_SIZE
+        value: "5"
+      - key: KC_DB_CONNECT_TIMEOUT
+        value: 60s
+      - key: KC_DB_POOL_ACQUISITION_TIMEOUT
+        value: 120s
+      - key: JAVA_OPTS_KC_HEAP
+        value: -XX:InitialRAMPercentage=5 -XX:MaxRAMPercentage=30
+      - key: JAVA_OPTS_APPEND
+        value: -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=48m -Xss512k -Djava.util.concurrent.ForkJoinPool.common.parallelism=1
       - key: KC_BOOTSTRAP_ADMIN_USERNAME
         sync: false
       - key: KC_BOOTSTRAP_ADMIN_PASSWORD
