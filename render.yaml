@@ -1,35 +1,63 @@
 services:
   - type: web
-    name: poms-motivation
+    name: poms-identity
     runtime: docker
     plan: free
     region: singapore
-    repo: https://github.com/ranga-tec/motivation
-    branch: main
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    dockerContext: ./POMS
+    dockerfilePath: ./POMS/docker/keycloak/Dockerfile.render
+    autoDeployTrigger: commit
+    envVars:
+      - key: KC_DB
+        value: postgres
+      - key: KC_DB_URL
+        sync: false
+      - key: KC_DB_USERNAME
+        sync: false
+      - key: KC_DB_PASSWORD
+        sync: false
+      - key: KC_HOSTNAME
+        sync: false
+      - key: KC_HOSTNAME_STRICT
+        value: "true"
+      - key: KC_BOOTSTRAP_ADMIN_USERNAME
+        sync: false
+      - key: KC_BOOTSTRAP_ADMIN_PASSWORD
+        sync: false
+
+  - type: web
+    name: poms-api
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerContext: ./POMS
+    dockerfilePath: ./POMS/src/Poms.Api/Dockerfile
     healthCheckPath: /health
     autoDeployTrigger: commit
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
-      - key: DOTNET_USE_POLLING_FILE_WATCHER
-        value: "1"
-      - key: UsePostgreSQL
-        value: "false"
-      - key: UseSQLite
+      - key: ASPNETCORE_URLS
+        value: http://+:10000
+      - key: DATABASE_URL
+        sync: false
+      - key: ApiAuthentication__Authority
+        sync: false
+      - key: ApiAuthentication__Audience
+        value: poms-api
+      - key: ApiAuthentication__RequireHttpsMetadata
         value: "true"
-      - key: ConnectionStrings__DefaultConnection
-        value: Data Source=/tmp/poms-local.db
+      - key: ApiAuthentication__NameClaimType
+        value: preferred_username
+      - key: ApiAuthentication__RoleClaimType
+        value: poms_role
+      - key: Cors__AllowedOrigins__0
+        sync: false
       - key: FileStorage__RootPath
         value: /tmp/poms-storage
-      - key: DataProtection__KeysPath
-        value: /tmp/poms-data-protection-keys
-      - key: Storage__AllowEphemeral
-        value: "true"
-      - key: BootstrapAdmin__Email
-        value: admin@poms-demo.invalid
-      - key: BootstrapAdmin__Password
-        generateValue: true
-      - key: Security__ForceHttps
+      - key: SeedDemoUsers
         value: "false"
+      - key: BootstrapAdmin__Email
+        sync: false
+      - key: BootstrapAdmin__Password
+        sync: false

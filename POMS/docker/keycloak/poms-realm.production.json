@@ -1,0 +1,58 @@
+{
+  "realm": "poms",
+  "enabled": true,
+  "sslRequired": "external",
+  "displayName": "POMS",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "bruteForceProtected": true,
+  "roles": {
+    "realm": [
+      { "name": "ADMIN" },
+      { "name": "CLINICIAN" },
+      { "name": "DATA_ENTRY" },
+      { "name": "MANAGEMENT" },
+      { "name": "VIEWER" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "poms-api",
+      "name": "POMS API",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "bearerOnly": true
+    },
+    {
+      "clientId": "poms-web",
+      "name": "POMS React frontend",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "https://poms.pages.dev/*"
+      ],
+      "webOrigins": [
+        "https://poms.pages.dev"
+      ],
+      "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "email"],
+      "protocolMappers": [
+        {
+          "name": "POMS API audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "poms-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ]
+}

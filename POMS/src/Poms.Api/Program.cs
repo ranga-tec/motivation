@@ -28,10 +28,13 @@ builder.Services.AddDbContext<PomsDbContext>(options =>
         if (userInfo.Length != 2)
             throw new InvalidOperationException("DATABASE_URL is missing the expected username and password.");
 
+        var ssl = builder.Environment.IsProduction()
+            ? "SSL Mode=Require"
+            : "SSL Mode=Prefer;Trust Server Certificate=true";
         var postgres =
             $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};" +
             $"Username={Uri.UnescapeDataString(userInfo[0])};Password={Uri.UnescapeDataString(userInfo[1])};" +
-            "SSL Mode=Prefer;Trust Server Certificate=true";
+            ssl;
         options.UseNpgsql(postgres);
     }
     else if (useSqlite && !string.IsNullOrWhiteSpace(connectionString))
