@@ -31,8 +31,9 @@ builder.Services.AddDbContext<PomsDbContext>(options =>
         var ssl = builder.Environment.IsProduction()
             ? "SSL Mode=Require"
             : "SSL Mode=Prefer;Trust Server Certificate=true";
+        var postgresPort = uri.IsDefaultPort ? 5432 : uri.Port;
         var postgres =
-            $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};" +
+            $"Host={uri.Host};Port={postgresPort};Database={uri.AbsolutePath.TrimStart('/')};" +
             $"Username={Uri.UnescapeDataString(userInfo[0])};Password={Uri.UnescapeDataString(userInfo[1])};" +
             ssl;
         options.UseNpgsql(postgres);
