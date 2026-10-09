@@ -20,4 +20,4 @@ ENV KC_DB=postgres \
     KC_PROXY_HEADERS=xforwarded
 
 ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
-CMD ["start", "--optimized", "--import-realm"]
+CMD ["start", "--optimized"]
