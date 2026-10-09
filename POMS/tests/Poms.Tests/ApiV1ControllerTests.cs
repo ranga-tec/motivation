@@ -274,6 +274,28 @@ public sealed class ApiV1ControllerTests
     }
 
     [Fact]
+    public async Task PatientsUpdate_PersistsEditableRegistrationFields()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var patient = await SeedPatientAsync(database.Context);
+        var controller = SetUser(CreatePatientsController(database.Context));
+        var request = ValidCreateRequest(patient) with
+        {
+            FullName = "Updated Patient",
+            Employment = "Updated employment",
+            Contacts = [new CreatePatientContactRequest("0777654321", new DateOnly(2026, 10, 8), "Reception")]
+        };
+
+        var action = await controller.Update(patient.Id, request, CancellationToken.None);
+
+        action.Result.Should().BeOfType<OkObjectResult>();
+        var updated = await database.Context.Patients.Include(item => item.Contacts).SingleAsync(item => item.Id == patient.Id);
+        updated.FullName.Should().Be("Updated Patient");
+        updated.Employment.Should().Be("Updated employment");
+        updated.Contacts.Should().ContainSingle().Which.TelephoneNo.Should().Be("0777654321");
+    }
+
+    [Fact]
     public async Task EpisodesCreate_PersistsPatientRecord()
     {
         await using var database = await CreateDatabaseAsync();

@@ -141,6 +141,98 @@ public sealed class PatientsApiController(
         return patient is null ? NotFound() : Ok(patient);
     }
 
+    [HttpGet("{id:guid}/edit")]
+    public async Task<ActionResult<PatientEditResponse>> GetForEdit(Guid id, CancellationToken cancellationToken)
+    {
+        var patient = await context.Patients.AsNoTracking().Where(item => item.Id == id)
+            .Select(item => new PatientEditResponse(
+                item.Id, item.FullName, item.NameWithInitials, item.Dob, item.Sex.ToString(), item.Employment,
+                item.Category.ToString(), item.Nationality, item.IdentificationType.ToString(), item.IdentificationNumber,
+                item.Address1, item.Address2, item.ProvinceId, item.DistrictId, item.CityId, item.CityOther, item.Email,
+                item.ReferralSourceId, item.ReferralSourceOther, item.ReferralPersonName,
+                item.ReferralPersonContactNumber, item.TravelTimeDistance, item.CenterId, item.RegistrationDate,
+                item.Remarks, item.AssignedClinicianName ?? "", item.AssignedClinicianUserId,
+                item.GuardianName, item.GuardianRelationship, item.GuardianAddress, item.GuardianPhone,
+                item.GuardianMobile, item.Contacts.OrderBy(contact => contact.CreatedAt)
+                    .Select(contact => new CreatePatientContactRequest(
+                        contact.TelephoneNo, contact.DateConfirmed, contact.PersonChecked)).ToList()))
+            .SingleOrDefaultAsync(cancellationToken);
+        return patient is null ? NotFound() : Ok(patient);
+    }
+
+    [HttpPut("{id:guid}")]
+    [Authorize(Policy = "ApiWrite")]
+    public async Task<ActionResult<PatientDetailResponse>> Update(
+        Guid id, [FromBody] CreatePatientRequest request, CancellationToken cancellationToken)
+    {
+        var patient = await context.Patients.Include(item => item.Contacts)
+            .SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
+        if (patient is null) return NotFound();
+        var errors = await ValidateReferencesAsync(request, cancellationToken);
+        var assignee = await appointmentAssignees.ResolveAsync(request.AssignedClinicianEntry, request.AssignedClinicianUserId);
+        if (!assignee.IsValid) errors[nameof(request.AssignedClinicianEntry)] = [assignee.Error!];
+        if (errors.Count > 0) return BadRequest(new ValidationProblemDetails(errors) { Status = 400 });
+
+        var identificationNumber = request.IdentificationType == IdentificationType.NotApplicable
+            ? string.Empty : request.IdentificationNumber?.Trim() ?? string.Empty;
+        var duplicate = await duplicateCheck.CheckAsync(request.IdentificationType, identificationNumber,
+            request.FullName.Trim(), request.DateOfBirth, id);
+        if (duplicate.IsExactDuplicate || duplicate.HasSimilarNameOrDob && !request.ConfirmPossibleDuplicate)
+            return DuplicateProblem(duplicate);
+
+        patient.FullName = request.FullName.Trim(); patient.NameWithInitials = request.NameWithInitials.Trim();
+        patient.Dob = request.DateOfBirth; patient.Sex = request.Sex!.Value; patient.Employment = Clean(request.Employment);
+        patient.Category = request.Category; patient.Nationality = Clean(request.Nationality);
+        patient.IdentificationType = request.IdentificationType; patient.IdentificationNumber = identificationNumber;
+        patient.Address1 = request.Address1.Trim(); patient.Address2 = Clean(request.Address2);
+        patient.ProvinceId = request.ProvinceId; patient.DistrictId = request.DistrictId; patient.CityId = request.CityId;
+        patient.CityOther = request.CityId.HasValue ? null : Clean(request.CityOther); patient.Email = NormalizeEmail(request.Email);
+        patient.ReferralSourceId = request.ReferralSourceId; patient.ReferralSourceOther = Clean(request.ReferralSourceOther);
+        patient.ReferralPersonName = Clean(request.ReferralPersonName); patient.ReferralPersonContactNumber = Clean(request.ReferralPersonContactNumber);
+        patient.TravelTimeDistance = Clean(request.TravelTimeDistance); patient.CenterId = request.CenterId;
+        patient.RegistrationDate = request.RegistrationDate ?? patient.RegistrationDate; patient.Remarks = Clean(request.Remarks);
+        patient.AssignedClinicianUserId = assignee.UserId; patient.AssignedClinicianName = assignee.FullName;
+        patient.GuardianName = request.GuardianName.Trim(); patient.GuardianRelationship = request.GuardianRelationship.Trim();
+        patient.GuardianAddress = Clean(request.GuardianAddress); patient.GuardianPhone = Clean(request.GuardianPhone);
+        patient.GuardianMobile = Clean(request.GuardianMobile); patient.UpdatedBy = Actor(); patient.UpdatedAt = DateTime.UtcNow;
+        var requestedContacts = request.Contacts
+            .Where(contact => !string.IsNullOrWhiteSpace(contact.TelephoneNumber))
+            .ToList();
+        var existingContacts = patient.Contacts.ToList();
+        var actor = Actor();
+        var sharedContactCount = Math.Min(existingContacts.Count, requestedContacts.Count);
+        for (var index = 0; index < sharedContactCount; index++)
+        {
+            var existing = existingContacts[index];
+            var requested = requestedContacts[index];
+            existing.TelephoneNo = requested.TelephoneNumber.Trim();
+            existing.DateConfirmed = requested.DateConfirmed;
+            existing.PersonChecked = Clean(requested.PersonChecked);
+            existing.UpdatedBy = actor;
+            existing.UpdatedAt = DateTime.UtcNow;
+        }
+        foreach (var existing in existingContacts.Skip(requestedContacts.Count))
+        {
+            patient.Contacts.Remove(existing);
+            context.PatientContacts.Remove(existing);
+        }
+        foreach (var requested in requestedContacts.Skip(existingContacts.Count))
+        {
+            var addedContact = new PatientContact
+            {
+                PatientId = patient.Id,
+                TelephoneNo = requested.TelephoneNumber.Trim(),
+                DateConfirmed = requested.DateConfirmed,
+                PersonChecked = Clean(requested.PersonChecked),
+                CreatedBy = actor
+            };
+            patient.Contacts.Add(addedContact);
+            context.PatientContacts.Add(addedContact);
+        }
+        await context.SaveChangesAsync(cancellationToken);
+        return Ok((await BuildDetailResponseAsync(id, cancellationToken))!);
+    }
+
     [HttpPost]
     [Authorize(Policy = "ApiWrite")]
     [ProducesResponseType<PatientDetailResponse>(StatusCodes.Status201Created)]
@@ -169,18 +261,7 @@ public sealed class PatientsApiController(
             request.DateOfBirth);
         if (duplicate.IsExactDuplicate || duplicate.HasSimilarNameOrDob && !request.ConfirmPossibleDuplicate)
         {
-            var problem = new ProblemDetails
-            {
-                Status = StatusCodes.Status409Conflict,
-                Title = duplicate.IsExactDuplicate ? "Duplicate patient" : "Possible matching patient",
-                Detail = duplicate.IsExactDuplicate
-                    ? "A patient with this identification document already exists."
-                    : "A patient with the same name and date of birth already exists. Confirm the match was reviewed before continuing."
-            };
-            problem.Extensions["duplicateType"] = duplicate.IsExactDuplicate ? "exact" : "possible";
-            problem.Extensions["existingPatientNumber"] = duplicate.ExistingPatientNumber;
-            problem.Extensions["existingPatientName"] = duplicate.ExistingPatientName;
-            return Conflict(problem);
+            return DuplicateProblem(duplicate);
         }
 
         var registrationDate = request.RegistrationDate ?? DateOnly.FromDateTime(DateTime.Today);
@@ -275,4 +356,19 @@ public sealed class PatientsApiController(
             ? "N/A"
             : value;
     }
+
+    private ConflictObjectResult DuplicateProblem(DuplicateCheckResult duplicate)
+    {
+        var problem = new ProblemDetails { Status = 409,
+            Title = duplicate.IsExactDuplicate ? "Duplicate patient" : "Possible matching patient",
+            Detail = duplicate.IsExactDuplicate ? "A patient with this identification document already exists."
+                : "A patient with the same name and date of birth already exists. Confirm the match was reviewed before continuing." };
+        problem.Extensions["duplicateType"] = duplicate.IsExactDuplicate ? "exact" : "possible";
+        problem.Extensions["existingPatientNumber"] = duplicate.ExistingPatientNumber;
+        problem.Extensions["existingPatientName"] = duplicate.ExistingPatientName;
+        return Conflict(problem);
+    }
+
+    private string Actor() => User.Identity?.Name ?? User.FindFirst("sub")?.Value ?? "API user";
+    private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

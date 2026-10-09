@@ -1,5 +1,5 @@
 import { config } from '../config'
-import type { AdminCatalog, AdminCenter, AdminDevice, AdminItem, AdminUsers, AdminUser, Appointment, AppointmentOptions, Assessment, ClinicalOptions, CreateAppointmentRequest, CreatePatientRequest, DashboardMetrics, Delivery, DocumentOptions, Episode, EpisodeClinicalRecords, EpisodeOptions, Fitting, FollowUp, ListOptions, PagedResponse, PatientDetail, PatientRegistrationOptions, PatientSummary, PrescriptionOption, ReportFilter, ReportOptions, ReportResult, SaveAssessmentRequest, SaveDeliveryRequest, SaveEpisodeRequest, SaveFittingRequest, SaveFollowUpRequest, StoredDocument } from './types'
+import type { AdminCatalog, AdminCenter, AdminDevice, AdminItem, AdminUsers, AdminUser, Appointment, AppointmentOptions, Assessment, ClinicalOptions, CreateAppointmentRequest, CreatePatientRequest, DashboardMetrics, Delivery, DocumentOptions, Episode, EpisodeClinicalRecords, EpisodeOptions, Fitting, FollowUp, ListOptions, PagedResponse, PatientDetail, PatientEditDetails, PatientRegistrationOptions, PatientSummary, PrescriptionOption, ReportFilter, ReportOptions, ReportResult, SaveAssessmentRequest, SaveDeliveryRequest, SaveEpisodeRequest, SaveFittingRequest, SaveFollowUpRequest, StoredDocument } from './types'
 
 export interface ApiProblem { title?: string; detail?: string; duplicateType?: string; existingPatientNumber?: string; existingPatientName?: string; errors?: Record<string, string[]> }
 export class ApiError extends Error {
@@ -7,31 +7,35 @@ export class ApiError extends Error {
   problem?: ApiProblem
   constructor(status: number, message: string, problem?: ApiProblem) { super(message); this.status = status; this.problem = problem }
 }
+const problemMessage = (status: number, problem?: ApiProblem) => problem?.detail
+  ?? Object.values(problem?.errors ?? {})[0]?.[0]
+  ?? problem?.title
+  ?? `Request failed (${status})`
 let accessToken: (() => Promise<string | undefined>) | undefined
 export const registerTokenProvider = (provider: () => Promise<string | undefined>) => { accessToken = provider }
 const queryString = (options: ListOptions) => { const query = new URLSearchParams(); Object.entries(options).forEach(([key, value]) => { if (value !== undefined && value !== '') query.set(key, String(value)) }); return query.toString() }
 async function get<T>(path: string): Promise<T> {
   const token = await accessToken?.()
   const response = await fetch(`${config.apiUrl}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-  if (!response.ok) { const problem = await response.json().catch(() => undefined) as ApiProblem | undefined; throw new ApiError(response.status, problem?.detail ?? problem?.title ?? `Request failed (${response.status})`, problem) }
+  if (!response.ok) { const problem = await response.json().catch(() => undefined) as ApiProblem | undefined; throw new ApiError(response.status, problemMessage(response.status, problem), problem) }
   return response.json() as Promise<T>
 }
 async function post<T>(path: string, body: unknown): Promise<T> {
   const token = await accessToken?.()
   const response = await fetch(`${config.apiUrl}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body) })
-  if (!response.ok) { const problem = await response.json().catch(() => undefined) as ApiProblem | undefined; throw new ApiError(response.status, problem?.detail ?? problem?.title ?? `Request failed (${response.status})`, problem) }
+  if (!response.ok) { const problem = await response.json().catch(() => undefined) as ApiProblem | undefined; throw new ApiError(response.status, problemMessage(response.status, problem), problem) }
   return response.json() as Promise<T>
 }
 async function put<T>(path: string, body: unknown): Promise<T> {
   const token = await accessToken?.()
   const response = await fetch(`${config.apiUrl}${path}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body) })
-  if (!response.ok) { const problem = await response.json().catch(() => undefined) as ApiProblem | undefined; throw new ApiError(response.status, problem?.detail ?? problem?.title ?? `Request failed (${response.status})`, problem) }
+  if (!response.ok) { const problem = await response.json().catch(() => undefined) as ApiProblem | undefined; throw new ApiError(response.status, problemMessage(response.status, problem), problem) }
   return response.json() as Promise<T>
 }
-async function putVoid(path: string, body: unknown): Promise<void> { const token = await accessToken?.(); const response = await fetch(`${config.apiUrl}${path}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body) }); if (!response.ok) { const problem = await response.json().catch(() => undefined) as ApiProblem | undefined; throw new ApiError(response.status, problem?.detail ?? problem?.title ?? `Request failed (${response.status})`, problem) } }
+async function putVoid(path: string, body: unknown): Promise<void> { const token = await accessToken?.(); const response = await fetch(`${config.apiUrl}${path}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body) }); if (!response.ok) { const problem = await response.json().catch(() => undefined) as ApiProblem | undefined; throw new ApiError(response.status, problemMessage(response.status, problem), problem) } }
 async function upload<T>(path: string, body: FormData): Promise<T> {
   const token = await accessToken?.(); const response = await fetch(`${config.apiUrl}${path}`, { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : {}, body })
-  if (!response.ok) { const problem = await response.json().catch(() => undefined) as ApiProblem | undefined; throw new ApiError(response.status, problem?.detail ?? problem?.title ?? `Request failed (${response.status})`, problem) }
+  if (!response.ok) { const problem = await response.json().catch(() => undefined) as ApiProblem | undefined; throw new ApiError(response.status, problemMessage(response.status, problem), problem) }
   return response.json() as Promise<T>
 }
 async function remove(path: string): Promise<void> { const token = await accessToken?.(); const response = await fetch(`${config.apiUrl}${path}`, { method: 'DELETE', headers: token ? { Authorization: `Bearer ${token}` } : {} }); if (!response.ok) throw new ApiError(response.status, `Request failed (${response.status})`) }
@@ -39,11 +43,13 @@ async function download(path: string): Promise<{ blob: Blob; fileName: string }>
 export const api = {
   patients: async (options: ListOptions = {}): Promise<PagedResponse<PatientSummary>> => get(`/api/v1/patients?${queryString(options)}`),
   patient: async (id: string): Promise<PatientDetail> => get(`/api/v1/patients/${id}`),
+  patientForEdit: async (id: string): Promise<PatientEditDetails> => get(`/api/v1/patients/${id}/edit`),
   appointments: async (options: ListOptions = {}): Promise<PagedResponse<Appointment>> => get(`/api/v1/appointments?${queryString(options)}`),
   registrationOptions: async (): Promise<PatientRegistrationOptions> => get('/api/v1/patients/registration-options'),
   createPatient: async (request: CreatePatientRequest): Promise<PatientDetail> => post('/api/v1/patients', request),
+  updatePatient: async (id: string, request: CreatePatientRequest): Promise<PatientDetail> => put(`/api/v1/patients/${id}`, request),
   appointmentOptions: async (): Promise<AppointmentOptions> => get('/api/v1/appointments/options'),
-  createAppointment: async (request: CreateAppointmentRequest): Promise<Appointment> => post('/api/v1/appointments', request),
+  createAppointment: async (request: CreateAppointmentRequest): Promise<Appointment> => post('/api/v1/appointments', { ...request, appointmentTime: request.appointmentTime || null }),
   completeAppointment: async (id: string): Promise<Appointment> => post(`/api/v1/appointments/${id}/complete`, {}),
   cancelAppointment: async (id: string, reason: string): Promise<Appointment> => post(`/api/v1/appointments/${id}/cancel`, { reason }),
   rescheduleAppointment: async (id: string, appointmentDate: string, appointmentTime: string | undefined, reason: string): Promise<Appointment> => post(`/api/v1/appointments/${id}/reschedule`, { appointmentDate, appointmentTime: appointmentTime || null, reason }),

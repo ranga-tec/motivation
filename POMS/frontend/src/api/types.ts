@@ -43,5 +43,6 @@ export interface CreatePatientRequest {
   identificationType: string; identificationNumber?: string; address1: string; address2?: string; provinceId: number; districtId: number;
   cityId?: number; cityOther?: string; email?: string; centerId: number; registrationDate: string; assignedClinicianEntry: string;
   assignedClinicianUserId?: string; guardianName: string; guardianRelationship: string; guardianAddress?: string; guardianPhone?: string;
-  guardianMobile?: string; remarks?: string; confirmPossibleDuplicate: boolean; contacts: { telephoneNumber: string }[];
+  guardianMobile?: string; remarks?: string; confirmPossibleDuplicate: boolean; contacts: { telephoneNumber: string; dateConfirmed?: string; personChecked?: string }[];
 }
+export interface PatientEditDetails extends CreatePatientRequest { id: string; referralSourceId?: number; referralSourceOther?: string; referralPersonName?: string; referralPersonContactNumber?: string; travelTimeDistance?: string }
