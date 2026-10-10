@@ -4,24 +4,30 @@ import { api, ApiError } from '../api/client'
 import type { Episode, SaveEpisodeRequest } from '../api/types'
 import { useApi } from '../hooks/useApi'
 
-const now = new Date()
-const initial = (patientId: string, centerId: number, episode?: Episode): SaveEpisodeRequest => ({
-  patientId,
-  centerId: episode?.centerId ?? centerId,
-  status: episode?.status ?? 'Active',
-  recordDate: episode?.recordDate ?? now.toISOString().slice(0, 10),
-  recordTime: episode?.recordTime?.slice(0, 5) ?? now.toTimeString().slice(0, 5),
-  remarks: episode?.remarks ?? '',
-  isRestricted: episode?.isRestricted ?? false,
-})
+const initial = (patientId: string, centerId: number, episode?: Episode): SaveEpisodeRequest => {
+  const now = new Date()
+  return {
+    patientId,
+    centerId: episode?.centerId ?? centerId,
+    status: episode?.status ?? 'Active',
+    recordDate: episode?.recordDate ?? now.toISOString().slice(0, 10),
+    recordTime: episode?.recordTime?.slice(0, 5) ?? now.toTimeString().slice(0, 5),
+    remarks: episode?.remarks ?? '',
+    isRestricted: episode?.isRestricted ?? false,
+  }
+}
 
 export function EpisodeDialog({ patientId, patientName, centerId, episode, close, saved }: { patientId: string; patientName: string; centerId: number; episode?: Episode; close: () => void; saved: (message: string) => void }) {
   const options = useApi(() => api.episodeOptions(), 'episode-options')
   const [form, setForm] = useState(() => initial(patientId, centerId, episode))
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const selectedCenterId = options.data?.centers.some((center) => center.id === form.centerId) ? form.centerId : 0
   const submit = async (event: FormEvent) => {
     event.preventDefault(); if (submitting) return; setSubmitting(true); setError('')
+    if (!selectedCenterId) {
+      setError('Select an active treatment centre.'); setSubmitting(false); return
+    }
     try {
       if (episode) await api.updateEpisode(episode.id, form)
       else await api.createEpisode(form)
