@@ -240,6 +240,7 @@ ClientBin/
 
 # Local POMS development database
 /POMS/src/Poms.Web/poms-local.db*
+/POMS/src/Poms.Api/poms-api-local.db*
 *.jfm
 *.pfx
 *.publishsettings

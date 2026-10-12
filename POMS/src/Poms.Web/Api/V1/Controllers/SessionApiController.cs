@@ -17,7 +17,12 @@ public sealed class SessionApiController : ControllerBase
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         var email = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email") ?? "";
         var displayName = User.Identity?.Name ?? email;
-        var roles = User.FindAll("poms_role").Select(claim => claim.Value).Distinct().OrderBy(role => role).ToList();
+        var roles = User.FindAll(ClaimTypes.Role)
+            .Concat(User.FindAll("poms_role"))
+            .Select(claim => claim.Value)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(role => role)
+            .ToList();
         return Ok(new SessionResponse(userId, email, displayName, roles));
     }
 }

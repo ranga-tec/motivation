@@ -1,6 +1,6 @@
 # POMS React frontend
 
-This is the independently deployable POMS browser client. It calls the versioned `Poms.Api` endpoints and authenticates through any standards-compliant OpenID Connect provider using Authorization Code + PKCE.
+This is the independently deployable POMS browser client. It calls the versioned `Poms.Api` endpoints and signs in through ASP.NET Core Identity bearer-token endpoints hosted by that API.
 
 ## Local development
 
@@ -10,13 +10,7 @@ npm install
 npm run dev
 ```
 
-Configure the OIDC values in `.env.local`. The provider must register these browser-client URLs:
-
-- Redirect URI: `http://localhost:5173/auth/callback`
-- Post-logout URI: `http://localhost:5173/signin`
-- Allowed web origin: `http://localhost:5173`
-
-Set the API host's `Cors__AllowedOrigins__0=http://localhost:5173`. The browser client never receives the database connection string or API secrets.
+Set `VITE_API_URL` to the API origin and configure the API host with `Cors__AllowedOrigins__0=http://localhost:5173`. Database credentials and API secrets must never be placed in `VITE_*` variables.
 
 ## Production build
 
@@ -25,4 +19,4 @@ npm run lint
 npm run build
 ```
 
-Deploy `dist/` to Cloudflare Pages or another static host. Configure all `VITE_*` values at build time. Routes must fall back to `index.html` so `/patients`, `/appointments`, and `/auth/callback` can load directly.
+Deploy `dist/` to a static host. Configure `VITE_API_URL` at build time. Routes must fall back to `index.html` so pages such as `/patients`, `/appointments`, and `/signin` load directly.

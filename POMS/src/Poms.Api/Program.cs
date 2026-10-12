@@ -1,9 +1,6 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using Poms.Infrastructure.Data;
 using Poms.Infrastructure.Services;
 using Poms.Web.Api;
@@ -49,33 +46,18 @@ builder.Services.AddDbContext<PomsDbContext>(options =>
     }
 });
 
-var authentication = builder.Configuration.GetSection("ApiAuthentication");
-var authority = authentication["Authority"];
-var audience = authentication["Audience"];
-var metadataAddress = authentication["MetadataAddress"];
-if (string.IsNullOrWhiteSpace(authority) || string.IsNullOrWhiteSpace(audience))
-{
-    throw new InvalidOperationException(
-        "Poms.Api requires ApiAuthentication:Authority and ApiAuthentication:Audience.");
-}
-
-builder.Services
-    .AddAuthentication(ApiAuthenticationDefaults.Scheme)
-    .AddJwtBearer(ApiAuthenticationDefaults.Scheme, options =>
+builder.Services.AddIdentityApiEndpoints<IdentityUser>(options =>
     {
-        options.Authority = authority;
-        if (!string.IsNullOrWhiteSpace(metadataAddress))
-            options.MetadataAddress = metadataAddress;
-        options.Audience = audience;
-        options.RequireHttpsMetadata = authentication.GetValue("RequireHttpsMetadata", true);
-        options.MapInboundClaims = false;
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidIssuer = authentication["Issuer"] ?? authority.TrimEnd('/'),
-            NameClaimType = authentication["NameClaimType"] ?? "name",
-            RoleClaimType = authentication["RoleClaimType"] ?? "poms_role"
-        };
-    });
+        options.User.RequireUniqueEmail = true;
+        options.SignIn.RequireConfirmedAccount = false;
+        options.Password.RequiredLength = 8;
+        options.Password.RequireDigit = true;
+        options.Password.RequireLowercase = true;
+        options.Password.RequireUppercase = true;
+        options.Password.RequireNonAlphanumeric = true;
+    })
+    .AddRoles<IdentityRole>()
+    .AddEntityFrameworkStores<PomsDbContext>();
 
 builder.Services.AddAuthorization(options =>
 {
@@ -122,11 +104,6 @@ builder.Services.AddRateLimiter(options =>
             }));
 });
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddIdentityCore<IdentityUser>()
-    .AddRoles<IdentityRole>()
-    .AddEntityFrameworkStores<PomsDbContext>()
-    .AddDefaultTokenProviders();
-builder.Services.AddScoped<IClaimsTransformation, LocalIdentityClaimsTransformation>();
 builder.Services.AddScoped<IRestrictedAccessService, RestrictedAccessService>();
 builder.Services.AddScoped<IPatientNumberService, PatientNumberService>();
 builder.Services.AddScoped<IDuplicateCheckService, DuplicateCheckService>();
@@ -186,10 +163,21 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseResponseCompression();
 app.UseCors("Frontend");
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.Equals("/auth/register", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    await next();
+});
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
 app.MapHealthChecks("/health");
+app.MapGroup("/auth").MapIdentityApi<IdentityUser>();
 app.MapControllers();
 app.Run();
 

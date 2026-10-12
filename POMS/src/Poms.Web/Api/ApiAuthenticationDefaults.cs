@@ -5,7 +5,7 @@ namespace Poms.Web.Api;
 
 public static class ApiAuthenticationDefaults
 {
-    public const string Scheme = "PomsApiAuthentication";
+    public const string Scheme = "Identity.Bearer";
 }
 
 public static class ApiAuthenticationSchemeSelector

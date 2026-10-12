@@ -16,7 +16,7 @@ export function AppShell() {
   const [open, setOpen] = useState(false)
   const location = useLocation()
   const { user, roles: userRoles, signOut } = useAuth()
-  const name = String(user?.profile.name ?? user?.profile.preferred_username ?? 'Staff user')
+  const name = user?.name ?? 'Staff user'
   const visibleNavigation = navigation.filter(item => item.to === '/reports'
     ? userRoles.some(role => ['VIEWER', 'MANAGEMENT', 'ADMIN'].includes(role))
     : item.to !== '/admin' || userRoles.includes('ADMIN'))
