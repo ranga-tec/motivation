@@ -1,5 +1,5 @@
-import { AlertTriangle, ArrowLeft, CheckCircle2, Save } from 'lucide-react'
-import { useMemo, useState, type FormEvent } from 'react'
+import { AlertTriangle, ArrowLeft, Camera, CheckCircle2, Save } from 'lucide-react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { CreatePatientRequest, PatientDetail } from '../api/types'
@@ -22,6 +22,10 @@ export function PatientRegistrationPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [duplicate, setDuplicate] = useState<{ number?: string; name?: string }>()
   const [created, setCreated] = useState<PatientDetail>()
+  const [photo, setPhoto] = useState<File>()
+  const [photoPreview, setPhotoPreview] = useState('')
+  const [completionWarning, setCompletionWarning] = useState('')
+  useEffect(() => () => { if (photoPreview) URL.revokeObjectURL(photoPreview) }, [photoPreview])
   const districts = useMemo(() => options.data?.districts.filter((item) => item.parentId === form.provinceId) ?? [], [options.data, form.provinceId])
   const cities = useMemo(() => options.data?.cities.filter((item) => item.parentId === form.districtId) ?? [], [options.data, form.districtId])
 
@@ -31,7 +35,15 @@ export function PatientRegistrationPage() {
   }
   const submit = async (event?: FormEvent, confirmDuplicate = false) => {
     event?.preventDefault(); setSubmitting(true); setError(''); setFieldErrors({}); setDuplicate(undefined)
-    try { setCreated(await api.createPatient({ ...form, confirmPossibleDuplicate: confirmDuplicate })) }
+    try {
+      const patient = await api.createPatient({ ...form, confirmPossibleDuplicate: confirmDuplicate })
+      let photoUploaded = false
+      if (photo) {
+        try { await api.uploadDocument('patient', patient.id, 'PatientPhoto', 'Registration profile photo', false, photo); photoUploaded = true }
+        catch { setCompletionWarning('The patient was registered, but the photo could not be uploaded. Add it from the patient record.') }
+      }
+      setCreated({ ...patient, hasPhoto: photoUploaded })
+    }
     catch (reason) {
       if (reason instanceof ApiError) {
         if (reason.problem?.duplicateType === 'possible') setDuplicate({ number: reason.problem.existingPatientNumber, name: reason.problem.existingPatientName })
@@ -45,7 +57,7 @@ export function PatientRegistrationPage() {
     } finally { setSubmitting(false) }
   }
 
-  if (created) return <div className="registration-result"><CheckCircle2 /><p className="eyebrow">Registration complete</p><h1>{created.fullName}</h1><div className="patient-number-result">{created.patientNumber}</div><p>The patient record is ready for clinical activity.</p><div><Link className="button primary" to="/patients">Return to patients</Link><button className="button secondary" onClick={() => { setCreated(undefined); setForm(initialForm) }}>Register another patient</button></div></div>
+  if (created) return <div className="registration-result"><CheckCircle2 /><p className="eyebrow">Registration complete</p><h1>{created.fullName}</h1><div className="patient-number-result">{created.patientNumber}</div><p>The patient record is ready for clinical activity.</p>{completionWarning && <div className="form-alert error">{completionWarning}</div>}<div><Link className="button primary" to={`/patients/${created.id}`}>Open patient record</Link><button className="button secondary" onClick={() => { setCreated(undefined); setForm(initialForm); setPhoto(undefined); setPhotoPreview(''); setCompletionWarning('') }}>Register another patient</button></div></div>
   return <>
     <PageHeader eyebrow="Patient administration" title="Register patient" description="Create one verified patient record. Fields marked * are required." action={<Link className="button secondary" to="/patients"><ArrowLeft size={17} /> Back to patients</Link>} />
     {options.error ? <ErrorPanel message={options.error} retry={options.refresh} /> : options.loading ? <section className="panel"><LoadingRows /></section> :
@@ -54,6 +66,7 @@ export function PatientRegistrationPage() {
       {duplicate && <div className="duplicate-panel" role="alert"><AlertTriangle /><div><strong>Possible matching patient</strong><p>{duplicate.number} — {duplicate.name} has the same name and date of birth. Check the existing record before continuing.</p><button type="button" className="button secondary" disabled={submitting} onClick={() => void submit(undefined, true)}>Details checked — register anyway</button></div></div>}
 
       <FormSection number="01" title="Patient identity" description="Details used to identify the patient and prevent duplicate records.">
+        <Field label="Patient photo" wide><div className="photo-upload-field"><div className="photo-preview">{photoPreview ? <img src={photoPreview} alt="Patient preview" /> : <Camera />}</div><div><input type="file" accept="image/jpeg,image/png" onChange={(event) => { const selected = event.target.files?.[0]; if (photoPreview) URL.revokeObjectURL(photoPreview); setPhoto(selected); setPhotoPreview(selected ? URL.createObjectURL(selected) : '') }} /><small>Optional JPG or PNG, maximum 5 MB.</small></div></div></Field>
         <Field label="Full name" required error={fieldErrors.fullname} wide><input required maxLength={200} autoComplete="name" value={form.fullName} onChange={(e) => update('fullName', e.target.value)} /></Field>
         <Field label="Name with initials" required error={fieldErrors.namewithinitials}><input required maxLength={100} value={form.nameWithInitials} onChange={(e) => update('nameWithInitials', e.target.value)} /></Field>
         <Field label="Date of birth" required error={fieldErrors.dateofbirth}><input required type="date" max={latestDob} value={form.dateOfBirth} onChange={(e) => update('dateOfBirth', e.target.value)} /></Field>

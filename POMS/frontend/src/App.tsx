@@ -9,6 +9,7 @@ import { PatientDetailPage } from './pages/PatientDetailPage'
 import { ClinicalRecordsPage } from './pages/ClinicalRecordsPage'
 import { AdminPage } from './pages/AdminPage'
 import { ReportsPage } from './pages/ReportsPage'
+import { ReferencePage } from './pages/ReferencePage'
 import './App.css'
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="records/:episodeId" element={<ClinicalRecordsPage />} />
           <Route path="appointments" element={<AppointmentsPage />} />
           <Route path="admin" element={<AdminPage />} />
+          <Route path="references/:section" element={<ReferencePage />} />
           <Route path="reports" element={<ReportsPage />} />
         </Route>
       </Route>

@@ -54,6 +54,34 @@ public sealed class AdminApiController(PomsDbContext context, UserManager<Identi
         if (item is null) return NotFound(); item.GetType().GetProperty("Name")!.SetValue(item, name); item.GetType().GetProperty("IsActive")!.SetValue(item, request.IsActive); await context.SaveChangesAsync(token); return Ok(new AdminItem(id, "", name, request.IsActive));
     }
 
+    [HttpDelete("lookups/{type}/{id:int}")]
+    [Authorize(Policy = "ApiWrite")]
+    public async Task<IActionResult> DeleteLookup(string type, int id, CancellationToken token)
+    {
+        if (!LookupTypes.Contains(type)) return NotFound();
+        object? item = type switch { "referral-sources" => await context.ReferralSources.FindAsync([id], token), "nationalities" => await context.Nationalities.FindAsync([id], token), "main-problem-types" => await context.MainProblemTypes.FindAsync([id], token), _ => await context.CauseReasonTypes.FindAsync([id], token) };
+        return await DeleteReference(item, token);
+    }
+
+    [HttpDelete("{resource}/{id:int}")]
+    [Authorize(Policy = "ApiWrite")]
+    public async Task<IActionResult> DeleteReferenceItem(string resource, int id, CancellationToken token)
+    {
+        object? item = resource switch
+        {
+            "provinces" => await context.Provinces.FindAsync([id], token),
+            "districts" => await context.Districts.FindAsync([id], token),
+            "cities" => await context.Cities.FindAsync([id], token),
+            "centers" => await context.Centers.FindAsync([id], token),
+            "device-types" => await context.DeviceTypes.FindAsync([id], token),
+            "devices" => await context.DeviceCatalogs.FindAsync([id], token),
+            _ => null
+        };
+        return resource is not ("provinces" or "districts" or "cities" or "centers" or "device-types" or "devices")
+            ? NotFound()
+            : await DeleteReference(item, token);
+    }
+
     [HttpPost("provinces")]
     [Authorize(Policy = "ApiWrite")]
     public Task<ActionResult<AdminItem>> CreateProvince(SaveCodedItemRequest request, CancellationToken token) => SaveProvince(null, request, token);
@@ -115,7 +143,7 @@ public sealed class AdminApiController(PomsDbContext context, UserManager<Identi
     public async Task<ActionResult<AdminUser>> CreateUser(CreateAdminUserRequest request, CancellationToken token)
     {
         var error = await ValidateUserRequest(request.Email, request.EmployeeNumber, request.Roles, null, token); if (error is not null) return error;
-        var email = request.Email.Trim(); var user = new IdentityUser { UserName = email, Email = email, EmailConfirmed = true, LockoutEnabled = true }; var created = await users.CreateAsync(user); if (!created.Succeeded) return IdentityProblem(created);
+        var email = request.Email.Trim(); var user = new IdentityUser { UserName = email, Email = email, EmailConfirmed = true, LockoutEnabled = true }; var created = await users.CreateAsync(user, request.Password); if (!created.Succeeded) return IdentityProblem(created);
         var roleResult = await users.AddToRolesAsync(user, request.Roles.Distinct(StringComparer.OrdinalIgnoreCase)); if (!roleResult.Succeeded) { await users.DeleteAsync(user); return IdentityProblem(roleResult); }
         var profile = new EmployeeProfile { UserId = user.Id, EmployeeNumber = request.EmployeeNumber.Trim().ToUpperInvariant(), FullName = request.FullName.Trim(), Designation = request.Designation.Trim(), Department = Clean(request.Department), MobileNumber = request.MobileNumber.Trim(), WorkPhoneNumber = Clean(request.WorkPhoneNumber), CanAccessRestrictedClinicalData = request.CanAccessRestrictedClinicalData, CreatedBy = Actor() }; context.EmployeeProfiles.Add(profile); await context.SaveChangesAsync(token);
         return Created($"/api/v1/admin/users/{user.Id}", MapUser(user, profile, request.Roles, false));
@@ -133,7 +161,28 @@ public sealed class AdminApiController(PomsDbContext context, UserManager<Identi
     [Authorize(Policy = "ApiWrite")]
     public async Task<IActionResult> SetLock(string id, SetLockRequest request) { var user = await users.FindByIdAsync(id); if (user is null) return NotFound(); if (request.Locked && (CurrentUserId() == id || await users.IsInRoleAsync(user, "ADMIN") && await IsLastActiveAdmin(user))) return ConflictProblem("The current or last active administrator cannot be locked."); var enabled = await users.SetLockoutEnabledAsync(user, true); if (!enabled.Succeeded) return IdentityProblem(enabled); var result = await users.SetLockoutEndDateAsync(user, request.Locked ? DateTimeOffset.MaxValue : null); return result.Succeeded ? NoContent() : IdentityProblem(result); }
 
+    [HttpPut("users/{id}/password")]
+    [Authorize(Policy = "ApiWrite")]
+    public async Task<IActionResult> ResetPassword(string id, ResetPasswordRequest request)
+    {
+        var user = await users.FindByIdAsync(id);
+        if (user is null) return NotFound();
+        var token = await users.GeneratePasswordResetTokenAsync(user);
+        var result = await users.ResetPasswordAsync(user, token, request.Password);
+        return result.Succeeded ? NoContent() : IdentityProblem(result);
+    }
+
     private async Task<ActionResult?> ValidateUserRequest(string email, string employeeNumber, IReadOnlyList<string> selectedRoles, string? id, CancellationToken token) { if (await users.FindByEmailAsync(email.Trim()) is not null) return ConflictProblem("Email address already exists."); if (await context.EmployeeProfiles.AnyAsync(x => x.UserId != id && x.EmployeeNumber == employeeNumber.Trim().ToUpper(), token)) return ConflictProblem("Employee number already exists."); if (selectedRoles.Count == 0 || await InvalidRoles(selectedRoles)) return Validation(nameof(selectedRoles), "Select valid access roles."); return null; }
+    private async Task<IActionResult> DeleteReference(object? item, CancellationToken token)
+    {
+        if (item is null) return NotFound();
+        context.Remove(item);
+        try { await context.SaveChangesAsync(token); return NoContent(); }
+        catch (DbUpdateException)
+        {
+            return ConflictProblem("This value is already used by patient or clinical records. Deactivate it instead so historical data remains valid.");
+        }
+    }
     private async Task<bool> InvalidRoles(IEnumerable<string> selected) { var available = await roles.Roles.Where(x => x.Name != null).Select(x => x.Name!).ToListAsync(); return selected.Any(x => !available.Contains(x, StringComparer.OrdinalIgnoreCase)); }
     private async Task<bool> IsLastActiveAdmin(IdentityUser target) { var admins = await users.GetUsersInRoleAsync("ADMIN"); return admins.Count(x => !IsLocked(x)) <= 1 && admins.Any(x => x.Id == target.Id && !IsLocked(x)); }
     private async Task<bool> LookupExists(string type, string name, int? id, CancellationToken token) => type switch { "referral-sources" => await context.ReferralSources.AnyAsync(x => x.Name == name && x.Id != id, token), "nationalities" => await context.Nationalities.AnyAsync(x => x.Name == name && x.Id != id, token), "main-problem-types" => await context.MainProblemTypes.AnyAsync(x => x.Name == name && x.Id != id, token), _ => await context.CauseReasonTypes.AnyAsync(x => x.Name == name && x.Id != id, token) };

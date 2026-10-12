@@ -44,6 +44,14 @@ public sealed class DocumentsApiController(PomsDbContext context, IFileStorageSe
     {
         if (request.PatientId.HasValue == request.EpisodeId.HasValue) return Validation("owner", "Specify either patientId or episodeId.");
         if (request.File is null || request.File.Length == 0) return Validation(nameof(request.File), "Select a non-empty file.");
+        var validatedContentType = request.File.ContentType;
+        if (request.DocumentType == DocumentType.PatientPhoto)
+        {
+            if (!request.PatientId.HasValue) return Validation(nameof(request.DocumentType), "Patient photos must belong to a patient.");
+            var validation = await PatientPhotoValidator.ValidateAsync(request.File);
+            if (!validation.IsValid) return Validation(nameof(request.File), validation.Error!);
+            validatedContentType = validation.ContentType!;
+        }
         var actor = Actor(); string patientNumber;
         Episode? episode = null;
         if (request.PatientId.HasValue)
@@ -59,7 +67,14 @@ public sealed class DocumentsApiController(PomsDbContext context, IFileStorageSe
             var stored = await storage.SaveFileAsync(request.File, patientNumber);
             if (episode is null)
             {
-                var item = new PatientDocument { PatientId = request.PatientId!.Value, DocumentType = request.DocumentType, FileName = stored.FileName, StoragePath = stored.StoragePath, ContentType = request.File.ContentType, Notes = Clean(request.Notes), UploadedBy = actor, UploadedAt = DateTime.UtcNow, IsRestricted = request.IsRestricted, CreatedBy = actor };
+                if (request.DocumentType == DocumentType.PatientPhoto)
+                {
+                    var previousPhotos = await context.PatientDocuments
+                        .Where(x => x.PatientId == request.PatientId && x.DocumentType == DocumentType.PatientPhoto)
+                        .ToListAsync(token);
+                    foreach (var previous in previousPhotos) SoftDelete(previous);
+                }
+                var item = new PatientDocument { PatientId = request.PatientId!.Value, DocumentType = request.DocumentType, FileName = stored.FileName, StoragePath = stored.StoragePath, ContentType = validatedContentType, Notes = Clean(request.Notes), UploadedBy = actor, UploadedAt = DateTime.UtcNow, IsRestricted = request.IsRestricted, CreatedBy = actor };
                 context.PatientDocuments.Add(item); await context.SaveChangesAsync(token); return Created($"/api/v1/documents/{item.Id}?scope=patient", Map(item));
             }
             var episodeItem = new EpisodeDocument { EpisodeId = episode.Id, DocumentType = request.DocumentType, FileName = stored.FileName, StoragePath = stored.StoragePath, ContentType = request.File.ContentType, FileSize = request.File.Length, Notes = Clean(request.Notes), UploadedBy = actor, UploadedAt = DateTime.UtcNow, IsRestricted = request.IsRestricted, CreatedBy = actor };

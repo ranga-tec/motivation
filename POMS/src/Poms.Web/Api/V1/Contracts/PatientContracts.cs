@@ -31,7 +31,8 @@ public sealed record PatientSummaryResponse(
     string Category,
     int CenterId,
     string CenterName,
-    DateOnly RegistrationDate);
+    DateOnly RegistrationDate,
+    bool HasPhoto);
 
 public sealed record PatientContactResponse(
     Guid Id,
@@ -58,10 +59,11 @@ public sealed record PatientDetailResponse(
     string? Email,
     string? Nationality,
     int CenterId,
-    string Center,
+    string CenterName,
     DateOnly RegistrationDate,
     string? AssignedClinicianName,
-    IReadOnlyList<PatientContactResponse> Contacts);
+    IReadOnlyList<PatientContactResponse> Contacts,
+    bool HasPhoto);
 
 public sealed record CreatePatientRequest : IValidatableObject
 {

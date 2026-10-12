@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using System.ComponentModel.DataAnnotations;
 using Poms.Domain.Enums;
 using Poms.Web.Api.V1.Contracts;
 using Poms.Web.Api.V1.Controllers;
@@ -49,6 +50,27 @@ public sealed class MvcContractValidationTests
         });
 
         Assert.Null(exception);
+    }
+
+    [Fact]
+    public void CreateAdminUser_RequiresProductionLengthPassword()
+    {
+        var request = new CreateAdminUserRequest
+        {
+            Email = "staff@poms.local",
+            Password = "Short1!",
+            FullName = "Staff Member",
+            EmployeeNumber = "EMP-1",
+            Designation = "Clinician",
+            MobileNumber = "0770000000",
+            Roles = ["CLINICIAN"]
+        };
+        var results = new List<ValidationResult>();
+
+        var valid = Validator.TryValidateObject(request, new ValidationContext(request), results, true);
+
+        Assert.False(valid);
+        Assert.Contains(results, result => result.MemberNames.Contains(nameof(CreateAdminUserRequest.Password)));
     }
 
     private static ServiceProvider BuildMvcServices()

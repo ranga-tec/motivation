@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { BarChart3, CalendarDays, ChevronDown, ClipboardPlus, LayoutDashboard, Menu, Search, Settings, Users, X } from 'lucide-react'
+import { BarChart3, BookOpen, CalendarDays, ChevronDown, ClipboardPlus, LayoutDashboard, Menu, Search, Settings, Users, X } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 
 const navigation = [
@@ -8,6 +8,7 @@ const navigation = [
   { to: '/patients', label: 'Patients', icon: Users },
   { to: '/appointments', label: 'Appointments', icon: CalendarDays },
   { to: '/reports', label: 'Reports', icon: BarChart3 },
+  { to: '/references/cities', label: 'Reference data', icon: BookOpen },
   { to: '/admin', label: 'Administration', icon: Settings },
 ]
 const titles: Record<string, string> = { '/': 'Overview', '/patients': 'Patients', '/patients/new': 'Register patient', '/appointments': 'Appointments', '/reports': 'Reports', '/admin': 'Administration' }
@@ -19,7 +20,7 @@ export function AppShell() {
   const name = user?.name ?? 'Staff user'
   const visibleNavigation = navigation.filter(item => item.to === '/reports'
     ? userRoles.some(role => ['VIEWER', 'MANAGEMENT', 'ADMIN'].includes(role))
-    : item.to !== '/admin' || userRoles.includes('ADMIN'))
+    : !item.to.startsWith('/admin') && !item.to.startsWith('/references') || userRoles.includes('ADMIN'))
   return <div className="app-shell">
     {open && <button className="mobile-scrim" aria-label="Close navigation" onClick={() => setOpen(false)} />}
     <aside className={`sidebar ${open ? 'open' : ''}`}>

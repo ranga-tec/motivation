@@ -85,7 +85,8 @@ public sealed class PatientsApiController(
                 patient.Category.ToString(),
                 patient.CenterId,
                 patient.Center.Name,
-                patient.RegistrationDate))
+                patient.RegistrationDate,
+                patient.Documents.Any(document => document.DocumentType == Poms.Domain.Enums.DocumentType.PatientPhoto)))
             .ToListAsync(cancellationToken);
 
         return Ok(new PagedResponse<PatientSummaryResponse>(
@@ -135,7 +136,8 @@ public sealed class PatientsApiController(
                         contact.TelephoneNo,
                         contact.DateConfirmed,
                         contact.PersonChecked))
-                    .ToList()))
+                    .ToList(),
+                item.Documents.Any(document => document.DocumentType == Poms.Domain.Enums.DocumentType.PatientPhoto)))
             .SingleOrDefaultAsync(cancellationToken);
 
         return patient is null ? NotFound() : Ok(patient);
@@ -345,7 +347,8 @@ public sealed class PatientsApiController(
                 item.Email, item.Nationality, item.CenterId, item.Center.Name, item.RegistrationDate,
                 item.AssignedClinicianName,
                 item.Contacts.OrderBy(contact => contact.CreatedAt)
-                    .Select(contact => new PatientContactResponse(contact.Id, contact.TelephoneNo, contact.DateConfirmed, contact.PersonChecked)).ToList()))
+                    .Select(contact => new PatientContactResponse(contact.Id, contact.TelephoneNo, contact.DateConfirmed, contact.PersonChecked)).ToList(),
+                item.Documents.Any(document => document.DocumentType == Poms.Domain.Enums.DocumentType.PatientPhoto)))
             .SingleOrDefaultAsync(cancellationToken);
 
     private static string? NormalizeEmail(string? email)
