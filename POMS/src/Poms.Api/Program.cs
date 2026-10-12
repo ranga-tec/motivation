@@ -5,7 +5,6 @@ using Poms.Infrastructure.Data;
 using Poms.Infrastructure.Services;
 using Poms.Web.Api;
 using Poms.Reporting.Services;
-using Poms.Api;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 
