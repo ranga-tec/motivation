@@ -214,7 +214,8 @@ builder.Services.AddTransient<IPatientFormOcrEngine>(services =>
     services.GetRequiredService<TesseractPatientFormOcrService>());
 builder.Services.AddScoped<IPatientFormOcrService, PatientFormOcrService>();
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews().AddJsonOptions(options =>
+    options.JsonSerializerOptions.Converters.Add(new FlexibleTimeOnlyJsonConverter()));
 builder.Services.AddRazorPages();
 
 // Authorization Policies

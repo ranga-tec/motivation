@@ -117,7 +117,8 @@ var maxFileSizeMb = fileStorage.GetValue<long>("MaxFileSizeMB", 10);
 var allowedExtensions = fileStorage.GetSection("AllowedExtensions").Get<string[]>();
 builder.Services.AddScoped<IFileStorageService>(_ => new FileStorageService(storageRoot, maxFileSizeMb, allowedExtensions));
 builder.Services.AddScoped<IPrintFormService, PrintFormService>();
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddJsonOptions(options =>
+    options.JsonSerializerOptions.Converters.Add(new FlexibleTimeOnlyJsonConverter()));
 builder.Services.AddHealthChecks().AddCheck<PomsApiDatabaseHealthCheck>("database");
 
 var app = builder.Build();
