@@ -1,63 +1,82 @@
-import { Search, X } from 'lucide-react'
-import { useState, type FormEvent, type ReactNode } from 'react'
-import { api, ApiError } from '../api/client'
-import type { Appointment, CreateAppointmentRequest, PatientSummary } from '../api/types'
+import { useState } from 'react'
+import { api } from '../api/client'
+import type { Appointment, AssigneeOption, CreateAppointmentRequest, PatientSummary } from '../api/types'
+import { useAuth } from '../auth/AuthProvider'
 import { useApi } from '../hooks/useApi'
+import { access } from '../lib/access'
+import { errorMessage, formatDate, localDate } from '../lib/format'
+import { Combobox } from './Combobox'
+import { PatientSearch } from './PatientPickerDialog'
+import { Field, FormModal, Segmented } from './Ui'
 
-const today = new Date().toISOString().slice(0, 10)
-const blank: CreateAppointmentRequest = { patientId: '', type: 'Assessment', appointmentDate: today, appointmentTime: '', assignedClinicianEntry: '' }
+// PRD 5.4.3: appointments cover assessment, fitting and delivery. Follow-ups live in clinical records.
+const visitTypes = [{ value: 'Assessment', label: 'Assessment' }, { value: 'Fitting', label: 'Fitting' }, { value: 'Delivery', label: 'Delivery' }]
 
-export function CreateAppointmentDialog({ close, saved }: { close: () => void; saved: (item: Appointment) => void }) {
+export function AssigneeInput({ value, assignees, onChange }: { value: string; assignees: AssigneeOption[]; onChange: (entry: string, userId?: string) => void }) {
+  const text = value.trim().toLowerCase()
+  const options = assignees.filter((item) => !text || item.displayName.toLowerCase().includes(text) || item.fullName.toLowerCase().includes(text))
+    .sort((a, b) => Number(b.isPreferred) - Number(a.isPreferred)).slice(0, 12)
+    .map((item) => ({ key: item.userId, label: item.displayName, sub: item.isPreferred ? 'Prosthetist / Orthotist' : undefined }))
+  return <Combobox required value={value} placeholder="Choose staff or type a name" options={options} emptyText="No staff match — the typed name will be used"
+    onChange={(entry) => onChange(entry, assignees.find((item) => item.displayName === entry)?.userId)}
+    onSelect={(option) => onChange(option.label, option.key)} />
+}
+
+export function CreateAppointmentDialog({ close, saved, initialDate, patient: initialPatient }: { close: () => void; saved: (item: Appointment) => void; initialDate?: string; patient?: PatientSummary }) {
+  const { roles } = useAuth()
+  const can = access(roles)
   const options = useApi(() => api.appointmentOptions(), 'appointment-options')
-  const [form, setForm] = useState(blank)
-  const [query, setQuery] = useState('')
-  const [patients, setPatients] = useState<PatientSummary[]>([])
-  const [selected, setSelected] = useState<PatientSummary>()
+  const [patient, setPatient] = useState<PatientSummary | undefined>(initialPatient)
+  const [form, setForm] = useState<CreateAppointmentRequest>({ patientId: initialPatient?.id ?? '', type: 'Assessment', appointmentDate: initialDate ?? localDate(), appointmentTime: '', assignedClinicianEntry: '' })
+  const episodes = useApi(() => api.episodes(patient!.id), `appointment-episodes-${patient?.id}`, Boolean(patient) && can.clinical)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
-
-  const search = async () => {
-    if (query.trim().length < 2) return
-    setPatients((await api.patients({ search: query.trim(), pageSize: 8 })).items)
-  }
-  const selectPatient = (patient: PatientSummary) => {
-    setSelected(patient)
-    setForm(current => ({ ...current, patientId: patient.id }))
-    setPatients([])
-  }
-  const submit = async (event: FormEvent) => {
-    event.preventDefault(); setSubmitting(true); setError('')
-    try { saved(await api.createAppointment(form)) }
-    catch (failure) { setError(failure instanceof ApiError ? failure.message : 'The appointment could not be created.') }
+  const set = (patch: Partial<CreateAppointmentRequest>) => setForm((current) => ({ ...current, ...patch }))
+  const submit = async () => {
+    if (!form.patientId) { setError('Select a patient.'); return }
+    setSubmitting(true); setError('')
+    try { saved(await api.createAppointment({ ...form, episodeId: form.episodeId || undefined })) }
+    catch (failure) { setError(errorMessage(failure, 'The appointment could not be created.')) }
     finally { setSubmitting(false) }
   }
-
-  return <Dialog title="New appointment" description="Schedule a patient with the appropriate clinician." close={close}><form onSubmit={(event) => void submit(event)}>
-    {error && <div className="inline-error">{error}</div>}
-    <div className="form-field wide"><span>Patient *</span>{selected ? <div className="selected-record"><div><strong>{selected.fullName}</strong><span>{selected.patientNumber}</span></div><button type="button" onClick={() => { setSelected(undefined); setForm(current => ({ ...current, patientId: '' })) }}>Change</button></div> : <><div className="record-search"><input aria-label="Patient search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Name or patient number" /><button type="button" onClick={() => void search()} aria-label="Search patients"><Search /></button></div>{patients.length > 0 && <div className="search-results">{patients.map((patient) => <button type="button" key={patient.id} onClick={() => selectPatient(patient)}><strong>{patient.fullName}</strong><span>{patient.patientNumber} · {patient.centerName}</span></button>)}</div>}</>}</div>
-    <div className="dialog-grid"><label className="form-field"><span>Visit type *</span><select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}><option>Assessment</option><option>Fitting</option><option>Delivery</option><option value="FollowUp">Follow-up</option><option value="GaitTraining">Gait training</option></select></label><label className="form-field"><span>Date *</span><input required type="date" value={form.appointmentDate} onChange={(e) => setForm({ ...form, appointmentDate: e.target.value })} /></label><label className="form-field"><span>Time</span><input type="time" value={form.appointmentTime} onChange={(e) => setForm({ ...form, appointmentTime: e.target.value })} /></label><label className="form-field"><span>Handled by *</span><input required list="appointment-assignees" value={form.assignedClinicianEntry} onChange={(e) => { const assignee = options.data?.assignees.find((item) => item.displayName === e.target.value); setForm({ ...form, assignedClinicianEntry: e.target.value, assignedClinicianUserId: assignee?.userId }) }} /><datalist id="appointment-assignees">{options.data?.assignees.map((item) => <option key={item.userId} value={item.displayName} />)}</datalist></label><label className="form-field wide"><span>Notes</span><textarea rows={3} value={form.notes ?? ''} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></label></div>
-    <DialogActions close={close} submitting={submitting} label="Create appointment" disabled={!form.patientId || options.loading} />
-  </form></Dialog>
+  return <FormModal title="New appointment" description="Book an assessment, fitting or delivery visit." onClose={close} onSubmit={submit} submitLabel="Book appointment" submitting={submitting} disabled={!form.patientId || options.loading} error={error} size="md">
+    <div className="form-grid">
+      <Field label="Patient" required className="span-all"><PatientSearch autoFocus={!initialPatient} selected={patient} onSelect={(value) => { setPatient(value); set({ patientId: value?.id ?? '', episodeId: undefined }) }} /></Field>
+      {patient && can.clinical && <Field label="Patient record" className="span-all" hint="Optional. Links the visit to a treatment record.">
+        <select value={form.episodeId ?? ''} onChange={(event) => set({ episodeId: event.target.value || undefined })} disabled={episodes.loading}>
+          <option value="">{episodes.loading ? 'Loading records…' : 'Not linked to a record'}</option>
+          {episodes.data?.map((episode) => <option key={episode.id} value={episode.id}>{formatDate(episode.recordDate)} · {episode.centerName} · {episode.status} — {episode.assessmentCount} assessments, {episode.fittingCount} fittings, {episode.deliveryCount} deliveries</option>)}
+        </select>
+      </Field>}
+      <Field label="Visit type" required className="span-all"><Segmented label="Visit type" value={form.type} options={visitTypes} onChange={(type) => set({ type })} /></Field>
+      <Field label="Date" required><input required type="date" value={form.appointmentDate} onChange={(event) => set({ appointmentDate: event.target.value })} /></Field>
+      <Field label="Time" hint="Leave blank if not fixed"><input type="time" value={form.appointmentTime} onChange={(event) => set({ appointmentTime: event.target.value })} /></Field>
+      <Field label="Handled by" required className="span-all"><AssigneeInput value={form.assignedClinicianEntry} assignees={options.data?.assignees ?? []} onChange={(entry, userId) => set({ assignedClinicianEntry: entry, assignedClinicianUserId: userId })} /></Field>
+      <Field label="Notes" className="span-all"><textarea rows={3} maxLength={2000} value={form.notes ?? ''} onChange={(event) => set({ notes: event.target.value })} /></Field>
+    </div>
+  </FormModal>
 }
 
 export function AppointmentActionDialog({ value, close, saved }: { value: { kind: 'cancel' | 'reschedule'; appointment: Appointment }; close: () => void; saved: (message: string) => void }) {
   const rescheduling = value.kind === 'reschedule'
   const [date, setDate] = useState(value.appointment.appointmentDate)
-  const [time, setTime] = useState(value.appointment.appointmentTime?.slice(0,5) ?? '')
+  const [time, setTime] = useState(value.appointment.appointmentTime?.slice(0, 5) ?? '')
   const [reason, setReason] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const submit = async (event: FormEvent) => {
-    event.preventDefault(); setSubmitting(true); setError('')
+  const submit = async () => {
+    setSubmitting(true); setError('')
     try {
       if (rescheduling) await api.rescheduleAppointment(value.appointment.id, date, time || undefined, reason)
       else await api.cancelAppointment(value.appointment.id, reason)
       saved(`${value.appointment.patientName}'s appointment was ${rescheduling ? 'rescheduled' : 'cancelled'}.`)
-    } catch (failure) { setError(failure instanceof Error ? failure.message : 'The appointment could not be updated.') }
+    } catch (failure) { setError(errorMessage(failure, 'The appointment could not be updated.')) }
     finally { setSubmitting(false) }
   }
-  return <Dialog title={`${rescheduling ? 'Reschedule' : 'Cancel'} appointment`} description={`${value.appointment.patientName} · ${value.appointment.patientNumber}`} close={close}><form onSubmit={(event) => void submit(event)}>{error && <div className="inline-error">{error}</div>}{rescheduling && <div className="dialog-grid"><label className="form-field"><span>New date *</span><input required type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label><label className="form-field"><span>New time</span><input type="time" value={time} onChange={(e) => setTime(e.target.value)} /></label></div>}<label className="form-field wide"><span>{rescheduling ? 'Reason for rescheduling' : 'Cancellation reason'} *</span><textarea required maxLength={500} rows={4} value={reason} onChange={(e) => setReason(e.target.value)} /></label><DialogActions close={close} submitting={submitting} label={rescheduling ? 'Save new schedule' : 'Cancel appointment'} danger={!rescheduling} /></form></Dialog>
+  return <FormModal title={rescheduling ? 'Reschedule appointment' : 'Cancel appointment'} description={`${value.appointment.patientName} · ${value.appointment.patientNumber}`} onClose={close} onSubmit={submit} submitLabel={rescheduling ? 'Save new time' : 'Cancel appointment'} danger={!rescheduling} submitting={submitting} error={error}>
+    <div className="form-grid">
+      {rescheduling && <><Field label="New date" required><input required type="date" value={date} onChange={(event) => setDate(event.target.value)} /></Field><Field label="New time"><input type="time" value={time} onChange={(event) => setTime(event.target.value)} /></Field></>}
+      <Field label={rescheduling ? 'Reason for rescheduling' : 'Reason for cancellation'} required className="span-all"><textarea required maxLength={500} rows={3} value={reason} onChange={(event) => setReason(event.target.value)} /></Field>
+    </div>
+  </FormModal>
 }
-
-function Dialog({ title, description, close, children }: { title: string; description: string; close: () => void; children: ReactNode }) { return <div className="dialog-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) close() }}><section className="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title"><header><div><h2 id="dialog-title">{title}</h2><p>{description}</p></div><button className="icon-button" onClick={close} aria-label="Close"><X /></button></header><div className="dialog-body">{children}</div></section></div> }
-function DialogActions({ close, submitting, label, disabled, danger }: { close: () => void; submitting: boolean; label: string; disabled?: boolean; danger?: boolean }) { return <div className="dialog-actions"><button type="button" className="button secondary" onClick={close}>Close</button><button disabled={submitting || disabled} className={`button ${danger ? 'danger-button' : 'primary'}`} type="submit">{submitting ? 'Saving…' : label}</button></div> }

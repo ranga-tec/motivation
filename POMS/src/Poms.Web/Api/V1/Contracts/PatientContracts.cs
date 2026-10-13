@@ -63,7 +63,22 @@ public sealed record PatientDetailResponse(
     DateOnly RegistrationDate,
     string? AssignedClinicianName,
     IReadOnlyList<PatientContactResponse> Contacts,
-    bool HasPhoto);
+    bool HasPhoto)
+{
+    public string? Employment { get; init; }
+    public string? GuardianName { get; init; }
+    public string? GuardianRelationship { get; init; }
+    public string? GuardianPhone { get; init; }
+    public string? GuardianMobile { get; init; }
+    public string? GuardianAddress { get; init; }
+    public string? ReferralSource { get; init; }
+    public string? ReferralSourceOther { get; init; }
+    public string? ReferralPersonName { get; init; }
+    public string? ReferralPersonContactNumber { get; init; }
+    public string? TravelTimeDistance { get; init; }
+    public string? RegistrationProcessedBy { get; init; }
+    public string? Remarks { get; init; }
+}
 
 public sealed record CreatePatientRequest : IValidatableObject
 {
@@ -138,7 +153,13 @@ public sealed record PatientRegistrationOptionsResponse(
     IReadOnlyList<RegistrationOption> Cities,
     IReadOnlyList<RegistrationOption> Centers,
     IReadOnlyList<RegistrationOption> ReferralSources,
-    IReadOnlyList<AssigneeOption> Assignees);
+    IReadOnlyList<AssigneeOption> Assignees,
+    IReadOnlyList<RegistrationOption> Nationalities);
+
+public sealed record PatientFilterOptionsResponse(
+    IReadOnlyList<RegistrationOption> Centers,
+    IReadOnlyList<RegistrationOption> Provinces,
+    IReadOnlyList<RegistrationOption> Districts);
 
 public sealed record PatientEditResponse(
     Guid Id,

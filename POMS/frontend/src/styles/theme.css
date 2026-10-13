@@ -1,0 +1,130 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/*
+ * Design tokens. Every colour in the application comes from these variables so
+ * the four themes (light, dark, classic, and system) stay consistent.
+ */
+:root {
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --sidebar-width: 260px;
+  --topbar-height: 64px;
+  --control-height: 40px;
+  --gap: 20px;
+  --page-pad: 32px;
+  --cell-pad-y: 13px;
+
+  /* Light theme (default) */
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --surface-3: #eef2f7;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --text: #0f172a;
+  --text-2: #334155;
+  --muted: #64748b;
+  --faint: #94a3b8;
+  --primary: #0b63ce;
+  --primary-hover: #0952ab;
+  --primary-soft: #e8f1fd;
+  --primary-text: #0a4fa6;
+  --on-primary: #ffffff;
+  --success: #0f7b5f;
+  --success-soft: #e6f6f0;
+  --warning: #a35c00;
+  --warning-soft: #fff4e0;
+  --danger: #c52a2a;
+  --danger-soft: #fdecec;
+  --info: #5b4bc4;
+  --info-soft: #efedfc;
+  --focus: 0 0 0 3px rgba(11, 99, 206, 0.28);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 6px 16px rgba(15, 23, 42, 0.05);
+  --shadow-lg: 0 20px 50px rgba(15, 23, 42, 0.18);
+  --scrim: rgba(15, 23, 42, 0.45);
+
+  --sidebar-bg: #ffffff;
+  --sidebar-border: #e2e8f0;
+  --sidebar-text: #475569;
+  --sidebar-heading: #94a3b8;
+  --sidebar-hover: #f1f5f9;
+  --sidebar-active-bg: #e8f1fd;
+  --sidebar-active-text: #0a4fa6;
+  --sidebar-brand: #0f172a;
+  --sidebar-brand-sub: #64748b;
+
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --bg: #0b1120;
+  --surface: #111a2c;
+  --surface-2: #0f1727;
+  --surface-3: #18233a;
+  --border: #1f2b42;
+  --border-strong: #2d3b57;
+  --text: #e6ebf3;
+  --text-2: #c3cddc;
+  --muted: #8d9bb3;
+  --faint: #64748b;
+  --primary: #4b8dff;
+  --primary-hover: #6aa1ff;
+  --primary-soft: rgba(75, 141, 255, 0.14);
+  --primary-text: #8db7ff;
+  --on-primary: #06122a;
+  --success: #3ccf9f;
+  --success-soft: rgba(60, 207, 159, 0.13);
+  --warning: #f2b552;
+  --warning-soft: rgba(242, 181, 82, 0.13);
+  --danger: #ff7a7a;
+  --danger-soft: rgba(255, 122, 122, 0.13);
+  --info: #a99bff;
+  --info-soft: rgba(169, 155, 255, 0.14);
+  --focus: 0 0 0 3px rgba(75, 141, 255, 0.35);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.35), 0 8px 20px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.55);
+  --scrim: rgba(2, 6, 16, 0.7);
+
+  --sidebar-bg: #0d1526;
+  --sidebar-border: #1a2540;
+  --sidebar-text: #a7b3c8;
+  --sidebar-heading: #5f6f8c;
+  --sidebar-hover: #16213a;
+  --sidebar-active-bg: rgba(75, 141, 255, 0.16);
+  --sidebar-active-text: #b3cdff;
+  --sidebar-brand: #e6ebf3;
+  --sidebar-brand-sub: #7d8ba5;
+
+  color-scheme: dark;
+}
+
+/* Classic keeps the original POMS navy sidebar with light content. */
+:root[data-theme='classic'] {
+  --bg: #f5f7fa;
+  --primary: #2563eb;
+  --primary-hover: #1d4fd0;
+  --primary-soft: #e8efff;
+  --primary-text: #1e48b8;
+  --focus: 0 0 0 3px rgba(37, 99, 235, 0.28);
+
+  --sidebar-bg: #12233f;
+  --sidebar-border: #12233f;
+  --sidebar-text: #b8c4d7;
+  --sidebar-heading: #6f82a3;
+  --sidebar-hover: rgba(255, 255, 255, 0.06);
+  --sidebar-active-bg: #ffffff;
+  --sidebar-active-text: #17315d;
+  --sidebar-brand: #ffffff;
+  --sidebar-brand-sub: #aebbd0;
+}
+
+:root[data-density='compact'] {
+  --control-height: 34px;
+  --gap: 14px;
+  --page-pad: 22px;
+  --cell-pad-y: 8px;
+}

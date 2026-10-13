@@ -1,6 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type FormEvent, type PropsWithChildren } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react'
 import { Navigate, Outlet } from 'react-router-dom'
-import { LockKeyhole } from 'lucide-react'
 import { registerTokenProvider } from '../api/client'
 import { config } from '../config'
 
@@ -107,35 +106,8 @@ export const useAuth = () => { const value = useContext(AuthContext); if (!value
 
 export function ProtectedRoute() {
   const { user, loading, accessError, signOut } = useAuth()
-  if (loading) return <div className="full-page-state"><span className="spinner" /> Restoring secure session…</div>
-  if (accessError) return <div className="full-page-state"><div className="error-panel" role="alert">{accessError}<button className="button secondary" onClick={signOut}>Sign out</button></div></div>
+  if (loading) return <div className="full-state"><div><span className="spinner" /> Restoring secure session…</div></div>
+  if (accessError) return <div className="full-state"><div className="alert alert-error" role="alert" style={{ maxWidth: 440 }}><div><strong>Access problem</strong>{accessError}</div><button className="btn btn-secondary btn-sm" onClick={signOut}>Sign out</button></div></div>
   if (!user) return <Navigate to="/signin" replace />
   return <Outlet />
-}
-
-export function SignInPage() {
-  const { user, signIn } = useAuth()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  if (user) return <Navigate to="/" replace />
-  const submit = async (event: FormEvent) => {
-    event.preventDefault(); if (submitting) return
-    setSubmitting(true); setError('')
-    try { await signIn(email.trim(), password) }
-    catch (reason) { setError(reason instanceof Error ? reason.message : 'Sign-in could not be completed.') }
-    finally { setSubmitting(false) }
-  }
-  return <main className="signin-page"><section className="signin-card">
-    <div className="brand-mark large">P</div><p className="eyebrow">POMS clinical workspace</p>
-    <h1>Secure staff sign in</h1><p>Enter your authorised POMS staff account.</p>
-    <form onSubmit={(event) => void submit(event)}>
-      <label className="form-field"><span>Email address</span><input type="email" autoComplete="username" required value={email} onChange={(event) => setEmail(event.target.value)} /></label>
-      <label className="form-field"><span>Password</span><input type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} /></label>
-      {error && <div className="error-panel" role="alert">{error}</div>}
-      <button className="button primary full" type="submit" disabled={submitting}><LockKeyhole size={18} /> {submitting ? 'Signing in…' : 'Sign in securely'}</button>
-    </form>
-    <small>Protected healthcare information. Authorised personnel only.</small>
-  </section></main>
 }

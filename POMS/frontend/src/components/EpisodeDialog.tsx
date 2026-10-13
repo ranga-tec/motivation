@@ -1,39 +1,37 @@
-import { X } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
-import { api, ApiError } from '../api/client'
+import { useState } from 'react'
+import { api } from '../api/client'
 import type { Episode, SaveEpisodeRequest } from '../api/types'
 import { useApi } from '../hooks/useApi'
-
-const initial = (patientId: string, centerId: number, episode?: Episode): SaveEpisodeRequest => {
-  const now = new Date()
-  return {
-    patientId,
-    centerId: episode?.centerId ?? centerId,
-    status: episode?.status ?? 'Active',
-    recordDate: episode?.recordDate ?? now.toISOString().slice(0, 10),
-    recordTime: episode?.recordTime?.slice(0, 5) ?? now.toTimeString().slice(0, 5),
-    remarks: episode?.remarks ?? '',
-    isRestricted: episode?.isRestricted ?? false,
-  }
-}
+import { errorMessage, localDate, localTime } from '../lib/format'
+import { Field, FormModal, Segmented } from './Ui'
 
 export function EpisodeDialog({ patientId, patientName, centerId, episode, close, saved }: { patientId: string; patientName: string; centerId: number; episode?: Episode; close: () => void; saved: (message: string) => void }) {
   const options = useApi(() => api.episodeOptions(), 'episode-options')
-  const [form, setForm] = useState(() => initial(patientId, centerId, episode))
+  const [form, setForm] = useState<SaveEpisodeRequest>(() => ({
+    patientId, centerId: episode?.centerId ?? centerId, status: episode?.status ?? 'Active', recordDate: episode?.recordDate ?? localDate(),
+    recordTime: episode?.recordTime?.slice(0, 5) ?? localTime(), remarks: episode?.remarks ?? '', isRestricted: episode?.isRestricted ?? false,
+  }))
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const selectedCenterId = options.data?.centers.some((center) => center.id === form.centerId) ? form.centerId : 0
-  const submit = async (event: FormEvent) => {
-    event.preventDefault(); if (submitting) return; setSubmitting(true); setError('')
-    if (!selectedCenterId) {
-      setError('Select an active treatment centre.'); setSubmitting(false); return
-    }
+  const set = (patch: Partial<SaveEpisodeRequest>) => setForm((current) => ({ ...current, ...patch }))
+  const activeCentre = options.data?.centers.some((center) => center.id === form.centerId)
+  const submit = async () => {
+    if (!activeCentre) { setError('Select an active treatment centre.'); return }
+    setSubmitting(true); setError('')
     try {
-      if (episode) await api.updateEpisode(episode.id, form)
-      else await api.createEpisode(form)
-      saved(`Patient record ${episode ? 'updated' : 'created'} successfully.`)
-    } catch (failure) { setError(failure instanceof ApiError ? failure.message : 'The patient record could not be saved.') }
+      if (episode) await api.updateEpisode(episode.id, form); else await api.createEpisode(form)
+      saved(`Patient record ${episode ? 'updated' : 'created'}.`)
+    } catch (failure) { setError(errorMessage(failure, 'The patient record could not be saved.')) }
     finally { setSubmitting(false) }
   }
-  return <div className="dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) close() }}><section className="dialog" role="dialog" aria-modal="true" aria-labelledby="episode-dialog-title"><header><div><h2 id="episode-dialog-title">{episode ? 'Edit' : 'New'} patient record</h2><p>{patientName}</p></div><button type="button" className="icon-button" onClick={close} aria-label="Close"><X /></button></header><div className="dialog-body"><form onSubmit={(event) => void submit(event)}>{error && <div className="inline-error">{error}</div>}<div className="dialog-grid"><label className="form-field"><span>Centre *</span><select required value={form.centerId} onChange={(event) => setForm({ ...form, centerId: Number(event.target.value) })}><option value="">Select centre</option>{options.data?.centers.map((center) => <option key={center.id} value={center.id}>{center.name}</option>)}</select></label><label className="form-field"><span>Status *</span><select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}>{options.data?.statuses.map((status) => <option key={status}>{status}</option>)}</select></label><label className="form-field"><span>Record date *</span><input required type="date" value={form.recordDate} onChange={(event) => setForm({ ...form, recordDate: event.target.value })} /></label><label className="form-field"><span>Record time *</span><input required type="time" value={form.recordTime} onChange={(event) => setForm({ ...form, recordTime: event.target.value })} /></label><label className="form-field wide"><span>Remarks</span><textarea maxLength={1000} rows={4} value={form.remarks} onChange={(event) => setForm({ ...form, remarks: event.target.value })} /></label><label className="checkbox-field wide"><input type="checkbox" checked={form.isRestricted} onChange={(event) => setForm({ ...form, isRestricted: event.target.checked })} /><span><strong>Restricted clinical record</strong><small>Only authorized users and the creator can access this record.</small></span></label></div><div className="dialog-actions"><button type="button" className="button secondary" onClick={close}>Close</button><button type="submit" className="button primary" disabled={submitting || options.loading}>{submitting ? 'Saving…' : episode ? 'Save changes' : 'Create record'}</button></div></form></div></section></div>
+  return <FormModal title={episode ? 'Edit patient record' : 'New patient record'} description={`${patientName} · one prosthetic or orthotic service case`} onClose={close} onSubmit={submit} submitLabel={episode ? 'Save changes' : 'Create record'} submitting={submitting} disabled={options.loading} error={error}>
+    <div className="form-grid">
+      <Field label="Location" required><select required value={activeCentre ? form.centerId : ''} onChange={(event) => set({ centerId: Number(event.target.value) })}><option value="">Select centre</option>{options.data?.centers.map((center) => <option key={center.id} value={center.id}>{center.name}</option>)}</select></Field>
+      <Field label="Status" required><Segmented label="Status" value={form.status} onChange={(status) => set({ status })} options={(options.data?.statuses ?? ['Active', 'Completed', 'Cancelled']).map((value) => ({ value, label: value }))} /></Field>
+      <Field label="Record date" required><input required type="date" value={form.recordDate} onChange={(event) => set({ recordDate: event.target.value })} /></Field>
+      <Field label="Record time" required><input required type="time" value={form.recordTime} onChange={(event) => set({ recordTime: event.target.value })} /></Field>
+      <Field label="Remarks" className="span-all"><textarea maxLength={1000} rows={3} value={form.remarks} onChange={(event) => set({ remarks: event.target.value })} placeholder="e.g. Left trans-tibial prosthesis — first fitting" /></Field>
+      <label className="check span-all"><input type="checkbox" checked={form.isRestricted} onChange={(event) => set({ isRestricted: event.target.checked })} /><span><strong>Restricted record</strong><small>Only the author and staff with restricted-data access can open it.</small></span></label>
+    </div>
+  </FormModal>
 }

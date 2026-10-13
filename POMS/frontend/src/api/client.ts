@@ -1,5 +1,5 @@
 import { config } from '../config'
-import type { AdminCatalog, AdminCenter, AdminDevice, AdminItem, AdminUsers, AdminUser, Appointment, AppointmentOptions, Assessment, ClinicalOptions, CreateAppointmentRequest, CreatePatientRequest, DashboardMetrics, Delivery, DocumentOptions, Episode, EpisodeClinicalRecords, EpisodeOptions, Fitting, FollowUp, ListOptions, PagedResponse, PatientDetail, PatientEditDetails, PatientRegistrationOptions, PatientSummary, PrescriptionOption, ReportFilter, ReportOptions, ReportResult, SaveAssessmentRequest, SaveDeliveryRequest, SaveEpisodeRequest, SaveFittingRequest, SaveFollowUpRequest, StoredDocument } from './types'
+import type { ActivityItem, AdminCatalog, AdminCenter, AdminDevice, AdminItem, AdminUser, AdminUsers, Appointment, AppointmentOptions, Assessment, ClinicalOptions, CreateAppointmentRequest, CreatePatientRequest, DashboardMetrics, DashboardRecord, Delivery, DocumentOptions, Episode, EpisodeClinicalRecords, EpisodeOptions, Fitting, FollowUp, ListOptions, PagedResponse, PatientDetail, PatientEditDetails, PatientFilterOptions, PatientRegistrationOptions, PatientSummary, PrescriptionOption, RecordListOptions, ReportFilter, ReportOptions, ReportResult, SaveAssessmentRequest, SaveDeliveryRequest, SaveEpisodeRequest, SaveFittingRequest, SaveFollowUpRequest, StoredDocument } from './types'
 
 export interface ApiProblem { title?: string; detail?: string; duplicateType?: string; existingPatientNumber?: string; existingPatientName?: string; errors?: Record<string, string[]> }
 export class ApiError extends Error {
@@ -7,91 +7,121 @@ export class ApiError extends Error {
   problem?: ApiProblem
   constructor(status: number, message: string, problem?: ApiProblem) { super(message); this.status = status; this.problem = problem }
 }
+
 const problemMessage = (status: number, problem?: ApiProblem) => problem?.detail
   ?? Object.values(problem?.errors ?? {})[0]?.[0]
   ?? problem?.title
-  ?? `Request failed (${status})`
+  ?? (status === 403 ? 'You do not have permission for this action.' : status === 404 ? 'The requested record was not found.' : `Request failed (${status}).`)
+
 let accessToken: (() => Promise<string | undefined>) | undefined
 export const registerTokenProvider = (provider: () => Promise<string | undefined>) => { accessToken = provider }
-const queryString = (options: ListOptions) => { const query = new URLSearchParams(); Object.entries(options).forEach(([key, value]) => { if (value !== undefined && value !== '') query.set(key, String(value)) }); return query.toString() }
+
+const queryString = (options: object) => {
+  const query = new URLSearchParams()
+  Object.entries(options).forEach(([key, value]) => { if (value !== undefined && value !== null && value !== '') query.set(key, String(value)) })
+  const text = query.toString()
+  return text ? `?${text}` : ''
+}
 const apiTime = (value?: string) => value ? (/^\d{2}:\d{2}$/.test(value) ? `${value}:00` : value) : null
-async function get<T>(path: string): Promise<T> {
+
+async function send(method: string, path: string, body?: unknown): Promise<Response> {
   const token = await accessToken?.()
-  const response = await fetch(`${config.apiUrl}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-  if (!response.ok) { const problem = await response.json().catch(() => undefined) as ApiProblem | undefined; throw new ApiError(response.status, problemMessage(response.status, problem), problem) }
-  return response.json() as Promise<T>
+  const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {}
+  let payload: BodyInit | undefined
+  if (body instanceof FormData) payload = body
+  else if (body !== undefined) { headers['Content-Type'] = 'application/json'; payload = JSON.stringify(body) }
+  let response: Response
+  try { response = await fetch(`${config.apiUrl}${path}`, { method, headers, body: payload }) }
+  catch { throw new ApiError(0, 'The POMS server could not be reached. Check your connection and try again.') }
+  if (!response.ok) {
+    const problem = await response.json().catch(() => undefined) as ApiProblem | undefined
+    throw new ApiError(response.status, problemMessage(response.status, problem), problem)
+  }
+  return response
 }
-async function post<T>(path: string, body: unknown): Promise<T> {
-  const token = await accessToken?.()
-  const response = await fetch(`${config.apiUrl}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body) })
-  if (!response.ok) { const problem = await response.json().catch(() => undefined) as ApiProblem | undefined; throw new ApiError(response.status, problemMessage(response.status, problem), problem) }
-  return response.json() as Promise<T>
+const get = async <T>(path: string) => (await send('GET', path)).json() as Promise<T>
+const post = async <T>(path: string, body: unknown) => (await send('POST', path, body)).json() as Promise<T>
+const put = async <T>(path: string, body: unknown) => (await send('PUT', path, body)).json() as Promise<T>
+const putVoid = async (path: string, body: unknown) => { await send('PUT', path, body) }
+const remove = async (path: string) => { await send('DELETE', path) }
+async function download(path: string): Promise<{ blob: Blob; fileName: string }> {
+  const response = await send('GET', path)
+  const disposition = response.headers.get('content-disposition') ?? ''
+  const fileName = /filename\*?=(?:UTF-8'')?"?([^";]+)/i.exec(disposition)?.[1] ?? 'document'
+  return { blob: await response.blob(), fileName: decodeURIComponent(fileName) }
 }
-async function put<T>(path: string, body: unknown): Promise<T> {
-  const token = await accessToken?.()
-  const response = await fetch(`${config.apiUrl}${path}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body) })
-  if (!response.ok) { const problem = await response.json().catch(() => undefined) as ApiProblem | undefined; throw new ApiError(response.status, problemMessage(response.status, problem), problem) }
-  return response.json() as Promise<T>
-}
-async function putVoid(path: string, body: unknown): Promise<void> { const token = await accessToken?.(); const response = await fetch(`${config.apiUrl}${path}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body) }); if (!response.ok) { const problem = await response.json().catch(() => undefined) as ApiProblem | undefined; throw new ApiError(response.status, problemMessage(response.status, problem), problem) } }
-async function upload<T>(path: string, body: FormData): Promise<T> {
-  const token = await accessToken?.(); const response = await fetch(`${config.apiUrl}${path}`, { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : {}, body })
-  if (!response.ok) { const problem = await response.json().catch(() => undefined) as ApiProblem | undefined; throw new ApiError(response.status, problemMessage(response.status, problem), problem) }
-  return response.json() as Promise<T>
-}
-async function remove(path: string): Promise<void> { const token = await accessToken?.(); const response = await fetch(`${config.apiUrl}${path}`, { method: 'DELETE', headers: token ? { Authorization: `Bearer ${token}` } : {} }); if (!response.ok) throw new ApiError(response.status, `Request failed (${response.status})`) }
-async function download(path: string): Promise<{ blob: Blob; fileName: string }> { const token = await accessToken?.(); const response = await fetch(`${config.apiUrl}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} }); if (!response.ok) throw new ApiError(response.status, `Request failed (${response.status})`); const disposition = response.headers.get('content-disposition') ?? ''; const fileName = /filename\*?=(?:UTF-8'')?"?([^";]+)/i.exec(disposition)?.[1] ?? 'document'; return { blob: await response.blob(), fileName: decodeURIComponent(fileName) } }
+
 export const api = {
-  patients: async (options: ListOptions = {}): Promise<PagedResponse<PatientSummary>> => get(`/api/v1/patients?${queryString(options)}`),
-  patient: async (id: string): Promise<PatientDetail> => get(`/api/v1/patients/${id}`),
-  patientForEdit: async (id: string): Promise<PatientEditDetails> => get(`/api/v1/patients/${id}/edit`),
-  appointments: async (options: ListOptions = {}): Promise<PagedResponse<Appointment>> => get(`/api/v1/appointments?${queryString(options)}`),
-  registrationOptions: async (): Promise<PatientRegistrationOptions> => get('/api/v1/patients/registration-options'),
-  createPatient: async (request: CreatePatientRequest): Promise<PatientDetail> => post('/api/v1/patients', request),
-  updatePatient: async (id: string, request: CreatePatientRequest): Promise<PatientDetail> => put(`/api/v1/patients/${id}`, request),
-  appointmentOptions: async (): Promise<AppointmentOptions> => get('/api/v1/appointments/options'),
-  createAppointment: async (request: CreateAppointmentRequest): Promise<Appointment> => post('/api/v1/appointments', { ...request, appointmentTime: apiTime(request.appointmentTime) }),
-  completeAppointment: async (id: string): Promise<Appointment> => post(`/api/v1/appointments/${id}/complete`, {}),
-  cancelAppointment: async (id: string, reason: string): Promise<Appointment> => post(`/api/v1/appointments/${id}/cancel`, { reason }),
-  rescheduleAppointment: async (id: string, appointmentDate: string, appointmentTime: string | undefined, reason: string): Promise<Appointment> => post(`/api/v1/appointments/${id}/reschedule`, { appointmentDate, appointmentTime: apiTime(appointmentTime), reason }),
-  episodes: async (patientId: string): Promise<Episode[]> => get(`/api/v1/episodes?patientId=${encodeURIComponent(patientId)}`),
-  episode: async (id: string): Promise<Episode> => get(`/api/v1/episodes/${id}`),
-  episodeOptions: async (): Promise<EpisodeOptions> => get('/api/v1/episodes/options'),
-  createEpisode: async (request: SaveEpisodeRequest): Promise<Episode> => post('/api/v1/episodes', { ...request, recordTime: apiTime(request.recordTime) }),
-  updateEpisode: async (id: string, request: SaveEpisodeRequest): Promise<Episode> => put(`/api/v1/episodes/${id}`, { ...request, recordTime: apiTime(request.recordTime) }),
-  clinicalOptions: async (): Promise<ClinicalOptions> => get('/api/v1/clinical-records/options'),
-  prescriptionOptions: async (assessmentType: string, limbCategory: string): Promise<PrescriptionOption[]> => get(`/api/v1/clinical-records/prescription-options?assessmentType=${assessmentType}&limbCategory=${limbCategory}`),
-  clinicalRecords: async (episodeId: string): Promise<EpisodeClinicalRecords> => get(`/api/v1/clinical-records/episodes/${episodeId}`),
-  createAssessment: async (request: SaveAssessmentRequest): Promise<Assessment> => post('/api/v1/clinical-records/assessments', { ...request, startTime: apiTime(request.startTime), endTime: apiTime(request.endTime) }),
-  updateAssessment: async (id: string, request: SaveAssessmentRequest): Promise<Assessment> => put(`/api/v1/clinical-records/assessments/${id}`, { ...request, startTime: apiTime(request.startTime), endTime: apiTime(request.endTime) }),
-  createFitting: async (request: SaveFittingRequest): Promise<Fitting> => post('/api/v1/clinical-records/fittings', request),
-  updateFitting: async (id: string, request: SaveFittingRequest): Promise<Fitting> => put(`/api/v1/clinical-records/fittings/${id}`, request),
-  createDelivery: async (request: SaveDeliveryRequest): Promise<Delivery> => post('/api/v1/clinical-records/deliveries', { ...request, deliveryTime: apiTime(request.deliveryTime) }),
-  updateDelivery: async (id: string, request: SaveDeliveryRequest): Promise<Delivery> => put(`/api/v1/clinical-records/deliveries/${id}`, { ...request, deliveryTime: apiTime(request.deliveryTime) }),
-  createFollowUp: async (request: SaveFollowUpRequest): Promise<FollowUp> => post('/api/v1/clinical-records/follow-ups', { ...request, startTime: apiTime(request.startTime), endTime: apiTime(request.endTime) }),
-  updateFollowUp: async (id: string, request: SaveFollowUpRequest): Promise<FollowUp> => put(`/api/v1/clinical-records/follow-ups/${id}`, { ...request, startTime: apiTime(request.startTime), endTime: apiTime(request.endTime) }),
-  documentOptions: async (): Promise<DocumentOptions> => get('/api/v1/documents/options'),
-  documents: async (scope: 'patient' | 'episode', ownerId: string): Promise<StoredDocument[]> => get(`/api/v1/documents?${scope}Id=${encodeURIComponent(ownerId)}`),
-  uploadDocument: async (scope: 'patient' | 'episode', ownerId: string, documentType: string, notes: string, restricted: boolean, file: File): Promise<StoredDocument> => { const body = new FormData(); body.set(`${scope}Id`, ownerId); body.set('documentType', documentType); body.set('notes', notes); body.set('isRestricted', String(restricted)); body.set('file', file); return upload('/api/v1/documents', body) },
-  deleteDocument: async (document: StoredDocument): Promise<void> => remove(`/api/v1/documents/${document.id}?scope=${document.scope}`),
-  downloadDocument: async (document: StoredDocument): Promise<{ blob: Blob; fileName: string }> => download(`/api/v1/documents/${document.id}?scope=${document.scope}`),
-  patientPhoto: async (patientId: string): Promise<Blob> => (await download(`/api/v1/documents/patient-photo/${patientId}`)).blob,
-  printRegistration: async (patientId: string) => download(`/api/v1/print/patients/${patientId}/registration`),
-  printAssessment: async (id: string) => download(`/api/v1/print/assessments/${id}`),
-  printPrescription: async (id: string) => download(`/api/v1/print/assessments/${id}/prescription`),
-  printDelivery: async (id: string) => download(`/api/v1/print/deliveries/${id}`),
-  printFollowUp: async (id: string) => download(`/api/v1/print/follow-ups/${id}`),
-  adminCatalog: async (): Promise<AdminCatalog> => get('/api/v1/admin/catalog'),
-  adminUsers: async (): Promise<AdminUsers> => get('/api/v1/admin/users'),
-  saveAdminItem: async (resource: string, item: Record<string, unknown>, id?: number): Promise<AdminItem | AdminCenter | AdminDevice> => id ? put(`/api/v1/admin/${resource}/${id}`, item) : post(`/api/v1/admin/${resource}`, item),
-  deleteAdminItem: async (resource: string, id: number): Promise<void> => remove(`/api/v1/admin/${resource}/${id}`),
-  createAdminUser: async (request: Record<string, unknown>): Promise<AdminUser> => post('/api/v1/admin/users', request),
-  updateAdminProfile: async (id: string, request: Record<string, unknown>): Promise<AdminUser> => put(`/api/v1/admin/users/${id}/profile`, request),
-  updateAdminRoles: async (id: string, roles: string[]): Promise<void> => putVoid(`/api/v1/admin/users/${id}/roles`, { roles }),
-  setAdminLock: async (id: string, locked: boolean): Promise<void> => putVoid(`/api/v1/admin/users/${id}/lock`, { locked }),
-  resetAdminPassword: async (id: string, password: string): Promise<void> => putVoid(`/api/v1/admin/users/${id}/password`, { password }),
-  dashboardMetrics: async (): Promise<DashboardMetrics> => get('/api/v1/dashboard'),
-  reportOptions: async (): Promise<ReportOptions> => get('/api/v1/reports/options'),
-  report: async (key: string, filter: ReportFilter): Promise<ReportResult> => get(`/api/v1/reports/${key}?${queryString(filter)}`),
-  reportPdf: async (key: string, filter: ReportFilter) => download(`/api/v1/reports/${key}/pdf?${queryString(filter)}`),
+  // Patients
+  patients: (options: ListOptions & { centerId?: number; provinceId?: number; districtId?: number } = {}) => get<PagedResponse<PatientSummary>>(`/api/v1/patients${queryString(options)}`),
+  patient: (id: string) => get<PatientDetail>(`/api/v1/patients/${id}`),
+  patientForEdit: (id: string) => get<PatientEditDetails>(`/api/v1/patients/${id}/edit`),
+  patientFilterOptions: () => get<PatientFilterOptions>('/api/v1/patients/filter-options'),
+  registrationOptions: () => get<PatientRegistrationOptions>('/api/v1/patients/registration-options'),
+  createPatient: (request: CreatePatientRequest) => post<PatientDetail>('/api/v1/patients', request),
+  updatePatient: (id: string, request: CreatePatientRequest) => put<PatientDetail>(`/api/v1/patients/${id}`, request),
+
+  // Appointments
+  appointments: (options: ListOptions = {}) => get<PagedResponse<Appointment>>(`/api/v1/appointments${queryString(options)}`),
+  appointmentOptions: () => get<AppointmentOptions>('/api/v1/appointments/options'),
+  createAppointment: (request: CreateAppointmentRequest) => post<Appointment>('/api/v1/appointments', { ...request, appointmentTime: apiTime(request.appointmentTime) }),
+  completeAppointment: (id: string) => post<Appointment>(`/api/v1/appointments/${id}/complete`, {}),
+  cancelAppointment: (id: string, reason: string) => post<Appointment>(`/api/v1/appointments/${id}/cancel`, { reason }),
+  rescheduleAppointment: (id: string, appointmentDate: string, appointmentTime: string | undefined, reason: string) => post<Appointment>(`/api/v1/appointments/${id}/reschedule`, { appointmentDate, appointmentTime: apiTime(appointmentTime), reason }),
+
+  // Patient records (episodes)
+  episodes: (patientId: string) => get<Episode[]>(`/api/v1/episodes?patientId=${encodeURIComponent(patientId)}`),
+  episode: (id: string) => get<Episode>(`/api/v1/episodes/${id}`),
+  episodeOptions: () => get<EpisodeOptions>('/api/v1/episodes/options'),
+  createEpisode: (request: SaveEpisodeRequest) => post<Episode>('/api/v1/episodes', { ...request, recordTime: apiTime(request.recordTime) }),
+  updateEpisode: (id: string, request: SaveEpisodeRequest) => put<Episode>(`/api/v1/episodes/${id}`, { ...request, recordTime: apiTime(request.recordTime) }),
+
+  // Clinical records
+  clinicalOptions: () => get<ClinicalOptions>('/api/v1/clinical-records/options'),
+  prescriptionOptions: (assessmentType: string, limbCategory: string) => get<PrescriptionOption[]>(`/api/v1/clinical-records/prescription-options${queryString({ assessmentType, limbCategory })}`),
+  clinicalRecords: (episodeId: string) => get<EpisodeClinicalRecords>(`/api/v1/clinical-records/episodes/${episodeId}`),
+  createAssessment: (request: SaveAssessmentRequest) => post<Assessment>('/api/v1/clinical-records/assessments', { ...request, startTime: apiTime(request.startTime), endTime: apiTime(request.endTime) }),
+  updateAssessment: (id: string, request: SaveAssessmentRequest) => put<Assessment>(`/api/v1/clinical-records/assessments/${id}`, { ...request, startTime: apiTime(request.startTime), endTime: apiTime(request.endTime) }),
+  createFitting: (request: SaveFittingRequest) => post<Fitting>('/api/v1/clinical-records/fittings', request),
+  updateFitting: (id: string, request: SaveFittingRequest) => put<Fitting>(`/api/v1/clinical-records/fittings/${id}`, request),
+  createDelivery: (request: SaveDeliveryRequest) => post<Delivery>('/api/v1/clinical-records/deliveries', { ...request, deliveryTime: apiTime(request.deliveryTime) }),
+  updateDelivery: (id: string, request: SaveDeliveryRequest) => put<Delivery>(`/api/v1/clinical-records/deliveries/${id}`, { ...request, deliveryTime: apiTime(request.deliveryTime) }),
+  createFollowUp: (request: SaveFollowUpRequest) => post<FollowUp>('/api/v1/clinical-records/follow-ups', { ...request, startTime: apiTime(request.startTime), endTime: apiTime(request.endTime) }),
+  updateFollowUp: (id: string, request: SaveFollowUpRequest) => put<FollowUp>(`/api/v1/clinical-records/follow-ups/${id}`, { ...request, startTime: apiTime(request.startTime), endTime: apiTime(request.endTime) }),
+
+  // Documents and printing
+  documentOptions: () => get<DocumentOptions>('/api/v1/documents/options'),
+  documents: (scope: 'patient' | 'episode', ownerId: string) => get<StoredDocument[]>(`/api/v1/documents?${scope}Id=${encodeURIComponent(ownerId)}`),
+  uploadDocument: (scope: 'patient' | 'episode', ownerId: string, documentType: string, notes: string, restricted: boolean, file: File) => {
+    const body = new FormData()
+    body.set(`${scope}Id`, ownerId); body.set('documentType', documentType); body.set('notes', notes); body.set('isRestricted', String(restricted)); body.set('file', file)
+    return send('POST', '/api/v1/documents', body).then((response) => response.json() as Promise<StoredDocument>)
+  },
+  deleteDocument: (document: StoredDocument) => remove(`/api/v1/documents/${document.id}?scope=${document.scope}`),
+  downloadDocument: (document: StoredDocument) => download(`/api/v1/documents/${document.id}?scope=${document.scope}`),
+  patientPhoto: async (patientId: string) => (await download(`/api/v1/documents/patient-photo/${patientId}`)).blob,
+  printRegistration: (patientId: string) => download(`/api/v1/print/patients/${patientId}/registration`),
+  printAssessment: (id: string) => download(`/api/v1/print/assessments/${id}`),
+  printPrescription: (id: string) => download(`/api/v1/print/assessments/${id}/prescription`),
+  printDelivery: (id: string) => download(`/api/v1/print/deliveries/${id}`),
+  printFollowUp: (id: string) => download(`/api/v1/print/follow-ups/${id}`),
+
+  // Administration
+  adminCatalog: () => get<AdminCatalog>('/api/v1/admin/catalog'),
+  adminUsers: () => get<AdminUsers>('/api/v1/admin/users'),
+  saveAdminItem: (resource: string, item: Record<string, unknown>, id?: number) => id ? put<AdminItem | AdminCenter | AdminDevice>(`/api/v1/admin/${resource}/${id}`, item) : post<AdminItem | AdminCenter | AdminDevice>(`/api/v1/admin/${resource}`, item),
+  deleteAdminItem: (resource: string, id: number) => remove(`/api/v1/admin/${resource}/${id}`),
+  createAdminUser: (request: Record<string, unknown>) => post<AdminUser>('/api/v1/admin/users', request),
+  updateAdminProfile: (id: string, request: Record<string, unknown>) => put<AdminUser>(`/api/v1/admin/users/${id}/profile`, request),
+  updateAdminRoles: (id: string, roles: string[]) => putVoid(`/api/v1/admin/users/${id}/roles`, { roles }),
+  setAdminLock: (id: string, locked: boolean) => putVoid(`/api/v1/admin/users/${id}/lock`, { locked }),
+  resetAdminPassword: (id: string, password: string) => putVoid(`/api/v1/admin/users/${id}/password`, { password }),
+
+  // Dashboard and reports
+  dashboardMetrics: () => get<DashboardMetrics>('/api/v1/dashboard'),
+  dashboardActivity: () => get<ActivityItem[]>('/api/v1/dashboard/activity'),
+  records: (options: RecordListOptions = {}) => get<PagedResponse<DashboardRecord>>(`/api/v1/dashboard/records${queryString(options)}`),
+  reportOptions: () => get<ReportOptions>('/api/v1/reports/options'),
+  report: (key: string, filter: ReportFilter) => get<ReportResult>(`/api/v1/reports/${key}${queryString(filter)}`),
+  reportPdf: (key: string, filter: ReportFilter) => download(`/api/v1/reports/${key}/pdf${queryString(filter)}`),
 }

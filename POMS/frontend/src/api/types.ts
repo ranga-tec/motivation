@@ -1,6 +1,6 @@
 export interface PagedResponse<T> { items: T[]; page: number; pageSize: number; totalCount: number; totalPages: number }
 export interface PatientSummary { id: string; patientNumber: string; fullName: string; nameWithInitials: string; dateOfBirth: string; sex: string; category: string; centerId: number; centerName: string; registrationDate: string; hasPhoto: boolean }
-export interface PatientDetail extends PatientSummary { identificationType: string; identificationNumber: string; address1: string; address2?: string; province: string; district: string; city?: string; cityOther?: string; email?: string; nationality?: string; assignedClinicianName?: string; contacts: PatientContact[] }
+export interface PatientDetail extends PatientSummary { identificationType: string; identificationNumber: string; address1: string; address2?: string; province: string; district: string; city?: string; cityOther?: string; email?: string; nationality?: string; assignedClinicianName?: string; contacts: PatientContact[]; employment?: string; guardianName?: string; guardianRelationship?: string; guardianPhone?: string; guardianMobile?: string; guardianAddress?: string; referralSource?: string; referralSourceOther?: string; referralPersonName?: string; referralPersonContactNumber?: string; travelTimeDistance?: string; registrationProcessedBy?: string; remarks?: string }
 export interface PatientContact { id: string; telephoneNumber: string; dateConfirmed?: string; personChecked?: string }
 export interface Episode { id: string; patientId: string; patientNumber: string; patientName: string; centerId: number; centerName: string; status: string; recordDate: string; recordTime?: string; remarks?: string; isRestricted: boolean; assessmentCount: number; fittingCount: number; deliveryCount: number; followUpCount: number; documentCount: number }
 export interface EpisodeOptions { centers: RegistrationOption[]; statuses: string[] }
@@ -29,20 +29,24 @@ export interface AdminUsers { availableRoles: string[]; users: AdminUser[] }
 export interface ReportDefinition { key: string; title: string }
 export interface ReportOptions { reports: ReportDefinition[]; centers: AdminItem[]; provinces: AdminItem[] }
 export interface ReportResult { key: string; title: string; headers: string[]; rows: string[][]; totalCount: number }
-export interface ReportFilter { centerId?: number; provinceId?: number; dateFrom?: string; dateTo?: string; patientNumber?: string; year?: number }
-export interface DashboardMetrics { totalPatients: number; todayAppointments: number; awaitingAppointments: number; activeRecords: number; assessmentsThisMonth: number; deliveriesThisMonth: number }
+export interface ReportFilter { centerId?: number; provinceId?: number; dateFrom?: string; dateTo?: string; patientNumber?: string; year?: number; isForeign?: boolean; assessmentType?: string; limbCategory?: string; recordStatus?: string }
+export interface DashboardMetrics { totalPatients: number; todayAppointments: number; awaitingAppointments: number; activeRecords: number; assessmentsThisMonth: number; deliveriesThisMonth: number; activePatients: number; todayActivities: number; todayBreakdown: { assessments: number; fittings: number; deliveries: number; scheduledVisits: number } }
+export interface ActivityItem { type: string; description: string; occurredAt: string; patientId: string; patientNumber: string; patientName: string; location: string; user?: string; episodeId?: string }
+export interface DashboardRecord { episodeId: string; patientId: string; patientNumber: string; patientName: string; location: string; assessmentType?: string; limbCategory?: string; prescription?: string; lastActivity: string; stage: string; status: string }
+export interface RecordListOptions { status?: string; centerId?: number; search?: string; page?: number; pageSize?: number }
+export interface PatientFilterOptions { centers: RegistrationOption[]; provinces: RegistrationOption[]; districts: RegistrationOption[] }
 export interface Appointment { id: string; patientId: string; patientNumber: string; patientName: string; episodeId?: string; type: string; appointmentDate: string; appointmentTime?: string; status: string; assignedClinicianUserId?: string; assignedClinicianName?: string; notes?: string }
 export interface AppointmentOptions { assignees: AssigneeOption[] }
-export interface CreateAppointmentRequest { patientId: string; type: string; appointmentDate: string; appointmentTime?: string; assignedClinicianEntry: string; assignedClinicianUserId?: string; notes?: string }
+export interface CreateAppointmentRequest { patientId: string; episodeId?: string; type: string; appointmentDate: string; appointmentTime?: string; assignedClinicianEntry: string; assignedClinicianUserId?: string; notes?: string }
 export interface ListOptions { page?: number; pageSize?: number; search?: string; dateFrom?: string; dateTo?: string; status?: string }
 export interface RegistrationOption { id: number; name: string; parentId?: number }
 export interface AssigneeOption { userId: string; displayName: string; fullName: string; isPreferred: boolean }
-export interface PatientRegistrationOptions { provinces: RegistrationOption[]; districts: RegistrationOption[]; cities: RegistrationOption[]; centers: RegistrationOption[]; referralSources: RegistrationOption[]; assignees: AssigneeOption[] }
+export interface PatientRegistrationOptions { provinces: RegistrationOption[]; districts: RegistrationOption[]; cities: RegistrationOption[]; centers: RegistrationOption[]; referralSources: RegistrationOption[]; assignees: AssigneeOption[]; nationalities: RegistrationOption[] }
 export interface CreatePatientRequest {
   fullName: string; nameWithInitials: string; dateOfBirth: string; sex: string; employment?: string; category: string; nationality?: string;
   identificationType: string; identificationNumber?: string; address1: string; address2?: string; provinceId: number; districtId: number;
   cityId?: number; cityOther?: string; email?: string; centerId: number; registrationDate: string; assignedClinicianEntry: string;
   assignedClinicianUserId?: string; guardianName: string; guardianRelationship: string; guardianAddress?: string; guardianPhone?: string;
-  guardianMobile?: string; remarks?: string; confirmPossibleDuplicate: boolean; contacts: { telephoneNumber: string; dateConfirmed?: string; personChecked?: string }[];
+  guardianMobile?: string; remarks?: string; confirmPossibleDuplicate: boolean; referralSourceId?: number; referralSourceOther?: string; referralPersonName?: string; referralPersonContactNumber?: string; travelTimeDistance?: string; contacts: { telephoneNumber: string; dateConfirmed?: string; personChecked?: string }[];
 }
-export interface PatientEditDetails extends CreatePatientRequest { id: string; referralSourceId?: number; referralSourceOther?: string; referralPersonName?: string; referralPersonContactNumber?: string; travelTimeDistance?: string }
+export interface PatientEditDetails extends CreatePatientRequest { id: string }

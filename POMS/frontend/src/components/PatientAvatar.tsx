@@ -1,8 +1,10 @@
 /* oxlint-disable react/set-state-in-effect -- clears stale object URLs when the patient changes */
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
+import { initials } from '../lib/format'
 
-export function PatientAvatar({ patientId, name, hasPhoto, large = false }: { patientId: string; name: string; hasPhoto: boolean; large?: boolean }) {
+/** Patient photo fetched with the bearer token; falls back to initials. */
+export function PatientAvatar({ patientId, name, hasPhoto, size = '', onOpen }: { patientId: string; name: string; hasPhoto: boolean; size?: '' | 'sm' | 'lg'; onOpen?: (url: string) => void }) {
   const [source, setSource] = useState<string>()
   useEffect(() => {
     if (!hasPhoto) { setSource(undefined); return }
@@ -15,6 +17,7 @@ export function PatientAvatar({ patientId, name, hasPhoto, large = false }: { pa
     }).catch(() => { if (active) setSource(undefined) })
     return () => { active = false; if (objectUrl) URL.revokeObjectURL(objectUrl) }
   }, [patientId, hasPhoto])
-  const initials = name.split(' ').filter(Boolean).map((part) => part[0]).slice(0, 2).join('').toUpperCase()
-  return <div className={`patient-avatar ${large ? 'large' : ''}`}>{source ? <img src={source} alt={`${name} profile`} /> : <span>{initials}</span>}</div>
+  const content = source ? <img src={source} alt={`${name}`} /> : initials(name)
+  if (source && onOpen) return <button type="button" className={`avatar ${size}`} style={{ border: 0, padding: 0, cursor: 'zoom-in' }} onClick={() => onOpen(source)} aria-label="Enlarge photo">{content}</button>
+  return <div className={`avatar ${size}`}>{content}</div>
 }

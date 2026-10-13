@@ -1,35 +1,73 @@
-import { ArrowLeft, ClipboardCheck, Download, PackageCheck, Ruler, ShieldAlert, Stethoscope } from 'lucide-react'
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { ArrowLeft, Check, ClipboardCheck, PackageCheck, Pencil, Plus, Ruler, ShieldAlert, Stethoscope } from 'lucide-react'
 import { api } from '../api/client'
-import type { Assessment, Delivery, Fitting, FollowUp } from '../api/types'
+import type { EpisodeClinicalRecords } from '../api/types'
 import { ClinicalRecordDialog, type ClinicalItem, type ClinicalKind } from '../components/ClinicalRecordDialog'
-import { Badge, EmptyState, ErrorPanel, LoadingRows, PageHeader } from '../components/Ui'
-import { useApi } from '../hooks/useApi'
 import { DocumentPanel } from '../components/DocumentPanel'
+import { EpisodeDialog } from '../components/EpisodeDialog'
+import { TimelineRow, toTimeline } from '../components/PatientHistory'
+import { Badge, Card, EmptyState, ErrorPanel, PageHeader, Skeleton } from '../components/Ui'
+import { useApi } from '../hooks/useApi'
+import { formatDate } from '../lib/format'
+import { useToast } from '../lib/toast'
 
 type DialogState = { kind: ClinicalKind; item?: ClinicalItem }
+const sections: { kind: ClinicalKind; key: keyof EpisodeClinicalRecords; title: string; icon: typeof Stethoscope; empty: string }[] = [
+  { kind: 'assessment', key: 'assessments', title: 'Assessments & prescriptions', icon: Stethoscope, empty: 'No assessment recorded yet.' },
+  { kind: 'fitting', key: 'fittings', title: 'Fittings', icon: Ruler, empty: 'No fitting dates recorded.' },
+  { kind: 'delivery', key: 'deliveries', title: 'Deliveries', icon: PackageCheck, empty: 'No delivery recorded.' },
+  { kind: 'followUp', key: 'followUps', title: 'Follow-ups', icon: ClipboardCheck, empty: 'No follow-ups recorded.' },
+]
+const kinds: ClinicalKind[] = ['assessment', 'fitting', 'delivery', 'followUp']
+
 export function ClinicalRecordsPage() {
   const { episodeId = '' } = useParams()
-  const [dialog, setDialog] = useState<DialogState>()
+  const notify = useToast()
+  const [params, setParams] = useSearchParams()
+  const requested = params.get('add') as ClinicalKind | null
+  const [dialog, setDialog] = useState<DialogState | undefined>(requested && kinds.includes(requested) ? { kind: requested } : undefined)
+  const [editingEpisode, setEditingEpisode] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
-  const [notice, setNotice] = useState('')
-  const episode = useApi(() => api.episode(episodeId), `episode-${episodeId}`)
+  const episode = useApi(() => api.episode(episodeId), `episode-${episodeId}-${refreshKey}`)
   const records = useApi(() => api.clinicalRecords(episodeId), `clinical-${episodeId}-${refreshKey}`)
-  const saved = (message: string) => { setDialog(undefined); setNotice(message); setRefreshKey((value) => value + 1) }
-  const savePdf = async (request: Promise<{ blob: Blob; fileName: string }>) => { const result = await request; const url = URL.createObjectURL(result.blob); const link = document.createElement('a'); link.href = url; link.download = result.fileName; link.click(); URL.revokeObjectURL(url) }
-  if (episode.loading) return <LoadingRows />
-  if (episode.error || !episode.data) return <ErrorPanel message={episode.error || 'Patient record not found.'} retry={episode.refresh} />
+  const saved = (message: string) => { setDialog(undefined); setEditingEpisode(false); notify(message); setRefreshKey((value) => value + 1) }
+  const closeDialog = () => { setDialog(undefined); if (requested) setParams({}, { replace: true }) }
+
+  if (episode.loading && !episode.data) return <div className="card"><Skeleton rows={6} tall /></div>
+  if (episode.error || !episode.data) return <div className="card"><ErrorPanel message={episode.error || 'Patient record not found.'} retry={episode.refresh} /></div>
   const value = episode.data
+  const data = records.data
+  const stages = [
+    { label: 'Assessment', count: data?.assessments.length ?? value.assessmentCount, icon: Stethoscope },
+    { label: 'Fitting', count: data?.fittings.length ?? value.fittingCount, icon: Ruler },
+    { label: 'Delivery', count: data?.deliveries.length ?? value.deliveryCount, icon: PackageCheck },
+    { label: 'Follow-up', count: data?.followUps.length ?? value.followUpCount, icon: ClipboardCheck },
+  ]
+  const reached = stages.reduce((last, stage, index) => stage.count > 0 ? index : last, -1)
+
   return <>
-    <Link to={`/patients/${value.patientId}`} className="back-link"><ArrowLeft size={16} /> {value.patientName}</Link>
-    <PageHeader eyebrow={`Patient record · ${new Date(value.recordDate).toLocaleDateString('en-GB')}`} title="Clinical record" description={`${value.patientNumber} · ${value.centerName}`} action={<Badge value={value.status} />} />
-    {notice && <div className="notice success" role="status">{notice}</div>}
-    <div className="clinical-actions"><button className="button primary" onClick={() => setDialog({ kind: 'assessment' })}><Stethoscope size={17} /> Assessment</button><button className="button secondary" onClick={() => setDialog({ kind: 'fitting' })}><Ruler size={17} /> Fitting</button><button className="button secondary" onClick={() => setDialog({ kind: 'delivery' })}><PackageCheck size={17} /> Delivery</button><button className="button secondary" onClick={() => setDialog({ kind: 'followUp' })}><ClipboardCheck size={17} /> Follow-up</button></div>
-    {records.error ? <ErrorPanel message={records.error} retry={records.refresh} /> : records.loading ? <LoadingRows /> : records.data && <div className="clinical-sections"><RecordSection title="Assessments" empty="No assessments recorded." items={records.data.assessments} kind="assessment" open={(item) => setDialog({ kind: 'assessment', item })} render={(item: Assessment) => <><strong>{item.assessmentType} · {item.limbCategory.replace(/([a-z])([A-Z])/g, '$1 $2')}</strong><span>{item.mainProblemType} · {item.side}</span><small>{item.prescriptions.map((row) => `${row.side}: ${row.label}`).join(' · ')}</small><div className="print-links"><button onClick={() => void savePdf(api.printAssessment(item.id))}><Download /> Assessment</button><button onClick={() => void savePdf(api.printPrescription(item.id))}><Download /> Prescription</button></div></>} /><RecordSection title="Fittings" empty="No fittings recorded." items={records.data.fittings} kind="fitting" open={(item) => setDialog({ kind: 'fitting', item })} render={(item: Fitting) => <><strong>Fitting · {new Date(item.fittingDate).toLocaleDateString('en-GB')}</strong><span>{item.notes || 'No notes recorded.'}</span></>} /><RecordSection title="Deliveries" empty="No deliveries recorded." items={records.data.deliveries} kind="delivery" open={(item) => setDialog({ kind: 'delivery', item })} render={(item: Delivery) => <><strong>Delivery · {new Date(item.deliveryDate).toLocaleDateString('en-GB')}</strong><span>{item.deviceName || 'No device selected'}{item.deliveryTime ? ` · ${item.deliveryTime.slice(0, 5)}` : ''}</span><small>{item.notes}</small><div className="print-links"><button onClick={() => void savePdf(api.printDelivery(item.id))}><Download /> Delivery note</button></div></>} /><RecordSection title="Follow-ups" empty="No follow-ups recorded." items={records.data.followUps} kind="followUp" open={(item) => setDialog({ kind: 'followUp', item })} render={(item: FollowUp) => <><strong>Follow-up · {new Date(item.followUpDate).toLocaleDateString('en-GB')}</strong><span>{item.startTime?.slice(0, 5)}–{item.endTime?.slice(0, 5)}</span><small>{item.notes}</small><div className="print-links"><button onClick={() => void savePdf(api.printFollowUp(item.id))}><Download /> Follow-up note</button></div></>} /></div>}
-    <DocumentPanel scope="episode" ownerId={value.id} />
-    {dialog && <ClinicalRecordDialog kind={dialog.kind} episodeId={value.id} patientName={value.patientName} item={dialog.item} close={() => setDialog(undefined)} saved={saved} />}
+    <Link to={`/patients/${value.patientId}?tab=records`} className="back-link"><ArrowLeft size={16} /> {value.patientName}</Link>
+    <PageHeader eyebrow={`${value.patientNumber} · ${value.centerName}`}
+      title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>Record of {formatDate(value.recordDate)} <Badge value={value.status} />{value.isRestricted && <span className="restricted-tag"><ShieldAlert /> Restricted</span>}</span>}
+      description={value.remarks || `Clinical pathway for ${value.patientName}.`}
+      actions={<><button className="btn btn-secondary" onClick={() => setEditingEpisode(true)}><Pencil /> Edit record</button><button className="btn btn-primary" onClick={() => setDialog({ kind: 'assessment' })}><Stethoscope /> New assessment</button></>} />
+
+    <section className="card" style={{ marginBottom: 'var(--gap)' }} aria-label="Treatment stage">
+      <div className="stage-track">{stages.map((stage, index) => { const Icon = stage.icon; const state = index < reached ? 'done' : index === reached ? 'current' : ''; return <div key={stage.label} className={`stage ${state}`}><span className="stage-dot">{index < reached ? <Check /> : <Icon />}</span><div><strong>{stage.label}</strong><small>{stage.count ? `${stage.count} recorded` : 'Pending'}</small></div></div> })}</div>
+    </section>
+
+    {records.error ? <div className="card"><ErrorPanel message={records.error} retry={records.refresh} /></div> : <div className="grid grid-2">
+      {sections.map(({ kind, key, title, icon: Icon, empty }) => {
+        const items = data ? toTimeline({ assessments: [], fittings: [], deliveries: [], followUps: [], [key]: data[key] }) : []
+        return <Card key={kind} bodyless title={title} count={data?.[key].length} actions={<button className="btn btn-secondary btn-sm" onClick={() => setDialog({ kind })}><Plus /> Add</button>}>
+          {records.loading ? <Skeleton rows={2} tall /> : !items.length ? <EmptyState compact icon={<Icon />} title={empty} /> : <div className="timeline">{items.map((entry) => <TimelineRow key={entry.item.id} entry={entry} onEdit={() => setDialog({ kind, item: entry.item })} />)}</div>}
+        </Card>
+      })}
+    </div>}
+
+    <div className="section-gap"><DocumentPanel scope="episode" ownerId={value.id} /></div>
+    {dialog && <ClinicalRecordDialog kind={dialog.kind} episodeId={value.id} patientName={`${value.patientName} · ${value.patientNumber}`} item={dialog.item} close={closeDialog} saved={(message) => { saved(message); if (requested) setParams({}, { replace: true }) }} />}
+    {editingEpisode && <EpisodeDialog patientId={value.patientId} patientName={value.patientName} centerId={value.centerId} episode={value} close={() => setEditingEpisode(false)} saved={saved} />}
   </>
 }
-
-function RecordSection<T extends ClinicalItem>({ title, empty, items, open, render }: { title: string; empty: string; items: T[]; kind: ClinicalKind; open: (item: T) => void; render: (item: T) => React.ReactNode }) { return <section className="panel clinical-section"><header><h2>{title}</h2><span>{items.length}</span></header>{items.length === 0 ? <EmptyState><p>{empty}</p></EmptyState> : <div>{items.map((item) => <article key={item.id}><div className="clinical-entry">{render(item)}{item.isRestricted && <em><ShieldAlert size={13} /> Restricted</em>}</div><button className="button secondary compact" onClick={() => open(item)}>Edit</button></article>)}</div>}</section> }

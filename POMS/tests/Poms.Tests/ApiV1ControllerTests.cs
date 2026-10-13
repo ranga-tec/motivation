@@ -538,6 +538,29 @@ public sealed class ApiV1ControllerTests
         var result = await controller.Get(CancellationToken.None);
 
         result.TotalPatients.Should().Be(1); result.TodayAppointments.Should().Be(1); result.AwaitingAppointments.Should().Be(1); result.ActiveRecords.Should().Be(1);
+        result.ActivePatients.Should().Be(1); result.TodayActivities.Should().Be(1); result.TodayBreakdown.ScheduledVisits.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task DashboardActivityAndRecords_ListLatestWorkUnderPatientNumber()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var patient = await SeedPatientAsync(database.Context);
+        var episode = CreateEpisode(patient, false, "clinician@poms.lk");
+        database.Context.Episodes.Add(episode);
+        database.Context.Fittings.Add(new Fitting { EpisodeId = episode.Id, FittingDate = DateOnly.FromDateTime(DateTime.Today), CreatedBy = "clinician@poms.lk" });
+        await database.Context.SaveChangesAsync();
+        var controller = SetUser(new DashboardApiController(database.Context, AllowedRestrictedAccess()));
+
+        var activity = await controller.Activity(CancellationToken.None);
+        var records = (await controller.Records(new DashboardRecordQuery { Status = RecordStatus.Active }, CancellationToken.None))
+            .Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<PagedResponse<DashboardRecord>>().Subject;
+
+        activity.Should().Contain(x => x.Type == "Fitting" && x.PatientNumber == patient.PatientNumber);
+        activity.Should().Contain(x => x.Type == "PatientRegistered");
+        records.TotalCount.Should().Be(1);
+        records.Items.Single().Stage.Should().Be("Fitting");
+        records.Items.Single().PatientNumber.Should().Be(patient.PatientNumber);
     }
 
     private static PatientsApiController CreatePatientsController(PomsDbContext context) => new(

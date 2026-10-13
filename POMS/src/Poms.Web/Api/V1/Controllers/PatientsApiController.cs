@@ -12,7 +12,7 @@ namespace Poms.Web.Api.V1.Controllers;
 
 [ApiController]
 [Route("api/v1/patients")]
-[Authorize(AuthenticationSchemes = ApiAuthenticationDefaults.Scheme, Policy = "DataEntry")]
+[Authorize(AuthenticationSchemes = ApiAuthenticationDefaults.Scheme, Policy = "PatientRead")]
 public sealed class PatientsApiController(
     PomsDbContext context,
     IPatientNumberService patientNumbers,
@@ -20,6 +20,7 @@ public sealed class PatientsApiController(
     IAppointmentAssigneeService appointmentAssignees) : ControllerBase
 {
     [HttpGet("registration-options")]
+    [Authorize(Policy = "DataEntry")]
     [ProducesResponseType<PatientRegistrationOptionsResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<PatientRegistrationOptionsResponse>> RegistrationOptions(
         CancellationToken cancellationToken)
@@ -34,12 +35,26 @@ public sealed class PatientsApiController(
             .Select(item => new RegistrationOption(item.Id, item.Name, item.DistrictId)).ToListAsync(cancellationToken);
         var referrals = await context.ReferralSources.AsNoTracking().Where(item => item.IsActive).OrderBy(item => item.Name)
             .Select(item => new RegistrationOption(item.Id, item.Name, null)).ToListAsync(cancellationToken);
+        var nationalities = await context.Nationalities.AsNoTracking().Where(item => item.IsActive).OrderBy(item => item.Name)
+            .Select(item => new RegistrationOption(item.Id, item.Name, null)).ToListAsync(cancellationToken);
         var assignees = (await appointmentAssignees.GetOptionsAsync())
             .Select(item => new AssigneeOption(item.UserId, item.DisplayText, item.FullName, item.IsPreferred))
             .ToList();
 
         return Ok(new PatientRegistrationOptionsResponse(
-            provinces, districts, cities, centers, referrals, assignees));
+            provinces, districts, cities, centers, referrals, assignees, nationalities));
+    }
+
+    [HttpGet("filter-options")]
+    public async Task<ActionResult<PatientFilterOptionsResponse>> FilterOptions(CancellationToken cancellationToken)
+    {
+        var centers = await context.Centers.AsNoTracking().OrderBy(item => item.Name)
+            .Select(item => new RegistrationOption(item.Id, item.Name, item.DistrictId)).ToListAsync(cancellationToken);
+        var provinces = await context.Provinces.AsNoTracking().OrderBy(item => item.Name)
+            .Select(item => new RegistrationOption(item.Id, item.Name, null)).ToListAsync(cancellationToken);
+        var districts = await context.Districts.AsNoTracking().OrderBy(item => item.Name)
+            .Select(item => new RegistrationOption(item.Id, item.Name, item.ProvinceId)).ToListAsync(cancellationToken);
+        return Ok(new PatientFilterOptionsResponse(centers, provinces, districts));
     }
 
     [HttpGet]
@@ -137,13 +152,29 @@ public sealed class PatientsApiController(
                         contact.DateConfirmed,
                         contact.PersonChecked))
                     .ToList(),
-                item.Documents.Any(document => document.DocumentType == Poms.Domain.Enums.DocumentType.PatientPhoto)))
+                item.Documents.Any(document => document.DocumentType == Poms.Domain.Enums.DocumentType.PatientPhoto))
+            {
+                Employment = item.Employment,
+                GuardianName = item.GuardianName,
+                GuardianRelationship = item.GuardianRelationship,
+                GuardianPhone = item.GuardianPhone,
+                GuardianMobile = item.GuardianMobile,
+                GuardianAddress = item.GuardianAddress,
+                ReferralSource = item.ReferralSource != null ? item.ReferralSource.Name : null,
+                ReferralSourceOther = item.ReferralSourceOther,
+                ReferralPersonName = item.ReferralPersonName,
+                ReferralPersonContactNumber = item.ReferralPersonContactNumber,
+                TravelTimeDistance = item.TravelTimeDistance,
+                RegistrationProcessedBy = item.RegistrationProcessedBy,
+                Remarks = item.Remarks,
+            })
             .SingleOrDefaultAsync(cancellationToken);
 
         return patient is null ? NotFound() : Ok(patient);
     }
 
     [HttpGet("{id:guid}/edit")]
+    [Authorize(Policy = "DataEntry")]
     public async Task<ActionResult<PatientEditResponse>> GetForEdit(Guid id, CancellationToken cancellationToken)
     {
         var patient = await context.Patients.AsNoTracking().Where(item => item.Id == id)
@@ -164,6 +195,7 @@ public sealed class PatientsApiController(
 
     [HttpPut("{id:guid}")]
     [Authorize(Policy = "ApiWrite")]
+    [Authorize(Policy = "DataEntry")]
     public async Task<ActionResult<PatientDetailResponse>> Update(
         Guid id, [FromBody] CreatePatientRequest request, CancellationToken cancellationToken)
     {
@@ -237,6 +269,7 @@ public sealed class PatientsApiController(
 
     [HttpPost]
     [Authorize(Policy = "ApiWrite")]
+    [Authorize(Policy = "DataEntry")]
     [ProducesResponseType<PatientDetailResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]

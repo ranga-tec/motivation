@@ -224,6 +224,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("ADMIN"));
     options.AddPolicy("ClinicianOrAdmin", policy => policy.RequireRole("CLINICIAN", "ADMIN"));
     options.AddPolicy("DataEntry", policy => policy.RequireRole("DATA_ENTRY", "ADMIN"));
+    options.AddPolicy("PatientRead", policy => policy.RequireRole("DATA_ENTRY", "CLINICIAN", "MANAGEMENT", "ADMIN"));
     options.AddPolicy("ManagementOrAdmin", policy => policy.RequireRole("MANAGEMENT", "ADMIN"));
     options.AddPolicy("ReportOrAdmin", policy => policy.RequireRole("VIEWER", "MANAGEMENT", "ADMIN"));
     options.AddPolicy("AnyAuthenticatedUser", policy => policy.RequireAuthenticatedUser());
