@@ -1,3 +1,10 @@
+{
+	# HTTP/3 (QUIC over UDP) failed on this network and left pages blank; serve HTTP/1.1 and HTTP/2 only.
+	servers {
+		protocols h1 h2
+	}
+}
+
 {$POMS_DOMAIN} {
 	encode zstd gzip
 
