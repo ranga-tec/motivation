@@ -1,73 +1,58 @@
-# Contabo Deployment
+# Contabo deployment (single VPS)
 
-This document describes the prepared same-VPS fallback path. The current live deployment is on Railway, not Contabo.
+POMS runs on one Ubuntu 24.04 VPS as four Docker containers: PostgreSQL, the API, the React
+frontend, and Caddy. Caddy obtains a Let's Encrypt certificate automatically and serves the
+whole system from one HTTPS address. Files live in `POMS/deploy/contabo/`.
 
-This project can be deployed on the Contabo server without touching the existing ISS app on port `80`.
+| Item | Value |
+| --- | --- |
+| Server | Contabo Cloud VPS 4, Hub Europe, `169.58.173.191` |
+| Address | <https://169-58-173-191.sslip.io> (free sslip.io name for the server IP) |
+| Ports open | 22 (SSH), 80 and 443 (Caddy). API and database are not exposed. |
+| Data | Docker volumes `poms_database`, `poms_files` (uploads), `poms_keys` (login token keys) |
+| Backups | Nightly 02:30 to `/var/backups/poms`, kept 14 days, plus Contabo Auto Backup |
 
-## Recommended shape
-
-- Keep ISS on port `80`
-- Run POMS in Docker on port `8081`
-- Keep PostgreSQL private inside Docker
-- Persist uploaded files and ASP.NET data-protection keys with Docker volumes
-
-## One-time setup on the server
-
-```bash
-apt-get update
-apt-get install -y docker.io docker-compose-plugin
-systemctl enable --now docker
-```
-
-## Deploy
+## First install
 
 ```bash
-git clone https://github.com/ranga-tec/motivation.git
-cd motivation
-cp .env.contabo.example .env
+ssh root@169.58.173.191
+git clone https://github.com/ranga-tec/motivation.git /opt/poms
+cd /opt/poms/POMS/deploy/contabo
+./setup-server.sh          # installs Docker + firewall, creates .env, then stops
+nano .env                  # set BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD
+./setup-server.sh          # builds and starts everything
 ```
 
-Update `.env` before starting:
+The first administrator is created only while the database is empty. After that, manage users
+in **Administration → Users & access**; the bootstrap values may then be removed from `.env`.
 
-```dotenv
-POSTGRES_PASSWORD=use-a-strong-password-here
-POMS_HOST_PORT=8081
-SECURITY_FORCE_HTTPS=false
-```
-
-Start the stack:
+## Update to the latest code
 
 ```bash
-docker compose -f docker-compose.contabo.yml up -d --build
+cd /opt/poms && git pull
+cd POMS/deploy/contabo && docker compose up -d --build
 ```
 
-## Smoke checks
+## Checks
 
 ```bash
-docker compose -f docker-compose.contabo.yml ps
-curl http://127.0.0.1:8081/health
-curl -I http://127.0.0.1:8081/
+docker compose ps
+curl -s https://169-58-173-191.sslip.io/health      # Healthy
+docker compose logs -f api                          # API log
+tail /var/log/poms-backup.log                       # last backups
 ```
 
-Public URL on the server IP:
+## Restore from a backup
 
-```text
-http://178.238.230.31:8081
+```bash
+cd /opt/poms/POMS/deploy/contabo
+docker compose exec -T database pg_restore -U poms -d poms --clean --if-exists < /var/backups/poms/db_<stamp>.dump
+docker run --rm -v poms_files:/files -v /var/backups/poms:/backup alpine sh -c "cd /files && tar xzf /backup/files_<stamp>.tar.gz"
+docker compose restart api
 ```
 
-## Fresh database login accounts
+## Using your own domain later
 
-These accounts are created automatically on first startup for a fresh database:
-
-- `admin@poms.lk` / `Admin@123`
-- `clinician@poms.lk` / `Clinic@123`
-- `registrar@poms.lk` / `Data@123`
-- `viewer@poms.lk` / `View@123`
-
-## Notes
-
-- The live Railway environments no longer use the seeded passwords above.
-- `Security__ForceHttps=false` is intentional for an IP-and-port deployment. Turn it on only after placing the app behind HTTPS.
-- If you later want a cleaner URL, put Nginx in front of `http://127.0.0.1:8081`.
-- Uploaded files persist in the `poms-storage` Docker volume.
-- Login cookies persist across restarts in the `poms-data-protection` Docker volume.
+1. Create an `A` record for the domain pointing to `169.58.173.191`.
+2. Set `POMS_DOMAIN=your.domain` in `.env`.
+3. Run `docker compose up -d --build` (the frontend is rebuilt with the new address).

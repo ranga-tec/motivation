@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -87,6 +88,14 @@ builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
     if (allowedOrigins.Length > 0)
         policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
 }));
+// Render and the Contabo Caddy proxy terminate TLS; trust their X-Forwarded-* headers so the
+// rate limiter and HTTPS handling see the real client. The API port is never exposed directly.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 builder.Services.AddProblemDetails();
 builder.Services.AddResponseCompression();
 builder.Services.AddRateLimiter(options =>
@@ -156,6 +165,7 @@ using (var scope = app.Services.CreateScope())
     await SampleDataSeeder.SeedDeviceCatalogAsync(context);
 }
 
+app.UseForwardedHeaders();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler();

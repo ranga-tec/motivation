@@ -1,0 +1,71 @@
+# POMS on a single Ubuntu VPS: PostgreSQL + API + React frontend behind Caddy (automatic HTTPS).
+# Run from this folder:  docker compose up -d --build
+name: poms
+
+services:
+  database:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: poms
+      POSTGRES_USER: poms
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U poms -d poms"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ../..
+      dockerfile: src/Poms.Api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      DATABASE_URL: postgresql://poms:${POSTGRES_PASSWORD}@database:5432/poms
+      Cors__AllowedOrigins__0: https://${POMS_DOMAIN:?Set POMS_DOMAIN in .env}
+      FileStorage__RootPath: /app/storage
+      SeedDemoUsers: "false"
+      BootstrapAdmin__Email: ${BOOTSTRAP_ADMIN_EMAIL:?Set BOOTSTRAP_ADMIN_EMAIL in .env}
+      BootstrapAdmin__Password: ${BOOTSTRAP_ADMIN_PASSWORD:?Set BOOTSTRAP_ADMIN_PASSWORD in .env}
+    volumes:
+      - files:/app/storage
+      - keys:/home/app/.aspnet/DataProtection-Keys
+    # No published port: only Caddy reaches the API.
+
+  frontend:
+    build:
+      context: ../../frontend
+      args:
+        # Same origin as the site; Caddy routes /api and /auth to the API container.
+        VITE_API_URL: https://${POMS_DOMAIN}
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    depends_on: [api, frontend]
+    environment:
+      POMS_DOMAIN: ${POMS_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  database:
+  files:
+  keys:
+  caddy_data:
+  caddy_config:
