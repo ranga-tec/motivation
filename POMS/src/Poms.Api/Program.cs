@@ -25,9 +25,13 @@ builder.Services.AddDbContext<PomsDbContext>(options =>
         if (userInfo.Length != 2)
             throw new InvalidOperationException("DATABASE_URL is missing the expected username and password.");
 
-        var ssl = builder.Environment.IsProduction()
-            ? "SSL Mode=Require"
-            : "SSL Mode=Prefer;Trust Server Certificate=true";
+        // An explicit ?sslmode= wins (the Contabo stack's private Docker database uses sslmode=disable).
+        var sslMode = System.Web.HttpUtility.ParseQueryString(uri.Query)["sslmode"];
+        var ssl = !string.IsNullOrWhiteSpace(sslMode)
+            ? $"SSL Mode={sslMode}"
+            : builder.Environment.IsProduction()
+                ? "SSL Mode=Require"
+                : "SSL Mode=Prefer;Trust Server Certificate=true";
         var postgresPort = uri.IsDefaultPort ? 5432 : uri.Port;
         var postgres =
             $"Host={uri.Host};Port={postgresPort};Database={uri.AbsolutePath.TrimStart('/')};" +

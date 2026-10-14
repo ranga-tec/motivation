@@ -29,7 +29,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
-      DATABASE_URL: postgresql://poms:${POSTGRES_PASSWORD}@database:5432/poms
+      DATABASE_URL: postgresql://poms:${POSTGRES_PASSWORD}@database:5432/poms?sslmode=disable
       Cors__AllowedOrigins__0: https://${POMS_DOMAIN:?Set POMS_DOMAIN in .env}
       FileStorage__RootPath: /app/storage
       SeedDemoUsers: "false"
