@@ -221,3 +221,27 @@ route 200.
 3. Add a secret-driven PostgreSQL/API/frontend Compose definition.
 4. Verify persistence, non-root execution, security headers, health, and direct routes.
 5. Document, test, commit, and push the Docker delivery.
+
+## Phase 14 UI redesign and PRD gap closure
+
+Status: complete on 2026-10-13 (`bc5b6f8`). Verification: 108/108 tests, frontend lint/build,
+Playwright desktop/mobile flows (registration → record → bilateral assessment → fitting →
+delivery → follow-up → document → appointment → reports, dark/classic themes, patient edit,
+quick-action picker, user and city creation) with zero console errors.
+
+1. Shared design system, themes (Light, Dark, Classic, System) and density setting.
+2. Dashboard, registration wizard, patient folder and clinical record screens aligned to PRD §5–§14.
+3. Records list, reports filters/CSV, users & access, reference data, settings.
+4. API additions (activity feed, records list, filter options, folder details) and `PatientRead` policy.
+5. Fixes for patient edit with linked staff and city creation.
+
+## Phase 15 Contabo hosting
+
+Status: complete on 2026-10-14/15. Verification: live `/health` 200, browser sign-in as the
+bootstrap administrator, `/auth/register` 404, demo password rejected, manual backup produced a
+database dump and files archive.
+
+1. Compose stack with Caddy HTTPS in `POMS/deploy/contabo`, setup and backup scripts.
+2. Forwarded-header trust for proxy deployments; `sslmode` support in `DATABASE_URL`.
+3. HTTP/3 disabled after QUIC errors in browsers.
+4. Previous cloud-host artefacts removed; documentation rewritten (`DEPLOY_CONTABO.md`).

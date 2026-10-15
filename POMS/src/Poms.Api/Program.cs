@@ -92,7 +92,7 @@ builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
     if (allowedOrigins.Length > 0)
         policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
 }));
-// Render and the Contabo Caddy proxy terminate TLS; trust their X-Forwarded-* headers so the
+// The Contabo Caddy proxy terminates TLS; trust their X-Forwarded-* headers so the
 // rate limiter and HTTPS handling see the real client. The API port is never exposed directly.
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {

@@ -9,7 +9,7 @@ public class PomsDbContextFactory : IDesignTimeDbContextFactory<PomsDbContext>
     {
         var optionsBuilder = new DbContextOptionsBuilder<PomsDbContext>();
 
-        // Check for DATABASE_URL environment variable (Railway format)
+        // Check for DATABASE_URL environment variable (postgresql://user:password@host:port/db)
         var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 
         if (!string.IsNullOrEmpty(databaseUrl))

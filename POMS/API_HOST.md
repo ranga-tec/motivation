@@ -1,101 +1,76 @@
-# Separate POMS API Host
+# POMS API (`Poms.Api`)
 
-`Poms.Api` is the production backend for the React, mobile, and external clients. `Poms.Web` is a
-rollback-only legacy host and must not be deployed for the React/API production cutover.
+`Poms.Api` is the only backend in production. It serves the React client under `/api/v1`, signs
+users in through ASP.NET Core Identity under `/auth`, and reports readiness at `/health`. It
+compiles the controllers and contracts from `src/Poms.Web/Api/V1`; it does not depend on the MVC
+process. Hosting is described in [`../DEPLOY_CONTABO.md`](../DEPLOY_CONTABO.md).
+
+## Authentication
+
+- `POST /auth/login?useCookies=false` with `{ "email", "password" }` returns a bearer access token
+  and a refresh token. `POST /auth/refresh` renews it. The frontend keeps tokens in session storage.
+- `GET /api/v1/session` returns the signed-in user and roles.
+- `POST /auth/register` is blocked (404). Accounts are created by administrators.
+- Token keys are ASP.NET Core data-protection keys; persist
+  `/home/app/.aspnet/DataProtection-Keys` or every user is signed out on restart.
+
+## Authorization policies
+
+| Policy | Roles | Used for |
+| --- | --- | --- |
+| `AnyAuthenticatedUser` | any signed-in user | dashboard, appointments, documents, printing, session |
+| `PatientRead` | DATA_ENTRY, CLINICIAN, MANAGEMENT, ADMIN | patient list/detail, records list |
+| `DataEntry` | DATA_ENTRY, ADMIN | registration options, create and edit patients |
+| `ClinicianOrAdmin` | CLINICIAN, ADMIN | records (episodes) and clinical entries |
+| `ReportOrAdmin` | VIEWER, MANAGEMENT, ADMIN | reports |
+| `AdminOnly` | ADMIN | users and reference data |
+| `ApiWrite` | bearer-token requests | every write endpoint |
+
+The React client mirrors these rules in `frontend/src/lib/access.ts`.
+
+## Endpoint map (`/api/v1`)
+
+| Area | Endpoints |
+| --- | --- |
+| Dashboard | `GET dashboard`, `GET dashboard/activity`, `GET dashboard/records` |
+| Patients | `GET patients`, `GET patients/{id}`, `GET patients/{id}/edit`, `GET patients/filter-options`, `GET patients/registration-options`, `POST patients`, `PUT patients/{id}` |
+| Records | `GET episodes?patientId=`, `GET episodes/{id}`, `GET episodes/options`, `POST episodes`, `PUT episodes/{id}` |
+| Clinical | `GET clinical-records/options`, `GET clinical-records/prescription-options`, `GET clinical-records/episodes/{id}`, `POST/PUT` for `assessments`, `fittings`, `deliveries`, `follow-ups` |
+| Appointments | `GET appointments`, `GET appointments/{id}`, `GET appointments/options`, `POST appointments`, `POST appointments/{id}/complete`, `/cancel`, `/reschedule` |
+| Documents | `GET documents/options`, `GET documents?patientId=` or `?episodeId=`, `POST documents`, `GET documents/{id}`, `DELETE documents/{id}`, `GET documents/patient-photo/{patientId}` |
+| Printing | `GET print/patients/{id}/registration`, `print/assessments/{id}`, `print/assessments/{id}/prescription`, `print/deliveries/{id}`, `print/follow-ups/{id}` |
+| Reports | `GET reports/options`, `GET reports/{key}`, `GET reports/{key}/pdf` (13 keys) |
+| Administration | `GET admin/catalog`, CRUD for `provinces`, `districts`, `cities`, `centers`, `device-types`, `devices`, `lookups/{type}`; `GET/POST admin/users`, `PUT admin/users/{id}/profile`, `/roles`, `/lock`, `/password` |
+
+Errors use RFC 7807 problem details. Validation errors return 400 with an `errors` dictionary.
+
+## Configuration
+
+| Setting | Production value |
+| --- | --- |
+| `ASPNETCORE_ENVIRONMENT` | `Production` |
+| `DATABASE_URL` | `postgresql://user:password@host:5432/db`. Add `?sslmode=disable` for a private Docker database; without `sslmode`, Production requires SSL. |
+| `Cors__AllowedOrigins__0` | The site origin, e.g. `https://169-58-173-191.sslip.io` |
+| `FileStorage__RootPath` | `/app/storage` on a persistent volume |
+| `SeedDemoUsers` | `false` |
+| `BootstrapAdmin__Email`, `BootstrapAdmin__Password` | First administrator for an empty database |
+
+Production refuses to start if the database, CORS origin, persistent storage or bootstrap
+administrator (on an empty database) is missing, and if a demonstration account still uses its
+published password. The schema is created with `EnsureCreated` plus `PostgresSchemaUpgrader`;
+additive changes apply automatically on start, destructive ones need the upgrader updated.
+
+Behind a reverse proxy the API trusts `X-Forwarded-For` / `X-Forwarded-Proto`, so rate limiting
+(120 requests per minute per user or IP) sees real client addresses. Never publish the API port
+directly when this is enabled.
 
 ## Local run
-
-The API creates or upgrades its database and seeds local demo accounts in Development:
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = "Development"
 $env:ASPNETCORE_URLS = "http://localhost:5015"
-$env:ConnectionStrings__DefaultConnection = "Data Source=X:\Developments\motivation\POMS\src\Poms.Web\poms-local.db"
 dotnet run --project POMS/src/Poms.Api --no-launch-profile
 ```
 
-Expected checks:
-
-```text
-GET /health                 -> 200 when the database is reachable
-GET /api/v1/patients        -> 401 without a bearer token
-GET /api/v1/appointments    -> 401 without a bearer token
-```
-
-## Required production configuration
-
-```text
-ASPNETCORE_ENVIRONMENT=Production
-DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DATABASE
-ApiAuthentication__Authority=https://identity.example.com
-ApiAuthentication__Audience=poms-api
-ApiAuthentication__RequireHttpsMetadata=true
-ApiAuthentication__NameClaimType=name
-ApiAuthentication__RoleClaimType=poms_role
-Cors__AllowedOrigins__0=https://app.example.com
-FileStorage__RootPath=/app/storage
-SeedDemoUsers=false
-BootstrapAdmin__Email=admin@example.com
-BootstrapAdmin__Password=USE_A_SECRET_VALUE
-```
-
-Production startup fails when OIDC, CORS, persistent storage, database, or bootstrap-administrator
-configuration is absent. The host accepts bearer tokens only; it has no Razor UI or cookie fallback.
-The OIDC `sub` for the administrator must match the local Identity user ID used by administration
-safeguards. Never commit any value shown as a secret.
-
-## Container build
-
-Run from the `POMS` directory:
-
-```powershell
-docker build -f src/Poms.Api/Dockerfile -t poms-api .
-docker build -f frontend/Dockerfile -t poms-frontend frontend `
-  --build-arg VITE_API_URL=https://api.example.com `
-  --build-arg VITE_OIDC_AUTHORITY=https://identity.example.com `
-  --build-arg VITE_OIDC_CLIENT_ID=poms-web `
-  --build-arg VITE_OIDC_REDIRECT_URI=https://app.example.com/auth/callback `
-  --build-arg VITE_OIDC_POST_LOGOUT_REDIRECT_URI=https://app.example.com/signin
-```
-
-For the complete PostgreSQL/API/frontend stack, copy `.env.example` to `.env`, replace every
-placeholder, and run `docker compose up -d --build`. Do not commit `.env`. The frontend image uses
-Nginx with SPA route fallback and immutable caching only for fingerprinted assets.
-
-Both application images run as non-root users. Compose persists PostgreSQL data, uploaded files,
-and ASP.NET Core data-protection keys in separate named volumes. Back up all three volumes before
-an infrastructure move or restore.
-
-For the complete local production-development stack, run
-`docker compose -f compose.development.yaml up -d --build`, then open `http://localhost:8080`.
-It uses PostgreSQL, Keycloak OIDC with authorization-code/PKCE, the bearer API, and the production
-Nginx frontend. Sign in as `admin@poms.local` with `Admin@123!`; these credentials are local-only.
-Keycloak administration is at `http://localhost:8082/admin` using `keycloak-admin` and
-`Keycloak-Local-8374!`.
-
-Production staff credentials remain owned by the configured identity provider. POMS stores the
-matching staff profile and authorization roles by email; it does not create or reset OIDC passwords.
-
-Mount `/app/storage` as persistent storage. Patient photos and documents are lost if this path is
-ephemeral. The API applies a global limit of 120 requests per minute per authenticated name or IP.
-
-## Migration ownership
-
-`Poms.Api.csproj` links the versioned API source under `Poms.Web/Api`; this is a source-sharing
-boundary only and does not make the production API depend on the MVC process.
-
-## Release checks
-
-```powershell
-dotnet restore Poms.sln
-dotnet build Poms.sln -c Release --no-restore
-dotnet test Poms.sln -c Release --no-build
-cd frontend
-npm ci
-npm run lint
-npm run build
-```
-
-Deploy the API image, verify `/health`, then deploy `frontend/dist` with its production OIDC and API
-environment variables. Keep the previous API image available for rollback; never roll back the
-database by deleting it.
+Development uses SQLite (`poms-api-local.db`) and seeds demonstration accounts.
+`GET /health` returns 200; `GET /api/v1/patients` returns 401 without a token.

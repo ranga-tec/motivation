@@ -16,7 +16,7 @@ QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Respect ASPNETCORE_URLS when it is provided, otherwise fall back to Railway/container PORT.
+// Respect ASPNETCORE_URLS when it is provided, otherwise fall back to the container PORT.
 var port = Environment.GetEnvironmentVariable("PORT");
 if (!string.IsNullOrWhiteSpace(port) && string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
 {
@@ -33,7 +33,7 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 // Add services to the container.
-// Check for Railway/container DATABASE_URL environment variable first.
+// Check for a container DATABASE_URL environment variable first.
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 string connectionString;
 bool usePostgreSQL;
@@ -83,7 +83,6 @@ builder.Services.AddDbContext<PomsDbContext>(options =>
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddHealthChecks()
     .AddCheck<PomsDatabaseHealthCheck>("database");
-builder.Services.Configure<VersionSwitchOptions>(builder.Configuration.GetSection("VersionSwitch"));
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders =
