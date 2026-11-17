@@ -183,6 +183,7 @@ public sealed class ApiV1ControllerTests
         var controller = SetUser(CreatePatientsController(database.Context));
         var request = ValidCreateRequest(existing) with
         {
+            PatientNumber = "COL/1234",
             FullName = "New API Patient",
             NameWithInitials = "N. Patient",
             IdentificationType = IdentificationType.NIC,
@@ -193,7 +194,7 @@ public sealed class ApiV1ControllerTests
 
         var created = action.Result.Should().BeOfType<CreatedAtActionResult>();
         var response = created.Which.Value.Should().BeOfType<PatientDetailResponse>().Subject;
-        response.PatientNumber.Should().MatchRegex(@"^2026/\d{4}$");
+        response.PatientNumber.Should().Be("COL/1234");
         response.FullName.Should().Be("New API Patient");
         var stored = await database.Context.Patients.SingleAsync(item => item.Id == response.Id);
         stored.CreatedBy.Should().Be("clinician@poms.lk");
@@ -218,6 +219,29 @@ public sealed class ApiV1ControllerTests
         var conflict = action.Result.Should().BeOfType<ConflictObjectResult>();
         var problem = conflict.Which.Value.Should().BeOfType<ProblemDetails>().Subject;
         problem.Extensions["duplicateType"].Should().Be("exact");
+    }
+
+    [Fact]
+    public async Task PatientsCreate_RejectsDuplicatePatientNumber()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var existing = await SeedPatientAsync(database.Context);
+        var controller = SetUser(CreatePatientsController(database.Context));
+        var request = ValidCreateRequest(existing) with
+        {
+            PatientNumber = existing.PatientNumber,
+            FullName = "Different Patient",
+            IdentificationType = IdentificationType.NIC,
+            IdentificationNumber = "UNIQUE-PATIENT-NIC",
+            ConfirmPossibleDuplicate = true
+        };
+
+        var action = await controller.Create(request, CancellationToken.None);
+
+        var badRequest = action.Result.Should().BeOfType<BadRequestObjectResult>();
+        var problem = badRequest.Which.Value.Should().BeOfType<ValidationProblemDetails>().Subject;
+        problem.Errors.Should().ContainKey(nameof(CreatePatientRequest.PatientNumber));
+        (await database.Context.Patients.CountAsync()).Should().Be(1);
     }
 
     [Fact]
@@ -565,7 +589,6 @@ public sealed class ApiV1ControllerTests
 
     private static PatientsApiController CreatePatientsController(PomsDbContext context) => new(
         context,
-        new PatientNumberService(context),
         new DuplicateCheckService(context),
         new AppointmentAssigneeService(context));
 
@@ -611,6 +634,7 @@ public sealed class ApiV1ControllerTests
 
     private static CreatePatientRequest ValidCreateRequest(Patient reference) => new()
     {
+        PatientNumber = $"MANUAL-{Guid.NewGuid():N}",
         FullName = reference.FullName,
         NameWithInitials = reference.NameWithInitials,
         DateOfBirth = reference.Dob,

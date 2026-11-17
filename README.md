@@ -1,7 +1,7 @@
 # POMS — Exceed Lanka Prosthetic & Orthotic Data Management System
 
 POMS manages the complete patient pathway for Exceed Lanka's prosthetic and orthotic services:
-registration, patient number (PNO) generation, the patient folder, assessments and prescriptions,
+registration, patient number (PNO) assignment, the patient folder, assessments and prescriptions,
 fittings, deliveries, follow-ups, documents, printable forms, appointments and reports. Every
 record is filed under the patient number. Requirements: [`Requirement/PRD`](Requirement/PRD).
 
@@ -17,7 +17,7 @@ Hosting, operations, backups and restore: [`DEPLOY_CONTABO.md`](DEPLOY_CONTABO.m
 | Domain / data | Entities, EF Core context, services, QuestPDF forms and reports | `POMS/src/Poms.Domain`, `Poms.Infrastructure`, `Poms.Reporting` |
 | Database | PostgreSQL 17 (production), SQLite (local development) | — |
 | Hosting | Docker Compose: Caddy + frontend + API + PostgreSQL | `POMS/deploy/contabo` |
-| Tests | xUnit, FluentAssertions (108 tests) | `POMS/tests/Poms.Tests` |
+| Tests | xUnit, FluentAssertions (109 tests) | `POMS/tests/Poms.Tests` |
 
 `POMS/src/Poms.Web` is the original Razor MVC application. It is not deployed; its `Api/V1` folder
 holds the API controllers that `Poms.Api` compiles in.
@@ -30,8 +30,8 @@ holds the API controllers that `Poms.Api` compiles in.
 - **Patient registration** — five-step wizard (Identity, Contact, Guardian/carer, Registration,
   Review); local/foreign patients; NIC, passport, driving licence or N/A; duplicate checks;
   province → district → city; multiple telephone numbers with date confirmed and person checked;
-  referral source; travel time; optional photo. The PNO is generated automatically, with a centre
-  flag such as `C/2026/0001` for Colombo.
+  referral source; travel time; optional photo. Staff currently enter the unique PNO manually;
+  automatic PNO generation is temporarily paused.
 - **Patient folder** — search by PNO, names, ID number or phone, filter by location, province and
   district; tabs for Overview, Clinical records, Clinical history, Documents and Print forms.
 - **Clinical records** — records (episodes) per patient; prosthetic and orthotic assessments with

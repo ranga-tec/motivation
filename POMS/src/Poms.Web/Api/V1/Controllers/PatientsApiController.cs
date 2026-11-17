@@ -15,7 +15,6 @@ namespace Poms.Web.Api.V1.Controllers;
 [Authorize(AuthenticationSchemes = ApiAuthenticationDefaults.Scheme, Policy = "PatientRead")]
 public sealed class PatientsApiController(
     PomsDbContext context,
-    IPatientNumberService patientNumbers,
     IDuplicateCheckService duplicateCheck,
     IAppointmentAssigneeService appointmentAssignees) : ControllerBase
 {
@@ -179,7 +178,7 @@ public sealed class PatientsApiController(
     {
         var patient = await context.Patients.AsNoTracking().Where(item => item.Id == id)
             .Select(item => new PatientEditResponse(
-                item.Id, item.FullName, item.NameWithInitials, item.Dob, item.Sex.ToString(), item.Employment,
+                item.Id, item.PatientNumber, item.FullName, item.NameWithInitials, item.Dob, item.Sex.ToString(), item.Employment,
                 item.Category.ToString(), item.Nationality, item.IdentificationType.ToString(), item.IdentificationNumber,
                 item.Address1, item.Address2, item.ProvinceId, item.DistrictId, item.CityId, item.CityOther, item.Email,
                 item.ReferralSourceId, item.ReferralSourceOther, item.ReferralPersonName,
@@ -278,6 +277,12 @@ public sealed class PatientsApiController(
         CancellationToken cancellationToken)
     {
         var errors = await ValidateReferencesAsync(request, cancellationToken);
+        var patientNumber = request.PatientNumber?.Trim();
+        if (string.IsNullOrWhiteSpace(patientNumber))
+            errors[nameof(request.PatientNumber)] = ["Enter a patient number."];
+        else if (await context.Patients.AnyAsync(
+            item => item.PatientNumber == patientNumber, cancellationToken))
+            errors[nameof(request.PatientNumber)] = ["This patient number is already in use."];
         var assignee = await appointmentAssignees.ResolveAsync(
             request.AssignedClinicianEntry,
             request.AssignedClinicianUserId);
@@ -300,11 +305,10 @@ public sealed class PatientsApiController(
         }
 
         var registrationDate = request.RegistrationDate ?? DateOnly.FromDateTime(DateTime.Today);
-        var patientNumber = await patientNumbers.GeneratePatientNumberAsync(request.CenterId, registrationDate);
         var actor = User.Identity?.Name ?? User.FindFirst("sub")?.Value ?? "API user";
         var patient = new Patient
         {
-            PatientNumber = patientNumber,
+            PatientNumber = patientNumber!,
             FullName = request.FullName.Trim(),
             NameWithInitials = request.NameWithInitials.Trim(),
             Dob = request.DateOfBirth,

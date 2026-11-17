@@ -12,7 +12,7 @@ import { useToast } from '../lib/toast'
 
 const latestDob = () => { const date = new Date(); date.setDate(date.getDate() - 3); return localDate(date) }
 const blank = (): CreatePatientRequest => ({
-  fullName: '', nameWithInitials: '', dateOfBirth: '', sex: '', category: 'Local', identificationType: 'NIC', identificationNumber: '',
+  patientNumber: '', fullName: '', nameWithInitials: '', dateOfBirth: '', sex: '', category: 'Local', identificationType: 'NIC', identificationNumber: '',
   address1: '', provinceId: 0, districtId: 0, cityOther: '', centerId: 0, registrationDate: localDate(),
   assignedClinicianEntry: '', guardianName: '', guardianRelationship: '', confirmPossibleDuplicate: false, contacts: [{ telephoneNumber: '', dateConfirmed: localDate() }],
 })
@@ -26,7 +26,7 @@ const steps = [
 ]
 // Maps server validation keys to the wizard step that owns the field.
 const fieldStep: Record<string, number> = {
-  fullname: 0, namewithinitials: 0, dateofbirth: 0, sex: 0, category: 0, nationality: 0, identificationtype: 0, identificationnumber: 0, centerid: 0, employment: 0,
+  patientnumber: 0, fullname: 0, namewithinitials: 0, dateofbirth: 0, sex: 0, category: 0, nationality: 0, identificationtype: 0, identificationnumber: 0, centerid: 0, employment: 0,
   address1: 1, address2: 1, provinceid: 1, districtid: 1, cityid: 1, cityother: 1, email: 1, contacts: 1,
   guardianname: 2, guardianrelationship: 2, guardianphone: 2, guardianmobile: 2, guardianaddress: 2,
   registrationdate: 3, assignedclinicianentry: 3, referralsourceid: 3, referralsourceother: 3, traveltimedistance: 3, remarks: 3,
@@ -53,7 +53,7 @@ export function PatientRegistrationPage() {
 function Header({ editing, id }: { editing: boolean; id?: string }) {
   return <>
     <Link to={editing ? `/patients/${id}` : '/patients'} className="back-link"><ArrowLeft size={16} /> {editing ? 'Back to patient folder' : 'Patient folder'}</Link>
-    <PageHeader eyebrow={editing ? 'Patient folder' : 'New patient'} title={editing ? 'Edit patient details' : 'Register patient'} description={editing ? 'Changes keep the existing patient number.' : 'The patient number (PNO) is generated automatically when you save.'} />
+    <PageHeader eyebrow={editing ? 'Patient folder' : 'New patient'} title={editing ? 'Edit patient details' : 'Register patient'} description={editing ? 'Changes keep the existing patient number.' : 'Enter the patient number (PNO) assigned to this patient.'} />
   </>
 }
 
@@ -190,7 +190,10 @@ function RegistrationWizard({ id, initial, options }: { id?: string; initial: Cr
                 {photo && <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setPhoto(undefined); setPhotoPreview('') }}>Remove</button>}
               </div>
             </div>}
-            <Field label="Centre / location" required error={fieldErrors.centerid} hint={centre ? 'Determines the patient number format.' : undefined}>
+            {!editing && <Field label="Patient number (PNO)" required error={fieldErrors.patientnumber} hint="Must be unique. Automatic numbering is temporarily paused.">
+              <input required maxLength={50} autoComplete="off" value={form.patientNumber ?? ''} onChange={(event) => set({ patientNumber: event.target.value })} placeholder="Enter patient number" />
+            </Field>}
+            <Field label="Centre / location" required error={fieldErrors.centerid}>
               <select required value={form.centerId || ''} onChange={(event) => set({ centerId: Number(event.target.value) })}><option value="">Select location</option>{options.centers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
             </Field>
             <Field label="Patient category" required>
@@ -257,7 +260,7 @@ function RegistrationWizard({ id, initial, options }: { id?: string; initial: Cr
           {step === 4 && <>
             {!editing && photoPreview && <div className="photo-picker" style={{ marginBottom: 14 }}><button type="button" className="avatar lg" style={{ border: 0, padding: 0, cursor: 'zoom-in' }} onClick={() => setZoom(true)} aria-label="Enlarge photo"><img src={photoPreview} alt="Patient" /></button><div><strong>{form.fullName}</strong><span>Click the photo to enlarge.</span></div></div>}
             <div className="review-grid">
-              {review('Identity', 0, [['Location', centre?.name], ['Category', `${form.category} patient`], ['Full name', form.fullName], ['Name with initials', form.nameWithInitials], ['Date of birth', form.dateOfBirth && formatDate(form.dateOfBirth)], ['Gender', form.sex], ['Nationality', form.nationality], ['Identification', `${humanize(form.identificationType)}${form.identificationNumber ? ` · ${form.identificationNumber}` : ''}`], ['Employment', form.employment]])}
+              {review('Identity', 0, [['Patient number', form.patientNumber], ['Location', centre?.name], ['Category', `${form.category} patient`], ['Full name', form.fullName], ['Name with initials', form.nameWithInitials], ['Date of birth', form.dateOfBirth && formatDate(form.dateOfBirth)], ['Gender', form.sex], ['Nationality', form.nationality], ['Identification', `${humanize(form.identificationType)}${form.identificationNumber ? ` · ${form.identificationNumber}` : ''}`], ['Employment', form.employment]])}
               {review('Contact', 1, [['Address', [form.address1, form.address2].filter(Boolean).join(', ')], ['Province', options.provinces.find((item) => item.id === form.provinceId)?.name], ['District', options.districts.find((item) => item.id === form.districtId)?.name], ['City', options.cities.find((item) => item.id === form.cityId)?.name ?? form.cityOther], ['Email', form.email], ['Telephone', form.contacts.filter((contact) => contact.telephoneNumber).map((contact) => contact.telephoneNumber).join(', ')]])}
               {review('Guardian / carer', 2, [['Name', form.guardianName], ['Relationship', form.guardianRelationship], ['Mobile', form.guardianMobile], ['Phone', form.guardianPhone], ['Address', form.guardianAddress]])}
               {review('Registration', 3, [['Registration date', formatDate(form.registrationDate)], ['Processed by', user?.name], ['Handled by', form.assignedClinicianEntry], ['Referral source', referral ? (form.referralSourceOther ? `${referral.name} — ${form.referralSourceOther}` : referral.name) : undefined], ['Travel time / distance', form.travelTimeDistance], ['Remarks', form.remarks]])}

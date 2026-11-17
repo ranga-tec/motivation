@@ -82,6 +82,7 @@ public sealed record PatientDetailResponse(
 
 public sealed record CreatePatientRequest : IValidatableObject
 {
+    [StringLength(50)] public string? PatientNumber { get; init; }
     [Required, StringLength(200)] public string FullName { get; init; } = string.Empty;
     [Required, StringLength(100)] public string NameWithInitials { get; init; } = string.Empty;
     public DateOnly DateOfBirth { get; init; }
@@ -163,6 +164,7 @@ public sealed record PatientFilterOptionsResponse(
 
 public sealed record PatientEditResponse(
     Guid Id,
+    string PatientNumber,
     string FullName,
     string NameWithInitials,
     DateOnly DateOfBirth,

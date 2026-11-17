@@ -43,7 +43,7 @@ export interface RegistrationOption { id: number; name: string; parentId?: numbe
 export interface AssigneeOption { userId: string; displayName: string; fullName: string; isPreferred: boolean }
 export interface PatientRegistrationOptions { provinces: RegistrationOption[]; districts: RegistrationOption[]; cities: RegistrationOption[]; centers: RegistrationOption[]; referralSources: RegistrationOption[]; assignees: AssigneeOption[]; nationalities: RegistrationOption[] }
 export interface CreatePatientRequest {
-  fullName: string; nameWithInitials: string; dateOfBirth: string; sex: string; employment?: string; category: string; nationality?: string;
+  patientNumber?: string; fullName: string; nameWithInitials: string; dateOfBirth: string; sex: string; employment?: string; category: string; nationality?: string;
   identificationType: string; identificationNumber?: string; address1: string; address2?: string; provinceId: number; districtId: number;
   cityId?: number; cityOther?: string; email?: string; centerId: number; registrationDate: string; assignedClinicianEntry: string;
   assignedClinicianUserId?: string; guardianName: string; guardianRelationship: string; guardianAddress?: string; guardianPhone?: string;
