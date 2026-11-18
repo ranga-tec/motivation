@@ -1,15 +1,19 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { BarChart3, BookOpen, CalendarDays, ChevronDown, ClipboardList, FolderOpen, LayoutDashboard, LogOut, Menu, Moon, Plus, Search, Settings, Sun, UserPlus, Users, X } from 'lucide-react'
+import { BarChart3, BookOpen, CalendarDays, ChevronDown, ClipboardList, FolderOpen, LayoutDashboard, LogOut, Menu, Moon, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings, Sun, UserPlus, Users, X } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import { access } from '../lib/access'
 import { initials, roleLabel } from '../lib/format'
 import { useTheme } from '../lib/theme'
 
 const year = new Date().getFullYear()
+const sidebarStorageKey = 'poms-sidebar-collapsed'
 
 export function AppShell() {
   const [open, setOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return window.localStorage.getItem(sidebarStorageKey) === 'true' } catch { return false }
+  })
   const location = useLocation()
   const { user, roles } = useAuth()
   const can = access(roles)
@@ -28,24 +32,30 @@ export function AppShell() {
     { to: '/admin/reference', label: 'Reference data', icon: BookOpen },
   ]
   const name = user?.name ?? 'Staff user'
+  const toggleCollapsed = () => setCollapsed((current) => {
+    const next = !current
+    try { window.localStorage.setItem(sidebarStorageKey, String(next)) } catch { /* storage unavailable */ }
+    return next
+  })
 
   return <div className="shell">
     {open && <button className="scrim" aria-label="Close navigation" onClick={() => setOpen(false)} />}
-    <aside className={`sidebar ${open ? 'open' : ''}`} aria-label="Main navigation">
+    <aside className={`sidebar ${open ? 'open' : ''} ${collapsed ? 'collapsed' : ''}`} aria-label="Main navigation">
       <div className="sidebar-brand">
         <div className="brand-mark">EL</div>
         <div className="brand-text"><strong>Exceed Lanka</strong><span>P&amp;O Data Management</span></div>
+        <button className="icon-btn sidebar-collapse" onClick={toggleCollapsed} aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'} title={collapsed ? 'Expand navigation' : 'Collapse navigation'}>{collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}</button>
         <button className="icon-btn sidebar-close" onClick={() => setOpen(false)} aria-label="Close navigation"><X /></button>
       </div>
       <nav className="sidebar-scroll">
         <div className="nav-group"><div className="nav-heading">Workspace</div>
-          {workspace.filter((item) => item.show).map(({ to, label, icon: Icon, end }) => <NavLink key={to} to={to} end={end} className="nav-link"><Icon /><span>{label}</span></NavLink>)}
+          {workspace.filter((item) => item.show).map(({ to, label, icon: Icon, end }) => <NavLink key={to} to={to} end={end} className="nav-link" title={collapsed ? label : undefined}><Icon /><span>{label}</span></NavLink>)}
         </div>
         {can.isAdmin && <div className="nav-group"><div className="nav-heading">Administration</div>
-          {administration.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} className="nav-link"><Icon /><span>{label}</span></NavLink>)}
+          {administration.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} className="nav-link" title={collapsed ? label : undefined}><Icon /><span>{label}</span></NavLink>)}
         </div>}
         <div className="nav-group"><div className="nav-heading">Preferences</div>
-          <NavLink to="/settings" className="nav-link"><Settings /><span>Settings</span></NavLink>
+          <NavLink to="/settings" className="nav-link" title={collapsed ? 'Settings' : undefined}><Settings /><span>Settings</span></NavLink>
         </div>
       </nav>
       <div className="sidebar-footer">
@@ -53,7 +63,7 @@ export function AppShell() {
       </div>
     </aside>
 
-    <div className="main">
+    <div className={`main ${collapsed ? 'sidebar-collapsed' : ''}`}>
       <header className="topbar">
         <button className="icon-btn menu-toggle" onClick={() => setOpen(true)} aria-label="Open navigation"><Menu /></button>
         {can.readPatients ? <GlobalSearch /> : <div className="topbar-spacer" />}
